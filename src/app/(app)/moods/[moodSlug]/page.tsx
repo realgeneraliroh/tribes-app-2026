@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, MessageSquareText, ThumbsUp, Settings2, Smile } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, MessageSquareText, Settings2, Smile as VibeIcon } from 'lucide-react'; // Renamed Smile to VibeIcon for clarity
 import { moodsData } from '../page'; // Import moodsData for the tuner
 import { cn } from '@/lib/utils';
 
@@ -24,7 +25,7 @@ interface MoodStreamPost {
   imageAlt?: string; 
   moodTags: string[]; // e.g., ["chill-vibes", "relaxing"]
   timestamp: Date;
-  likes?: number;
+  likes?: number; // This will represent total "vibes"
   comments?: number;
   dataAiHintAvatar?: string;
   dataAiHintImage?: string;
@@ -44,6 +45,7 @@ const allMoodStreamPosts: MoodStreamPost[] = [
 
 const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
+  const emoticons = ["😊", "😍", "😂", "🤔", "🔥", "🎉"];
 
   useEffect(() => {
     const timeSince = (date: Date): string => {
@@ -64,6 +66,12 @@ const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
     };
     setDisplayTime(timeSince(post.timestamp));
   }, [post.timestamp]);
+
+  const handleVibeSelection = (vibe: string) => {
+    console.log(`User vibed with: ${vibe} on post ${post.id}`);
+    // Here you would typically update state or call an API
+    // For now, we'll just close the popover if one is open or handle the vibe
+  };
 
   return (
     <Card className="overflow-hidden shadow-none sm:shadow-md hover:sm:shadow-lg transition-shadow duration-200">
@@ -86,8 +94,8 @@ const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
             <Image 
               src={post.imageUrl} 
               alt={post.imageAlt || "Mood stream media"} 
-              layout="fill" 
-              objectFit="cover" 
+              fill // Changed from layout="fill" and objectFit="cover" to just fill for Next 13+
+              style={{ objectFit: 'cover' }} // Added style for objectFit
               data-ai-hint={post.dataAiHintImage || "media content"}
             />
           </div>
@@ -97,9 +105,28 @@ const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
       {(post.likes !== undefined || post.comments !== undefined) && (
         <CardFooter className="p-3 sm:p-4 pt-2 sm:pt-3 flex items-center justify-start space-x-4 border-t">
           {post.likes !== undefined && (
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-              <ThumbsUp className="mr-1.5 h-4 w-4" /> {post.likes}
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                  <VibeIcon className="mr-1.5 h-4 w-4" /> {post.likes}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2 bg-card border shadow-xl rounded-lg">
+                <div className="flex space-x-1">
+                  {emoticons.map((emo, index) => (
+                    <Button 
+                      key={index} 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-xl p-1.5 h-auto w-auto rounded-md hover:bg-accent"
+                      onClick={() => handleVibeSelection(emo)}
+                    >
+                      {emo}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
           {post.comments !== undefined && (
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
@@ -180,7 +207,7 @@ export default function MoodStreamPage() {
 
       <header className={cn("mb-4 md:mb-6", isTunerVisible && "pt-4")}> {/* Add padding top if tuner is visible */}
         <div className="flex items-center space-x-2 mb-1">
-            <Smile className="h-7 w-7 md:h-8 md:w-8 text-primary" />
+            <VibeIcon className="h-7 w-7 md:h-8 md:w-8 text-primary" /> {/* Changed from Smile to VibeIcon */}
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground font-mono">
              {currentMoodName} Stream
             </h1>
@@ -199,7 +226,7 @@ export default function MoodStreamPage() {
       ) : (
         <Card className="text-center py-12 shadow-none sm:shadow-lg">
             <CardContent className="p-4 sm:p-6">
-                <Smile className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground opacity-50 mb-4 sm:mb-6" />
+                <VibeIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground opacity-50 mb-4 sm:mb-6" /> {/* Changed from Smile to VibeIcon */}
                 <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">No posts for '{currentMoodName}' yet!</h3>
                 <p className="text-muted-foreground text-sm sm:text-base">
                     Try tuning to a different mood or check back later.
@@ -210,3 +237,4 @@ export default function MoodStreamPage() {
     </div>
   );
 }
+
