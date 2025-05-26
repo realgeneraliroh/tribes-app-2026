@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageSquareText, Zap, Users, User, HeartHandshake, Rss } from "lucide-react"; // Added Rss for Mood Stream
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 interface CommunicationItem {
   id: string;
@@ -128,9 +129,10 @@ export default function YourCommsPage() {
             <div className="space-y-4">
               {familyComms.map(item => <YourCommsItem key={item.id} item={item} />)}
             </div>
-             { (regularComms.length > 0 || moodItems.length > 0) && <Separator className="my-8" />}
           </section>
         )}
+
+        {familyComms.length > 0 && (regularComms.length > 0 || moodItems.length > 0) && <Separator className="my-6" />}
 
         {regularComms.length > 0 && (
           <section>
@@ -140,10 +142,11 @@ export default function YourCommsPage() {
             <div className="space-y-4">
               {regularComms.map(item => <YourCommsItem key={item.id} item={item} />)}
             </div>
-            { moodItems.length > 0 && <Separator className="my-8" />}
           </section>
         )}
 
+        {regularComms.length > 0 && moodItems.length > 0 && <Separator className="my-6" />}
+        
         {moodItems.length > 0 && (
           <section>
             <h2 className="text-2xl font-semibold text-foreground mb-4 flex items-center">
