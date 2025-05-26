@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
 export default function RootPage() {
-  redirect('/dashboard');
-  return null; // Or a loading spinner if preferred
+  redirect('/your-comms'); // Changed from /dashboard
+  return null; 
 }

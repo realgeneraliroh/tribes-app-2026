@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppLogo } from "@/components/icons/app-logo";
 import {
-  LayoutDashboard,
+  LayoutDashboard, // Keeping for "Your Comms" as a central hub icon
   MessageSquare,
   Users,
   Smile,
@@ -23,16 +23,16 @@ import {
   Sparkles,
   FileText,
   PlusCircle,
-  Link2 // Added Link2 for Bonds
+  Link2 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", tooltip: "Dashboard" },
+  { href: "/your-comms", icon: LayoutDashboard, label: "Your Comms", tooltip: "Your Communications" }, // Changed from Dashboard
   { href: "/chat", icon: MessageSquare, label: "Chats", tooltip: "Chats" },
   { href: "/tribes", icon: Users, label: "Tribes", tooltip: "Tribes" },
-  { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" }, // Added Bonds
+  { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
   { href: "/ai-assistant", icon: Bot, label: "AI Assistant", tooltip: "AI Assistant" },
@@ -48,7 +48,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
       <SidebarHeader className="flex items-center justify-between p-3 border-b">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/your-comms" className="flex items-center gap-2"> {/* Changed from /dashboard */}
           <AppLogo className="w-8 h-8 text-sidebar-primary" />
           <span className="font-semibold text-lg font-mono text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             Tribes.app
