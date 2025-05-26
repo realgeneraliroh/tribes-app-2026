@@ -9,13 +9,14 @@ import { UserNav } from "@/components/layout/user-nav";
 import { cn } from "@/lib/utils";
 
 export function AppHeader() {
-  const { isMobile } = useSidebar();
+  // const { isMobile } = useSidebar(); // No longer needed to conditionally render trigger
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 sm:px-8">
         <div className="flex items-center">
-          {isMobile && <SidebarTrigger className="mr-2" />}
+          {/* Always show SidebarTrigger for a consistent collapse/expand control */}
+          <SidebarTrigger className="mr-2" />
           {/* Logo and App Name removed from here. It's in AppSidebar. */}
         </div>
 
