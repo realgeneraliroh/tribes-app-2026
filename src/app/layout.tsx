@@ -1,11 +1,13 @@
 import type {Metadata} from 'next';
-import {Geist, Geist_Mono} from 'next/font/google';
+import { Oxanium, Geist_Mono } from 'next/font/google'; // Changed Geist to Oxanium
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Configure Oxanium font
+const oxanium = Oxanium({
+  variable: '--font-oxanium', // CSS variable for Oxanium
   subsets: ['latin'],
+  display: 'swap', // Use swap for better performance and UX
 });
 
 const geistMono = Geist_Mono({
@@ -25,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen`}>
+      <body className={`${oxanium.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen`}>
         {children}
         <Toaster />
       </body>
