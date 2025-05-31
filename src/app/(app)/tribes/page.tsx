@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, PlusCircle, ArrowRight, ThumbsUp, MessageCircle } from "lucide-react";
+import { Users, Search, PlusCircle, ArrowRight, Smile, MessageCircle } from "lucide-react"; // Changed ThumbsUp to Smile
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,7 @@ export default function TribesPage() {
                   <CardDescription className="text-sm h-16 overflow-hidden text-ellipsis leading-relaxed">{tribe.description}</CardDescription>
                   <div className="flex items-center text-xs text-muted-foreground mt-2 space-x-3">
                     <div className="flex items-center"><Users className="h-3.5 w-3.5 mr-1"/> {tribe.members} members</div>
-                    <div className="flex items-center"><ThumbsUp className="h-3.5 w-3.5 mr-1"/> 1.2k Likes</div>
+                    <div className="flex items-center"><Smile className="h-3.5 w-3.5 mr-1"/> 1.2k Good Vibes</div>
                     <div className="flex items-center"><MessageCircle className="h-3.5 w-3.5 mr-1"/> 300 Posts</div>
                   </div>
                 </CardContent>
