@@ -50,7 +50,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex items-center justify-between p-3 border-b">
         <Link href="/your-comms" className="flex items-center gap-2">
           <AppLogo className="w-8 h-8 text-sidebar-primary" />
-          <span className="font-semibold text-lg font-mono text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+          <span className="font-semibold text-lg font-mono text-sidebar-foreground group-data-[collapsible=icon]:hidden tracking-normal">
             Tribes.app
           </span>
         </Link>
