@@ -27,6 +27,7 @@ const tribesData: Tribe[] = [
   { id: "3", name: "Indie Game Devs", description: "A community for indie game developers to collaborate and showcase.", members: 245, isPublic: false, cover: "https://placehold.co/400x200.png?text=Games" , dataAiHint: "gaming development" },
   { id: "4", name: "Local Bookworms", description: "Discussing our favorite reads and discovering new authors together.", members: 55, isPublic: true, cover: "https://placehold.co/400x200.png?text=Books" , dataAiHint: "reading library" },
   { id: "5", name: "Sustainable Living Hub", description: "Tips and discussions on eco-friendly practices and sustainability.", members: 92, isPublic: true, cover: "https://placehold.co/400x200.png?text=Eco" , dataAiHint: "nature environment" },
+  { id: "6", name: "Family Hub", description: "A private space for our family to connect, share updates, and plan events.", members: 15, isPublic: false, cover: "https://placehold.co/400x200.png?text=Family", dataAiHint: "family home" },
 ];
 
 const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean }> = ({ tribe, isMyTribe }) => (
@@ -87,7 +88,7 @@ export default function TribesPage() {
             </Badge>
           </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-semibold truncate">{tribe.name}</CardTitle>
+            <CardTitle className="text-xl font-semibold truncate tracking-normal">{tribe.name}</CardTitle>
           </CardHeader>
           <CardContent className="flex-grow pb-2">
             <CardDescription className="text-sm h-16 overflow-hidden text-ellipsis leading-relaxed">{tribe.description}</CardDescription>
@@ -154,7 +155,7 @@ export default function TribesPage() {
         ) : (
           <Card className="text-center p-8">
             <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <CardTitle>No Tribes Yet</CardTitle>
+            <CardTitle className="tracking-normal">No Tribes Yet</CardTitle>
             <CardDescription className="mt-2 mb-4">You haven't joined or created any tribes. Start by creating one or exploring existing communities.</CardDescription>
             <Link href="/tribes/create" passHref>
               <Button variant="default">Create Your First Tribe</Button>
@@ -177,3 +178,4 @@ export default function TribesPage() {
     </div>
   );
 }
+
