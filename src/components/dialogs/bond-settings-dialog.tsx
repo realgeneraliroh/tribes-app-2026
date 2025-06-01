@@ -32,6 +32,19 @@ interface BondSettingsDialogProps {
   bond: Bond | null;
 }
 
+// Helper to display bond type nicely, moved before usage
+const getBondTypeDisplay = (bondType: BondType): string => {
+  switch (bondType) {
+    case "family": return "Family";
+    case "friend": return "Friend";
+    case "professional": return "Professional";
+    case "collaborator": return "Collaborator";
+    case "follower": return "Follower";
+    case "supporter": return "Supporter";
+    default: return bondType;
+  }
+};
+
 export function BondSettingsDialog({ isOpen, onOpenChange, bond }: BondSettingsDialogProps) {
   const isMobile = useIsMobile();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -100,18 +113,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond }: BondSettingsD
     </>
   );
 
-  // Helper to display bond type nicely, mirroring logic from bonds/page.tsx
-  const getBondTypeDisplay = (bondType: BondType): string => {
-    switch (bondType) {
-      case "family": return "Family";
-      case "friend": return "Friend";
-      case "professional": return "Professional";
-      case "collaborator": return "Collaborator";
-      case "follower": return "Follower";
-      case "supporter": return "Supporter";
-      default: return bondType;
-    }
-  };
 
   if (isMobile) {
     return (
