@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Bond } from '@/app/(app)/bonds/page'; 
+import type { Bond } from '@/app/(app)/bonds/page';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -39,15 +39,15 @@ export function IntroductionDialog({
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedBondId(undefined); 
-      setIntroSearchTerm(""); 
+      setSelectedBondId(undefined);
+      setIntroSearchTerm("");
     }
   }, [isOpen]);
 
   const displayableEligibleBonds = useMemo(() => {
     if (!introducingBond) return [];
     return allBonds.filter(
-      (bond) => bond.id !== introducingBond.id && 
+      (bond) => bond.id !== introducingBond.id &&
                 bond.targetType === 'user' &&
                 bond.targetName.toLowerCase().includes(introSearchTerm.toLowerCase())
     );
@@ -107,7 +107,7 @@ export function IntroductionDialog({
                        {/* Using a generic User icon for now, ideally bond.targetAvatar or similar */}
                       <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                     </Avatar>
-                    <span className="font-medium text-sm">{bond.targetName}</span>
+                    <span className="font-medium text-xs">{bond.targetName}</span> {/* Changed from text-sm to text-xs */}
                   </Label>
                 ))}
               </div>
