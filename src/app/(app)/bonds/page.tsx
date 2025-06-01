@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Share2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Share2, Search, ChevronLeft, ChevronRight, Filter as FilterIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog';
 import { IntroductionDialog } from '@/components/dialogs/introduction-dialog';
@@ -60,7 +62,7 @@ const generateInitialBondsData = (): Bond[] => [
 
 
 const MAX_FAMILY_BONDS = 25;
-const ITEMS_PER_PAGE = 8;
+const DEFAULT_ITEMS_PER_PAGE = 8;
 
 const getBondTypeDisplay = (bondType: BondType): string => {
   switch (bondType) {
@@ -173,8 +175,10 @@ export default function BondsPage() {
   const [selectedBondForSettings, setSelectedBondForSettings] = useState<Bond | null>(null);
   const [isIntroductionDialogOpen, setIsIntroductionDialogOpen] = useState(false);
   const [bondToIntroduceFrom, setBondToIntroduceFrom] = useState<Bond | null>(null);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
 
 
   useEffect(() => {
@@ -286,17 +290,25 @@ export default function BondsPage() {
 
   const filteredBonds = useMemo(() => {
     if (!bonds) return [];
-    setCurrentPage(1); // Reset to first page on new search
     return bonds.filter(bond =>
       bond.targetName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [bonds, searchTerm]);
 
-  const totalPages = Math.ceil(filteredBonds.length / ITEMS_PER_PAGE);
-  const paginatedBonds = filteredBonds.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredBonds.length / itemsPerPage);
+  const paginatedBonds = useMemo(() => {
+    return filteredBonds.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredBonds, currentPage, itemsPerPage]);
+  
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
+    setCurrentPage(1); 
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
   };
 
   const handleNextPage = () => {
@@ -342,16 +354,44 @@ export default function BondsPage() {
               <CardTitle className="tracking-normal">Current Bonds</CardTitle>
               <CardDescription>A list of your active and expired bonds. Toggle visibility in your Intercom feed.</CardDescription>
             </div>
-            <div className="relative w-full sm:w-auto sm:max-w-xs">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search bonds by name..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    className="pl-8 w-full"
-                />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <FilterIcon className="mr-2 h-4 w-4" /> Filter & View Options
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 space-y-4 p-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bond-search-input">Search by Name</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="bond-search-input"
+                        type="search"
+                        placeholder="Search bonds..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        className="pl-8 w-full"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="items-per-page-select">Items per Page</Label>
+                  <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+                    <SelectTrigger id="items-per-page-select" className="w-full">
+                      <SelectValue placeholder="Select items per page" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="8">8</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardHeader>
         <CardContent>
@@ -542,3 +582,6 @@ export default function BondsPage() {
     </div>
   );
 }
+
+
+    
