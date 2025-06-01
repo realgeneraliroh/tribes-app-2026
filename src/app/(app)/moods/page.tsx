@@ -61,15 +61,16 @@ export default function MoodsPage() {
       <section className="text-center py-12">
         <Card className="inline-block p-8 shadow-xl bg-gradient-to-r from-primary/10 via-background to-accent/10">
           <Sparkles className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-foreground mb-3 font-mono tracking-normal">Boost Your Tribe's Content</h2>
+          <h2 className="text-2xl font-semibold text-foreground mb-3 font-mono tracking-normal">Feature Your Tribe's Content</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Tribe founders can boost relevant threads to Mood Streams, increasing visibility and engagement.
+            Tribe founders can feature relevant threads to Mood Streams, increasing visibility and engagement.
           </p>
           <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
-            Learn More About Boosting
+            Learn More About Featuring
           </Button>
         </Card>
       </section>
     </div>
   );
 }
+
