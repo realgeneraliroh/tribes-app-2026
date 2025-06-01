@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
+import { cn } from '@/lib/utils';
 
 type BondType = "family" | "friend" | "professional" | "collaborator" | "follower" | "supporter";
 
@@ -40,6 +41,8 @@ const initialBondsData: Bond[] = [
   { id: "4", targetName: "Bob The Builder", targetType: "user", bondType: "professional", passkeyStatus: "expired", expiresAt: new Date(Date.now() - 86400000 * 2), lastRefreshedAt: new Date(Date.now() - 86400000 * 62), passkeyStrength: 0, showInIntercom: true },
   { id: "5", targetName: "Mom", targetType: "user", bondType: "family", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 10), passkeyStrength: 100, expiresAt: new Date(Date.now() + 86400000 * 360), showInIntercom: true },
   { id: "6", targetName: "Design Masters", targetType: "tribe", bondType: "professional", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(Date.now() - 86400000 * 180), passkeyStrength: 10, expiresAt: new Date(Date.now() + 86400000 * 185), showInIntercom: true },
+  { id: "7", targetName: "Project Collab", targetType: "tribe", bondType: "collaborator", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 5), passkeyStrength: 90, expiresAt: new Date(Date.now() + 86400000 * 25), showInIntercom: true },
+  { id: "8", targetName: "Art Patronage Inc.", targetType: "tribe", bondType: "supporter", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 15), passkeyStrength: 75, expiresAt: new Date(Date.now() + 86400000 * 350), showInIntercom: true },
 ];
 
 const MAX_FAMILY_BONDS = 25;
@@ -53,11 +56,27 @@ const getBondTypeDisplay = (bondType: BondType): string => {
     case "follower": return "Follower";
     case "supporter": return "Supporter";
     default:
-      // Fallback for any unexpected types, though TS should prevent this
       const exhaustiveCheck: never = bondType;
       return exhaustiveCheck;
   }
 };
+
+const getBondTypeBadgeClasses = (bondType: BondType): string => {
+  switch (bondType) {
+    case "family": return "border-transparent bg-pink-500 text-white hover:bg-pink-600";
+    case "friend": return "border-transparent bg-orange-500 text-white hover:bg-orange-600";
+    case "professional": return "border-transparent bg-sky-600 text-white hover:bg-sky-700";
+    case "collaborator": return "border-transparent bg-indigo-500 text-white hover:bg-indigo-600";
+    case "follower": return "border-transparent bg-teal-500 text-white hover:bg-teal-600";
+    case "supporter": return "border-transparent bg-emerald-500 text-white hover:bg-emerald-600";
+    default:
+      // This ensures exhaustiveness at compile time with the `never` type
+      const _exhaustiveCheck: never = bondType;
+      // Fallback for safety, though should not be reached if types are correct
+      return "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80";
+  }
+};
+
 
 export default function BondsPage() {
   const [bonds, setBonds] = useState<Bond[]>(initialBondsData);
@@ -131,7 +150,7 @@ export default function BondsPage() {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <HeartHandshake className="h-6 w-6 text-pink-500" />
-            <CardTitle>Family Bond Capacity</CardTitle>
+            <CardTitle className="tracking-normal">Family Bond Capacity</CardTitle>
           </div>
           <CardDescription>
             You have {familyBondsCount} out of {MAX_FAMILY_BONDS} family bonds currently active. Family bonds are for user-to-user connections.
@@ -144,7 +163,7 @@ export default function BondsPage() {
 
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle>Current Bonds</CardTitle>
+          <CardTitle className="tracking-normal">Current Bonds</CardTitle>
           <CardDescription>A list of your active and expired bonds. Toggle visibility in your Intercom feed.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -169,10 +188,7 @@ export default function BondsPage() {
                   </TableCell>
                   <TableCell className="font-medium">{bond.targetName}</TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={bond.bondType === "family" ? "default" : "secondary"} 
-                      className={bond.bondType === "family" ? "bg-pink-500 text-white hover:bg-pink-600" : ""}
-                    >
+                    <Badge className={getBondTypeBadgeClasses(bond.bondType)}>
                       {getBondTypeDisplay(bond.bondType)}
                     </Badge>
                   </TableCell>
@@ -243,4 +259,3 @@ export default function BondsPage() {
     </div>
   );
 }
-
