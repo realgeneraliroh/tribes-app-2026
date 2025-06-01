@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"; // Label might not be used directly in this version, but keeping for completeness
 import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,22 +28,22 @@ interface Bond {
   targetType: "user" | "tribe";
   bondType: BondType;
   passkeyStatus: "active" | "expires_soon" | "expired" | "needs_refresh";
-  expiresAt: Date; // Made non-optional as it's crucial for time calculation
+  expiresAt: Date;
   lastRefreshedAt: Date;
   showInIntercom?: boolean;
 }
 
 const initialBondsData: Bond[] = [
-  { id: "1", targetName: "AI Innovators Tribe", targetType: "tribe", bondType: "follower", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 30), expiresAt: new Date(Date.now() + 86400000 * 335), showInIntercom: true },
+  { id: "1", targetName: "AI Innovators Tribe", targetType: "tribe", bondType: "follower", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 30), expiresAt: new Date(Date.now() + 86400000 * (365-30)), showInIntercom: true },
   { id: "2", targetName: "Alice Wonderland", targetType: "user", bondType: "friend", passkeyStatus: "expires_soon", expiresAt: new Date(Date.now() + 86400000 * 5), lastRefreshedAt: new Date(Date.now() - 86400000 * 25), showInIntercom: true },
   { id: "3", targetName: "Weekend Hikers", targetType: "tribe", bondType: "follower", passkeyStatus: "active", expiresAt: new Date(Date.now() + 86400000 * 80), lastRefreshedAt: new Date(Date.now() - 86400000 * 10), showInIntercom: false },
   { id: "4", targetName: "Bob The Builder", targetType: "user", bondType: "professional", passkeyStatus: "expired", expiresAt: new Date(Date.now() - 86400000 * 2), lastRefreshedAt: new Date(Date.now() - 86400000 * 62), showInIntercom: true },
-  { id: "5", targetName: "Mom", targetType: "user", bondType: "family", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 10), expiresAt: new Date(Date.now() + 86400000 * 355), showInIntercom: true }, // Adjusted expiry from 360 to 355 to make total duration 365
-  { id: "6", targetName: "Design Masters", targetType: "tribe", bondType: "professional", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(Date.now() - 86400000 * 180), expiresAt: new Date(Date.now() + 86400000 * 185), showInIntercom: true },
-  { id: "7", targetName: "Project Collab", targetType: "tribe", bondType: "collaborator", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 5), expiresAt: new Date(Date.now() + 86400000 * 25), showInIntercom: true },
-  { id: "8", targetName: "Art Patronage Inc.", targetType: "tribe", bondType: "supporter", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 15), expiresAt: new Date(Date.now() + 86400000 * 350), showInIntercom: true },
-  { id: "9", targetName: "Book Club Collective", targetType: "tribe", bondType: "follower", passkeyStatus: "expires_soon", expiresAt: new Date(Date.now() + 86400000 * 12), lastRefreshedAt: new Date(Date.now() - 86400000 * 18), showInIntercom: true },
-  { id: "10", targetName: "John Doe (Dev)", targetType: "user", bondType: "collaborator", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(Date.now() - 86400000 * 90), expiresAt: new Date(Date.now() + 86400000 * 275), showInIntercom: false }, // Adjusted expiry
+  { id: "5", targetName: "Mom", targetType: "user", bondType: "family", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 10), expiresAt: new Date(Date.now() + 86400000 * (365-10)), showInIntercom: true },
+  { id: "6", targetName: "Design Masters", targetType: "tribe", bondType: "professional", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(Date.now() - 86400000 * 180), expiresAt: new Date(Date.now() + 86400000 * (365-180)), showInIntercom: true }, // Approx 50%
+  { id: "7", targetName: "Project Collab", targetType: "tribe", bondType: "collaborator", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 15), expiresAt: new Date(Date.now() + 86400000 * 15), showInIntercom: true }, // Should be 50% for a 30-day cycle
+  { id: "8", targetName: "Art Patronage Inc.", targetType: "tribe", bondType: "supporter", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 15), expiresAt: new Date(Date.now() + 86400000 * (365-15)), showInIntercom: true },
+  { id: "9", targetName: "Book Club Collective", targetType: "tribe", bondType: "follower", passkeyStatus: "expires_soon", expiresAt: new Date(Date.now() + 86400000 * 12), lastRefreshedAt: new Date(Date.now() - 86400000 * 18), showInIntercom: true }, // 40% for a 30-day cycle
+  { id: "10", targetName: "John Doe (Dev)", targetType: "user", bondType: "collaborator", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(Date.now() - 86400000 * 90), expiresAt: new Date(Date.now() + 86400000 * (365-90)), showInIntercom: false },
 ];
 
 
@@ -122,7 +122,7 @@ export default function BondsPage() {
 
   const familyBondsCount = bonds.filter(b => b.bondType === "family").length;
 
-  const formatDate = (date?: Date) => {
+  const formatDate = (date: Date) => {
     if (!date) return "N/A";
     return date.toLocaleDateString();
   };
@@ -164,18 +164,22 @@ export default function BondsPage() {
     ));
   };
 
-  const calculateProgress = (bond: Bond) => {
-    if (!bond.expiresAt || !bond.lastRefreshedAt) return 0;
+  const calculateProgress = (bond: Bond): number => {
     if (bond.passkeyStatus === 'expired') return 0;
+    // Ensure dates are valid before proceeding
+    if (!(bond.expiresAt instanceof Date) || !(bond.lastRefreshedAt instanceof Date) || isNaN(bond.expiresAt.getTime()) || isNaN(bond.lastRefreshedAt.getTime())) {
+        return 0; 
+    }
 
     const now = Date.now();
     const expiresAtTime = bond.expiresAt.getTime();
     const lastRefreshedAtTime = bond.lastRefreshedAt.getTime();
 
-    if (expiresAtTime <= now) return 0; // Already expired
+    if (expiresAtTime <= now) return 0; 
 
     const totalPlannedDuration = expiresAtTime - lastRefreshedAtTime;
-    if (totalPlannedDuration <= 0) { // Should not happen with good data
+    
+    if (totalPlannedDuration <= 0) {
         return expiresAtTime > now ? 100 : 0;
     }
     
@@ -255,6 +259,8 @@ export default function BondsPage() {
                   <TableCell className="hidden lg:table-cell text-muted-foreground">
                     {bond.passkeyStatus === "expired" ? `Expired: ${formatDate(bond.expiresAt)}` : 
                      `Expires: ${formatDate(bond.expiresAt)}`}
+                     <br />
+                     <span className="text-xs">Refreshed: {formatDate(bond.lastRefreshedAt)}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -304,11 +310,10 @@ export default function BondsPage() {
         </CardContent>
          <CardFooter>
             <p className="text-xs text-muted-foreground">
-                The "Strength" bar visualizes the time remaining until the bond expires, based on its last refresh. Non-family bonds typically require refreshing every 30 days. Family bonds offer extended validity. Use the <Rss className="inline h-3 w-3 text-accent"/> toggle to control which bond updates appear on your Intercom feed. Hover over status icons for details.
+                The "Strength" bar visualizes the percentage of time remaining until the bond expires, based on its last refresh date and total validity period (typically 30 days for non-family bonds, 365 days for family bonds). Use the <Rss className="inline h-3 w-3 text-accent"/> toggle to control which bond updates appear on your Intercom feed. Hover over status icons for details.
             </p>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
