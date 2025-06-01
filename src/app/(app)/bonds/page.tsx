@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Bell, Ban, MessageSquare, Settings } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
+import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog'; // Import the new dialog
 
 type BondType = "family" | "friend" | "professional" | "collaborator" | "follower" | "supporter";
 
-interface Bond {
+export interface Bond { // Export Bond interface to be potentially used by other components
   id: string;
   targetName: string;
   targetType: "user" | "tribe";
@@ -157,6 +158,8 @@ const ConnectVibeIcon: React.FC<{ bond: Bond }> = ({ bond }) => {
 
 export default function BondsPage() {
   const [bonds, setBonds] = useState<Bond[]>(initialBondsData);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [selectedBondForSettings, setSelectedBondForSettings] = useState<Bond | null>(null);
 
   const familyBondsCount = bonds.filter(b => b.bondType === "family").length;
 
@@ -212,6 +215,11 @@ export default function BondsPage() {
   const handleStartChat = (bondId: string, targetName: string) => {
     console.log(`Start chat action initiated for bond ID: ${bondId}, Target: ${targetName}`);
     alert(`Simulating start chat with ${targetName}. In a real app, this would navigate to the chat interface.`);
+  };
+  
+  const handleOpenBondSettings = (bond: Bond) => {
+    setSelectedBondForSettings(bond);
+    setIsSettingsModalOpen(true);
   };
 
   const calculateTimeProgress = (bond: Bond): number => {
@@ -342,10 +350,7 @@ export default function BondsPage() {
                         >
                           <MessageSquare className="mr-2 h-4 w-4" /> Start Chat
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => console.log(`Notification settings for bond ${bond.id}`)}>
-                            <Bell className="mr-2 h-4 w-4" /> Notification Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => console.log(`Accessing settings for bond ${bond.id}`)}>
+                        <DropdownMenuItem onClick={() => handleOpenBondSettings(bond)}>
                             <Settings className="mr-2 h-4 w-4" /> Bond Settings
                         </DropdownMenuItem>
                         <DropdownMenuItem 
@@ -385,7 +390,13 @@ export default function BondsPage() {
             </p>
         </CardFooter>
       </Card>
+      {selectedBondForSettings && (
+        <BondSettingsDialog
+          isOpen={isSettingsModalOpen}
+          onOpenChange={setIsSettingsModalOpen}
+          bond={selectedBondForSettings}
+        />
+      )}
     </div>
   );
 }
-
