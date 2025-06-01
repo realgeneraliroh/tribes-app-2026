@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Bell } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,11 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog'; // Import the new dialog
+import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog';
 
 type BondType = "family" | "friend" | "professional" | "collaborator" | "follower" | "supporter";
 
-export interface Bond { // Export Bond interface to be potentially used by other components
+export interface Bond {
   id: string;
   targetName: string;
   targetType: "user" | "tribe";
@@ -35,7 +35,8 @@ export interface Bond { // Export Bond interface to be potentially used by other
   showInIntercom?: boolean;
 }
 
-const initialBondsData: Bond[] = [
+// Function to generate initial bonds data to ensure Date.now() is client-side
+const generateInitialBondsData = (): Bond[] => [
   { id: "1", targetName: "AI Innovators Tribe", targetType: "tribe", bondType: "follower", passkeyStatus: "active", lastRefreshedAt: new Date(Date.now() - 86400000 * 30), expiresAt: new Date(Date.now() + 86400000 * (30)), reconnectsCount: 2, showInIntercom: true },
   { id: "2", targetName: "Alice Wonderland", targetType: "user", bondType: "friend", passkeyStatus: "expires_soon", expiresAt: new Date(Date.now() + 86400000 * 5), lastRefreshedAt: new Date(Date.now() - 86400000 * 25), reconnectsCount: 1, showInIntercom: true },
   { id: "3", targetName: "Weekend Hikers", targetType: "tribe", bondType: "follower", passkeyStatus: "active", expiresAt: new Date(Date.now() + 86400000 * 80), lastRefreshedAt: new Date(Date.now() - 86400000 * 10), reconnectsCount: 0, showInIntercom: false },
@@ -157,11 +158,16 @@ const ConnectVibeIcon: React.FC<{ bond: Bond }> = ({ bond }) => {
 
 
 export default function BondsPage() {
-  const [bonds, setBonds] = useState<Bond[]>(initialBondsData);
+  const [bonds, setBonds] = useState<Bond[] | null>(null); // Initialize with null
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedBondForSettings, setSelectedBondForSettings] = useState<Bond | null>(null);
 
-  const familyBondsCount = bonds.filter(b => b.bondType === "family").length;
+  useEffect(() => {
+    // Generate and set data on the client side after mount
+    setBonds(generateInitialBondsData());
+  }, []);
+
+  const familyBondsCount = bonds ? bonds.filter(b => b.bondType === "family").length : 0;
 
   const formatDate = (date: Date) => {
     if (!date) return "N/A";
@@ -169,7 +175,7 @@ export default function BondsPage() {
   };
   
   const handleRefreshBond = (bondId: string) => {
-    setBonds(prevBonds => prevBonds.map(bond => 
+    setBonds(prevBonds => prevBonds ? prevBonds.map(bond => 
       bond.id === bondId ? { 
         ...bond, 
         passkeyStatus: "active", 
@@ -177,11 +183,11 @@ export default function BondsPage() {
         expiresAt: new Date(Date.now() + (bond.bondType === 'family' ? 365 : 30) * 86400000),
         reconnectsCount: (bond.reconnectsCount || 0) + 1,
       } : bond
-    ));
+    ) : null);
   };
 
   const handleRevokeBond = (bondId: string) => {
-    setBonds(prevBonds => prevBonds.filter(bond => bond.id !== bondId));
+    setBonds(prevBonds => prevBonds ? prevBonds.filter(bond => bond.id !== bondId) : null);
   };
   
   const handleUpgradeToFamilyBond = (bondId: string) => {
@@ -189,7 +195,7 @@ export default function BondsPage() {
       alert("Maximum number of family bonds reached.");
       return;
     }
-    setBonds(prevBonds => prevBonds.map(bond => 
+    setBonds(prevBonds => prevBonds ? prevBonds.map(bond => 
       (bond.id === bondId && bond.targetType === 'user') ? { 
         ...bond, 
         bondType: "family", 
@@ -198,13 +204,13 @@ export default function BondsPage() {
         expiresAt: new Date(Date.now() + 365 * 86400000),
         reconnectsCount: (bond.reconnectsCount || 0) + 1, 
       } : bond
-    ));
+    ) : null);
   };
 
   const handleToggleShowInIntercom = (bondId: string, checked: boolean) => {
-    setBonds(prevBonds => prevBonds.map(bond =>
+    setBonds(prevBonds => prevBonds ? prevBonds.map(bond =>
       bond.id === bondId ? { ...bond, showInIntercom: checked } : bond
-    ));
+    ) : null);
   };
 
   const handleBlockBond = (bondId: string, targetName: string) => {
@@ -280,109 +286,113 @@ export default function BondsPage() {
           <CardDescription>A list of your active and expired bonds. Toggle visibility in your Intercom feed.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px] hidden sm:table-cell"></TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-center">Passkey Status</TableHead>
-                <TableHead className="text-center hidden md:table-cell">Connect Vibe</TableHead>
-                <TableHead className="hidden lg:table-cell">Expires</TableHead>
-                <TableHead>Intercom Feed</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bonds.map((bond) => {
-                const timeBasedProgress = calculateTimeProgress(bond);
-                const canUpgradeToFamily = bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS;
-                const isUserBond = bond.targetType === 'user';
-                return (
-                <TableRow key={bond.id} className="hover:bg-muted/50">
-                  <TableCell className="hidden sm:table-cell">
-                    {bond.targetType === 'user' ? <User className="h-6 w-6 text-muted-foreground" /> : <Users className="h-6 w-6 text-muted-foreground" />}
-                  </TableCell>
-                  <TableCell className="font-medium">{bond.targetName}</TableCell>
-                  <TableCell>
-                    <Badge className={cn(getBondTypeBadgeClasses(bond.bondType), "whitespace-nowrap")}>
-                      {getBondTypeDisplay(bond.bondType)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <PasskeyStatusIcon status={bond.passkeyStatus} />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
-                     <ConnectVibeIcon bond={bond} />
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-muted-foreground">
-                    {bond.passkeyStatus === "expired" ? `Expired: ${formatDate(bond.expiresAt)}` : 
-                     `Expires: ${formatDate(bond.expiresAt)}`}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id={`intercom-switch-${bond.id}`}
-                        checked={!!bond.showInIntercom}
-                        onCheckedChange={(checked) => handleToggleShowInIntercom(bond.id, checked)}
-                        aria-label="Show in Intercom feed"
-                      />
-                       <Rss className={`h-4 w-4 ${bond.showInIntercom ? 'text-accent' : 'text-muted-foreground'}`} />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                            onClick={() => handleRefreshBond(bond.id)} 
-                            disabled={bond.passkeyStatus === 'active' && timeBasedProgress > 90 && bond.bondType !== 'family'}
-                        >
-                          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={() => handleStartChat(bond.id, bond.targetName)}
-                            disabled={!isUserBond}
-                        >
-                          <MessageSquare className="mr-2 h-4 w-4" /> Start Chat
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenBondSettings(bond)}>
-                            <Settings className="mr-2 h-4 w-4" /> Bond Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={() => { if(canUpgradeToFamily) handleUpgradeToFamilyBond(bond.id);}}
-                            disabled={!canUpgradeToFamily}
-                        >
-                            <HeartHandshake className="mr-2 h-4 w-4 text-pink-500" /> Upgrade to Family
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleBlockBond(bond.id, bond.targetName)} 
-                          className="text-destructive hover:!bg-destructive/10 hover:!text-destructive"
-                        >
-                          <Ban className="mr-2 h-4 w-4" /> Block
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleRevokeBond(bond.id)} className="text-destructive hover:!bg-destructive/10 hover:!text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" /> Revoke Bond
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )})}
-              {bonds.length === 0 && (
+          {!bonds ? (
+            <p className="text-center text-muted-foreground py-8">Loading bonds...</p>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        You have no active bonds. Start connecting with users or tribes!
-                    </TableCell>
+                  <TableHead className="w-[50px] hidden sm:table-cell"></TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-center">Passkey Status</TableHead>
+                  <TableHead className="text-center hidden md:table-cell">Connect Vibe</TableHead>
+                  <TableHead className="hidden lg:table-cell">Expires</TableHead>
+                  <TableHead>Intercom Feed</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {bonds.map((bond) => {
+                  const timeBasedProgress = calculateTimeProgress(bond);
+                  const canUpgradeToFamily = bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS;
+                  const isUserBond = bond.targetType === 'user';
+                  return (
+                  <TableRow key={bond.id} className="hover:bg-muted/50">
+                    <TableCell className="hidden sm:table-cell">
+                      {bond.targetType === 'user' ? <User className="h-6 w-6 text-muted-foreground" /> : <Users className="h-6 w-6 text-muted-foreground" />}
+                    </TableCell>
+                    <TableCell className="font-medium">{bond.targetName}</TableCell>
+                    <TableCell>
+                      <Badge className={cn(getBondTypeBadgeClasses(bond.bondType), "whitespace-nowrap")}>
+                        {getBondTypeDisplay(bond.bondType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <PasskeyStatusIcon status={bond.passkeyStatus} />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-center">
+                       <ConnectVibeIcon bond={bond} />
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
+                      {bond.passkeyStatus === "expired" ? `Expired: ${formatDate(bond.expiresAt)}` : 
+                       `Expires: ${formatDate(bond.expiresAt)}`}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id={`intercom-switch-${bond.id}`}
+                          checked={!!bond.showInIntercom}
+                          onCheckedChange={(checked) => handleToggleShowInIntercom(bond.id, checked)}
+                          aria-label="Show in Intercom feed"
+                        />
+                         <Rss className={`h-4 w-4 ${bond.showInIntercom ? 'text-accent' : 'text-muted-foreground'}`} />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                              onClick={() => handleRefreshBond(bond.id)} 
+                              disabled={bond.passkeyStatus === 'active' && timeBasedProgress > 90 && bond.bondType !== 'family'}
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                              onClick={() => handleStartChat(bond.id, bond.targetName)}
+                              disabled={!isUserBond}
+                          >
+                            <MessageSquare className="mr-2 h-4 w-4" /> Start Chat
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenBondSettings(bond)}>
+                              <Settings className="mr-2 h-4 w-4" /> Bond Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                              onClick={() => { if(canUpgradeToFamily) handleUpgradeToFamilyBond(bond.id);}}
+                              disabled={!canUpgradeToFamily}
+                          >
+                              <HeartHandshake className="mr-2 h-4 w-4 text-pink-500" /> Upgrade to Family
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleBlockBond(bond.id, bond.targetName)} 
+                            className="text-destructive hover:!bg-destructive/10 hover:!text-destructive"
+                          >
+                            <Ban className="mr-2 h-4 w-4" /> Block
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRevokeBond(bond.id)} className="text-destructive hover:!bg-destructive/10 hover:!text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Revoke Bond
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )})}
+                {bonds.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          You have no active bonds. Start connecting with users or tribes!
+                      </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
          <CardFooter>
             <p className="text-xs text-muted-foreground">
@@ -400,3 +410,5 @@ export default function BondsPage() {
     </div>
   );
 }
+
+    
