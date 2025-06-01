@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Bell, Ban } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Bell, Ban, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -206,11 +206,12 @@ export default function BondsPage() {
 
   const handleBlockBond = (bondId: string, targetName: string) => {
     console.log(`Block action initiated for bond ID: ${bondId}, Target: ${targetName}`);
-    // Here you would typically open a confirmation dialog and then
-    // call an API to block the user/tribe.
-    // For now, we'll just log it.
-    // You might want to remove the bond from the list or visually indicate it's blocked.
     alert(`Simulating block for ${targetName}. In a real app, this bond might be hidden or marked as blocked.`);
+  };
+
+  const handleStartChat = (bondId: string, targetName: string) => {
+    console.log(`Start chat action initiated for bond ID: ${bondId}, Target: ${targetName}`);
+    alert(`Simulating start chat with ${targetName}. In a real app, this would navigate to the chat interface.`);
   };
 
   const calculateTimeProgress = (bond: Bond): number => {
@@ -288,6 +289,7 @@ export default function BondsPage() {
               {bonds.map((bond) => {
                 const timeBasedProgress = calculateTimeProgress(bond);
                 const canUpgradeToFamily = bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS;
+                const isUserBond = bond.targetType === 'user';
                 return (
                 <TableRow key={bond.id} className="hover:bg-muted/50">
                   <TableCell className="hidden sm:table-cell">
@@ -334,6 +336,12 @@ export default function BondsPage() {
                         >
                           <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            onClick={() => handleStartChat(bond.id, bond.targetName)}
+                            disabled={!isUserBond}
+                        >
+                          <MessageSquare className="mr-2 h-4 w-4" /> Start Chat
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => console.log(`Notification settings for bond ${bond.id}`)}>
                             <Bell className="mr-2 h-4 w-4" /> Notification Settings
                         </DropdownMenuItem>
@@ -377,6 +385,3 @@ export default function BondsPage() {
     </div>
   );
 }
-
-
-    
