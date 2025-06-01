@@ -20,6 +20,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog';
+import { IntroductionDialog } from '@/components/dialogs/introduction-dialog';
 
 type BondType = "family" | "friend" | "professional" | "collaborator" | "follower" | "supporter";
 type FormationMethod = "rfid_tap" | "digital_introduction" | "virtual_request";
@@ -163,6 +164,9 @@ export default function BondsPage() {
   const [bonds, setBonds] = useState<Bond[] | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedBondForSettings, setSelectedBondForSettings] = useState<Bond | null>(null);
+  const [isIntroductionDialogOpen, setIsIntroductionDialogOpen] = useState(false);
+  const [bondToIntroduceFrom, setBondToIntroduceFrom] = useState<Bond | null>(null);
+
 
   useEffect(() => {
     setBonds(generateInitialBondsData());
@@ -234,8 +238,17 @@ export default function BondsPage() {
   };
   
   const handleInitiateIntroduction = (bond: Bond) => {
-    console.log(`Introduction initiated for ${bond.targetName}. User needs to select another bond to introduce them to.`);
-    alert(`Simulating introduction for ${bond.targetName}. Next step would be to select another of your bonds.`);
+    setBondToIntroduceFrom(bond);
+    setIsIntroductionDialogOpen(true);
+  };
+
+  const handleConfirmIntroduction = (bondToIntroduceTo: Bond) => {
+    if (bondToIntroduceFrom) {
+        console.log(`User confirmed introduction: ${bondToIntroduceFrom.targetName} to ${bondToIntroduceTo.targetName}`);
+        alert(`Simulating introduction of ${bondToIntroduceFrom.targetName} to ${bondToIntroduceTo.targetName}.`);
+    }
+    setIsIntroductionDialogOpen(false);
+    setBondToIntroduceFrom(null);
   };
 
   const calculateTimeProgress = (bond: Bond): number => {
@@ -447,6 +460,15 @@ export default function BondsPage() {
           onOpenChange={setIsSettingsModalOpen}
           bond={selectedBondForSettings}
           onSave={handleSaveBondSettings}
+        />
+      )}
+      {bondToIntroduceFrom && bonds && (
+         <IntroductionDialog
+            isOpen={isIntroductionDialogOpen}
+            onOpenChange={setIsIntroductionDialogOpen}
+            introducingBond={bondToIntroduceFrom}
+            allBonds={bonds}
+            onConfirmIntroduction={handleConfirmIntroduction}
         />
       )}
     </div>
