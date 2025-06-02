@@ -16,6 +16,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 type FormationMethod = "rfid_tap" | "digital_introduction" | "virtual_request";
+type KeyType = "standard" | "event_promo" | "event_attendee";
+type AccessTier = "spectator" | "attendee" | "vip";
 
 // Minimal Bond interface for this dialog
 export interface Bond {
@@ -26,6 +28,9 @@ export interface Bond {
   formationMethod: FormationMethod;
   showInIntercom?: boolean;
   allowChatInitiation?: boolean;
+  keyType?: KeyType;
+  eventId?: string;
+  accessTier?: AccessTier;
 }
 
 interface BondSettingsDialogProps {
@@ -55,7 +60,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
   useEffect(() => {
     if (isOpen && bond) {
       setNotificationsEnabled(bond.showInIntercom ?? true);
-      setAllowChat(bond.allowChatInitiation ?? true);
+      setAllowChat(bond.allowChatInitiation ?? (bond.targetType === 'user' && bond.keyType === 'standard'));
     }
   }, [isOpen, bond]);
 
@@ -89,6 +94,11 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
         <DialogTitleComponent>Bond Settings: <span className="italic font-semibold">{bond.targetName}</span></DialogTitleComponent>
         <DialogDescriptionComponent>
           Manage preferences for your bond with <span className="italic font-semibold">{bond.targetName}</span> ({bond.targetType === 'user' ? 'User' : 'Tribe'} - {getBondTypeDisplay(bond.bondType)}).
+          {bond.keyType && bond.keyType !== 'standard' && (
+            <span className="block mt-1 text-xs text-purple-600">
+              This is an '{bond.keyType.replace('_', ' ')}' key {bond.eventId ? `for event ${bond.eventId}` : ''} with '{bond.accessTier}' access.
+            </span>
+          )}
         </DialogDescriptionComponent>
       </DialogHeaderComponent>
 
@@ -124,11 +134,13 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
               checked={allowChat}
               onCheckedChange={setAllowChat}
               aria-label={`Toggle allowing ${bond.targetName} to initiate chat with you`}
-              disabled={bond.targetType === 'tribe'}
+              disabled={bond.targetType === 'tribe' || bond.keyType?.startsWith('event_')}
             />
           </div>
           <p className="text-xs text-muted-foreground mt-1 px-1">
-            Controls if <span className="italic font-semibold">{bond.targetName}</span> ({bond.targetType}) can start new direct conversations with you. This setting only applies to user-to-user bonds.
+            Controls if <span className="italic font-semibold">{bond.targetName}</span> ({bond.targetType}) can start new direct conversations with you.
+            {bond.targetType === 'tribe' && " Tribes cannot initiate direct chats."}
+            {bond.keyType?.startsWith('event_') && " Event pass holders typically cannot initiate direct chats."}
           </p>
         </fieldset>
       </div>
@@ -163,5 +175,3 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
     </RootComponent>
   );
 }
-
-    
