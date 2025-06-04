@@ -153,15 +153,13 @@ const ConnectVibeIcon: React.FC<{ bond: Bond }> = ({ bond }) => {
     iconElement = <GhostIcon className="h-6 w-6 text-muted-foreground" />;
     tooltipText = (bond.keyType === "event_promo" || bond.keyType === "event_attendee") ? "Event Pass Expired" : "Bond Expired";
   } else if (bond.keyType === "event_promo" || bond.keyType === "event_attendee") {
-    if (bond.accessTier === "vip") {
-      iconElement = <Star className="h-6 w-6 text-yellow-500 fill-yellow-500" />;
-      tooltipText = "VIP Event Access";
-    } else if (bond.passkeyStatus === 'expires_soon') {
+    // Star is now a separate badge. Default to PartyPopper logic for VIPs too.
+    if (bond.passkeyStatus === 'expires_soon') {
       iconElement = <PartyPopper className="h-6 w-6 text-yellow-500" />;
-      tooltipText = "Event Pass Expires Soon";
-    } else {
+      tooltipText = `Event Pass Expires Soon${bond.accessTier === 'vip' ? ' (VIP)' : ''}`;
+    } else { // Active or other statuses that aren't 'expired' or 'expires_soon'
       iconElement = <PartyPopper className="h-6 w-6 text-purple-500" />;
-      tooltipText = "Event Pass Active";
+      tooltipText = `Event Pass Active${bond.accessTier === 'vip' ? ' (VIP)' : ''}`;
     }
   } else if (bond.bondType === "family") {
     iconElement = <Heart className="h-6 w-6 text-pink-500 fill-pink-500" />;
@@ -544,6 +542,7 @@ export default function BondsPage() {
                 <TableRow>
                   <SortableHeaderCell columnKey="targetName" title="Target" />
                   <SortableHeaderCell columnKey="bondType" title="Type" />
+                  <TableHead className="hidden md:table-cell w-[80px]"></TableHead> {/* New Unlabeled Tier Column */}
                   <SortableHeaderCell columnKey="passkeyStatus" title="Passkey Status" className="text-center"/>
                   <TableHead className="text-center hidden md:table-cell">Connect Vibe</TableHead>
                   <SortableHeaderCell columnKey="expiresAt" title="Expires" className="hidden lg:table-cell"/>
@@ -568,8 +567,6 @@ export default function BondsPage() {
                         </span>
                         <span className="flex-grow min-w-0">
                           {bond.targetName}
-                          {bond.keyType === 'event_attendee' && <Badge variant="outline" className="ml-2 border-orange-500 text-orange-500 bg-orange-500/10 text-xs">Attendee</Badge>}
-                          {bond.accessTier === 'vip' && <Badge variant="outline" className="ml-2 border-yellow-400 text-yellow-500 bg-yellow-500/10 text-xs flex items-center"><Star className="h-3 w-3 mr-1 fill-current"/>VIP</Badge>}
                         </span>
                       </div>
                     </TableCell>
@@ -577,6 +574,18 @@ export default function BondsPage() {
                       <Badge className={cn(getBondTypeBadgeClasses(bond), "whitespace-nowrap")}>
                         {getBondTypeDisplay(bond)}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell"> {/* New Tier Cell */}
+                      <div className="flex flex-col items-start gap-1">
+                        {bond.keyType === 'event_attendee' && (
+                          <Badge variant="outline" className="border-orange-500 text-orange-500 bg-orange-500/10 text-xs whitespace-nowrap">Attendee</Badge>
+                        )}
+                        {bond.accessTier === 'vip' && (
+                          <Badge variant="outline" className="border-yellow-400 text-yellow-500 bg-yellow-500/10 text-xs flex items-center whitespace-nowrap">
+                            <Star className="h-3 w-3 mr-1 fill-current"/>VIP
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <PasskeyStatusIcon status={bond.passkeyStatus} />
@@ -741,3 +750,4 @@ export default function BondsPage() {
     </div>
   );
 }
+
