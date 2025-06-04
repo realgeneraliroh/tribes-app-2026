@@ -216,7 +216,7 @@ export default function TribeDetailPage() {
             <Badge variant={tribe.isPublic ? "secondary" : "destructive"} className="text-xs py-1 px-2 backdrop-blur-sm bg-black/30 text-white border-white/50">
               {tribe.isPublic ? "Public Tribe" : "Private Tribe"}
             </Badge>
-            <div className="flex items-center text-xs text-gray-200 drop-shadow-sm">
+            <div className="flex items-center text-xs text-white drop-shadow-md">
               <Users className="h-4 w-4 mr-1.5" /> {tribe.members} members
             </div>
           </div>
