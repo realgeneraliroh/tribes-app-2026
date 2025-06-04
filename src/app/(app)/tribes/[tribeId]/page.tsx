@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
@@ -202,9 +202,13 @@ const EventHighlightCard: React.FC<{ event: Event }> = ({ event }) => {
             />
           </div>
         )}
-        <div className="flex items-center text-muted-foreground mb-2">
+        <div className="flex items-center text-muted-foreground mb-1">
           <CalendarDays className="h-4 w-4 mr-2 text-primary" />
           <span>{format(event.eventDate, "MMM dd, yyyy 'at' p")}</span>
+        </div>
+        <div className="flex items-center text-muted-foreground mb-2">
+          <MapPin className="h-4 w-4 mr-2 text-primary" />
+          <span>{event.locationName}{event.locationCityRegion && event.locationCityRegion.toLowerCase() !== "online" ? `, ${event.locationCityRegion}` : ''}</span>
         </div>
         <p className="text-muted-foreground line-clamp-2">
           {event.description}
@@ -401,4 +405,3 @@ export default function TribeDetailPage() {
     </div>
   );
 }
-

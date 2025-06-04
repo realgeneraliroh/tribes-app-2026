@@ -18,8 +18,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Image as ImageIcon, Globe, Lock, Sparkles, CalendarPlus } from "lucide-react";
-import { generateEventDescription } from "@/ai/flows/event-description-generator"; // To be created
+import { CalendarIcon, Image as ImageIcon, Globe, Lock, Sparkles, CalendarPlus, MapPin } from "lucide-react";
+import { generateEventDescription } from "@/ai/flows/event-description-generator";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -28,7 +28,9 @@ const eventCreateFormSchema = z.object({
   keywords: z.string().min(3, { message: "Please provide some keywords for your event (e.g., Live Music, Tech Workshop)."}),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }).max(1000, { message: "Description must not exceed 1000 characters." }),
   eventDate: z.date({ required_error: "An event date is required." }),
-  associatedTribe: z.string().min(1, { message: "Associated tribe is required."}), // Simple text input for now
+  associatedTribe: z.string().min(1, { message: "Associated tribe is required."}), 
+  locationName: z.string().min(1, {message: "Please provide a venue name or general location (e.g., Downtown Park, Online)."}),
+  locationCityRegion: z.string().min(1, {message: "Please provide the city and region (e.g., San Francisco, CA)."}),
   coverImage: z.instanceof(File).optional().refine(file => !file || file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`),
   isPublic: z.boolean().default(true),
 });
@@ -48,8 +50,9 @@ export default function CreateEventPage() {
       name: "",
       keywords: "",
       description: "",
-      // eventDate: new Date(), // Set a default or leave undefined
       associatedTribe: "",
+      locationName: "",
+      locationCityRegion: "",
       isPublic: true,
     },
   });
@@ -72,19 +75,37 @@ export default function CreateEventPage() {
   async function handleGenerateDescription() {
     const eventName = form.getValues("name");
     const keywords = form.getValues("keywords");
+    const locationName = form.getValues("locationName");
+    const locationCityRegion = form.getValues("locationCityRegion");
     
+    let hasError = false;
     if (!eventName) {
       form.setError("name", { type: "manual", message: "Please enter an event name first." });
-      return;
+      hasError = true;
     }
     if (!keywords) {
       form.setError("keywords", { type: "manual", message: "Please enter keywords to help generate a description." });
-      return;
+      hasError = true;
     }
+    if (!locationName) {
+      form.setError("locationName", {type: "manual", message: "Please provide a location name for better context."});
+      hasError = true;
+    }
+     if (!locationCityRegion) {
+      form.setError("locationCityRegion", {type: "manual", message: "Please provide a city/region for better context."});
+      hasError = true;
+    }
+
+    if (hasError) return;
 
     setIsAiGenerating(true);
     try {
-      const result = await generateEventDescription({ name: eventName, keywords });
+      const result = await generateEventDescription({ 
+        name: eventName, 
+        keywords,
+        locationName,
+        locationCityRegion 
+      });
       form.setValue("description", result.description);
       form.clearErrors("description");
     } catch (error) {
@@ -154,6 +175,38 @@ export default function CreateEventPage() {
                   </FormItem>
                 )}
               />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="locationName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg flex items-center"><MapPin className="h-4 w-4 mr-2 text-muted-foreground"/>Venue/Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., The Grand Ballroom, Online" {...field} className="text-base"/>
+                      </FormControl>
+                      <FormDescription>Name of the venue or type of location.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="locationCityRegion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-lg">City/Region</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., San Francisco, CA" {...field} className="text-base"/>
+                      </FormControl>
+                      <FormDescription>City and State/Region of the event.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
 
               <FormField
                 control={form.control}
@@ -241,7 +294,7 @@ export default function CreateEventPage() {
               <FormField
                 control={form.control}
                 name="coverImage"
-                render={({ field }) => ( // field is not directly used for value, onChange is handled by handleImageChange
+                render={({ field }) => ( 
                   <FormItem>
                     <FormLabel className="text-lg">Event Cover Image (Optional)</FormLabel>
                     <FormControl>
@@ -306,5 +359,3 @@ export default function CreateEventPage() {
     </div>
   );
 }
-
-    

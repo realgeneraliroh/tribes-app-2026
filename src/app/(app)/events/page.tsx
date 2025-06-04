@@ -9,8 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Search, PlusCircle, ArrowRight, Globe, Lock, Users } from "lucide-react";
-import { sampleEventsData, type Event } from './[eventId]/page'; // Import from detail page
+import { CalendarDays, Search, PlusCircle, ArrowRight, Globe, Lock, Users, MapPin } from "lucide-react";
+import { sampleEventsData, type Event } from './[eventId]/page'; 
 import { cn } from '@/lib/utils';
 
 const EventCard: React.FC<{ event: Event }> = ({ event }) => {
@@ -33,7 +33,7 @@ const EventCard: React.FC<{ event: Event }> = ({ event }) => {
           </div>
         )}
         {!event.coverImage && (
-            <div className="h-40 w-full bg-muted flex items-center justify-center">
+            <div className="h-40 w-full bg-muted flex items-center justify-center relative">
                 <CalendarDays className="h-16 w-16 text-muted-foreground opacity-50" />
                  <Badge variant={event.isPublic ? "secondary" : "destructive"} className="absolute top-2 right-2 text-xs py-1 px-2">
                     {event.isPublic ? <Globe className="inline-block mr-1 h-3 w-3" /> : <Lock className="inline-block mr-1 h-3 w-3" />}
@@ -48,6 +48,10 @@ const EventCard: React.FC<{ event: Event }> = ({ event }) => {
           <div className="flex items-center text-sm text-muted-foreground">
             <CalendarDays className="h-4 w-4 mr-2 text-primary" />
             <span>{format(event.eventDate, "MMM dd, yyyy 'at' p")}</span>
+          </div>
+           <div className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 mr-2 text-primary" />
+            <span>{event.locationName}{event.locationCityRegion && event.locationCityRegion.toLowerCase() !== "online" ? `, ${event.locationCityRegion}` : ''}</span>
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
             <Users className="h-4 w-4 mr-2 text-primary" />
@@ -76,7 +80,9 @@ export default function EventsPage() {
     event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.keywords.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.associatedTribe.toLowerCase().includes(searchTerm.toLowerCase())
+    event.associatedTribe.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.locationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.locationCityRegion.toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a,b) => a.eventDate.getTime() - b.eventDate.getTime()); // Sort by upcoming first
 
   return (
@@ -99,7 +105,7 @@ export default function EventsPage() {
         <div className="relative max-w-lg mx-auto sm:mx-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search events by name, keyword, or tribe..."
+            placeholder="Search events by name, keyword, location, or tribe..."
             className="pl-10 py-3 text-base rounded-full shadow-sm w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

@@ -19,6 +19,12 @@ const GenerateEventDescriptionInputSchema = z.object({
   keywords: z
     .string()
     .describe('Comma-separated keywords that describe the event and its atmosphere (e.g., Live Music, Tech Workshop, Community Gathering).'),
+  locationName: z
+    .string()
+    .describe('The name or general description of the event venue or location (e.g., Downtown Park, The Grand Ballroom, Online).'),
+  locationCityRegion: z
+    .string()
+    .describe('The city and region/state of the event (e.g., San Francisco, CA, London, UK).'),
 });
 export type GenerateEventDescriptionInput = z.infer<
   typeof GenerateEventDescriptionInputSchema
@@ -27,7 +33,7 @@ export type GenerateEventDescriptionInput = z.infer<
 const GenerateEventDescriptionOutputSchema = z.object({
   description: z
     .string()
-    .describe('A compelling description of the event based on its name and keywords.'),
+    .describe('A compelling description of the event based on its name, keywords, and location.'),
 });
 export type GenerateEventDescriptionOutput = z.infer<
   typeof GenerateEventDescriptionOutputSchema
@@ -47,10 +53,13 @@ const prompt = ai.definePrompt({
 
 Event Name: {{{name}}}
 Event Keywords: {{{keywords}}}
+Event Venue/Location: {{{locationName}}}
+Event City/Region: {{{locationCityRegion}}}
 
 The description should:
 - Be enthusiastic and make people want to attend.
-- Clearly convey the essence of the event based on the name and keywords.
+- Clearly convey the essence of the event based on the name, keywords, and location.
+- If the location is not "Online", subtly weave in the location (venue or city) to enhance the local feel where appropriate.
 - Highlight what makes the event special or unique.
 - Be suitable for an event listing or promotional material.
 - Be approximately 2-4 sentences long.`,
@@ -67,5 +76,3 @@ const generateEventDescriptionFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    

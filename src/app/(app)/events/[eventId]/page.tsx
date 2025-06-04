@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info } from "lucide-react";
+import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info, MapPin } from "lucide-react";
 import { cn } from '@/lib/utils';
 
 // Define an interface for an Event
@@ -25,6 +25,8 @@ export interface Event {
   dataAiHintCover?: string;
   isPublic: boolean;
   creatorId: string; // User ID of the event creator
+  locationName: string; // e.g., "Community Hall", "Zoom Online"
+  locationCityRegion: string; // e.g., "Springfield, IL", "Online"
 }
 
 // Sample event data (mimicking what might come from a database)
@@ -40,6 +42,8 @@ export const sampleEventsData: Event[] = [
     dataAiHintCover: "music festival concert",
     isPublic: true,
     creatorId: "user123",
+    locationName: "Downtown Park Amphitheater",
+    locationCityRegion: "Springfield, IL",
   },
   {
     id: "event2",
@@ -52,6 +56,8 @@ export const sampleEventsData: Event[] = [
     dataAiHintCover: "technology conference abstract",
     isPublic: true,
     creatorId: "user456",
+    locationName: "Grand Tech Convention Center",
+    locationCityRegion: "New York, NY",
   },
   {
     id: "event3",
@@ -63,6 +69,8 @@ export const sampleEventsData: Event[] = [
     // No cover image for this one
     isPublic: false, // Private event
     creatorId: "user789",
+    locationName: "The Artful Space Gallery",
+    locationCityRegion: "Portland, OR",
   },
   {
     id: "event4",
@@ -75,6 +83,8 @@ export const sampleEventsData: Event[] = [
     dataAiHintCover: "debate discussion abstract",
     isPublic: true,
     creatorId: "user456",
+    locationName: "University Lecture Hall B",
+    locationCityRegion: "Cambridge, MA",
   },
 ];
 
@@ -116,7 +126,7 @@ export default function EventDetailPage() {
         <h1 className="text-2xl font-semibold mb-2">Event Not Found</h1>
         <p className="text-muted-foreground mb-6">The event you are looking for does not exist or may have been moved.</p>
         <Button onClick={() => router.push('/events')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events List (Placeholder)
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events List
         </Button>
       </div>
     );
@@ -187,6 +197,18 @@ export default function EventDetailPage() {
               </div>
             </div>
           </div>
+
+          {(event.locationName || event.locationCityRegion) && (
+             <div className="flex items-start p-3 bg-muted/50 rounded-md text-sm">
+              <MapPin className="h-5 w-5 text-primary mr-3 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground">Location</p>
+                {event.locationName && <p className="text-muted-foreground">{event.locationName}</p>}
+                {event.locationCityRegion && <p className="text-muted-foreground">{event.locationCityRegion}</p>}
+                {event.locationName === "Online" && !event.locationCityRegion && <p className="text-muted-foreground">This is an online event.</p>}
+              </div>
+            </div>
+          )}
           
           {event.keywords && (
             <div>
