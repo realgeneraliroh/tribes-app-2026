@@ -10,13 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss } from "lucide-react"; // Changed Share2 to SquareArrowUp
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from '@/lib/utils';
 
 
 import { tribesData, type Tribe } from '../page';
 import { moodsData } from '../../moods/page';
-import { allMoodStreamPosts } from '../../moods/[moodSlug]/page'; 
+import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
 
 // Define an interface for a tribe post
 interface TribePost {
@@ -119,7 +120,10 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
   }, [post.timestamp]);
 
   return (
-    <Card className="overflow-hidden shadow-lg">
+    <Card className={cn(
+        "overflow-hidden shadow-lg",
+        isPromoted && "bg-accent/5 hover:bg-accent/10" // Highlight for promoted posts
+      )}>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start space-x-3">
           <Avatar className="h-10 w-10 border">
@@ -172,7 +176,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
           <MessageSquareText className="mr-1.5 h-4 w-4" /> {post.comments || 0}
         </Button>
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-          <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share 
+          <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
         </Button>
       </CardFooter>
     </Card>
@@ -186,10 +190,10 @@ export default function TribeDetailPage() {
   const tribeId = params.tribeId as string;
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
-  
+
   // SIMULATE USER MEMBERSHIP - toggle this to test views
-  const isUserMember = true; 
-  // const isUserMember = false; 
+  const isUserMember = true;
+  // const isUserMember = false;
 
 
   useEffect(() => {
@@ -205,7 +209,7 @@ export default function TribeDetailPage() {
 
   const postsInTribe = useMemo(() => {
     if (!tribe) return [];
-    
+
     const allTribeOriginalPosts = sampleTribePosts
         .filter(post => post.tribeId === tribe.id)
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
