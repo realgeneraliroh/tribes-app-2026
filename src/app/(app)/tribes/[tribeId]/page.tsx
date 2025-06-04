@@ -5,19 +5,21 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-
 
 import { tribesData, type Tribe } from '../page';
 import { moodsData } from '../../moods/page';
 import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
+import type { Event } from '../../events/[eventId]/page'; // Import Event type
+import { sampleEventsData } from '../../events/[eventId]/page'; // Import sampleEventsData
 
 // Define an interface for a tribe post
 interface TribePost {
@@ -37,17 +39,15 @@ interface TribePost {
   comments?: number;
 }
 
-// Sample data for tribe posts
-// Ensure some IDs match posts in `allMoodStreamPosts` to simulate promotion
 const sampleTribePosts: TribePost[] = [
-  { // Local post for AI Innovators
+  { 
     id: "tribe_post_ai_local1", tribeId: "1", authorName: "AI Enthusiast", authorAvatarFallback: "AE",
     timestamp: new Date(Date.now() - 3600000 * 2),
     title: "Local Discussion: Ethics in AI Development",
     content: "Starting a thread specifically for our tribe members on the ethical considerations of recent AI breakthroughs. What are your immediate thoughts?",
     vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
   },
-  { // Promoted post for AI Innovators (matches msp2 from allMoodStreamPosts)
+  { 
     id: "msp2", tribeId: "1", authorName: "ProductivePro", authorAvatarFallback: "PP",
     timestamp: new Date(Date.now() - 3600000 * 3),
     title: "My Top 5 Productivity Hacks for Deep Work",
@@ -55,7 +55,7 @@ const sampleTribePosts: TribePost[] = [
     imageUrl: "https://placehold.co/600x400.png?text=FocusHacks", imageAlt: "Productivity hacks", dataAiHintImage: "productivity office",
     vibes: 125, comments: 18, dataAiHintAvatar: "work professional",
   },
-  { // Local post for Weekend Hikers
+  { 
     id: "tribe_post_hikers_local1", tribeId: "2", authorName: "Trail Blazer", authorAvatarFallback: "TB",
     timestamp: new Date(Date.now() - 86400000 * 1),
     title: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)",
@@ -63,15 +63,15 @@ const sampleTribePosts: TribePost[] = [
     imageUrl: "https://placehold.co/600x450.png", imageAlt: "Mountain landscape", dataAiHintImage: "mountain landscape",
     vibes: 210, comments: 32, dataAiHintAvatar: "hiker adventurer",
   },
-   { // Promoted post for Weekend Hikers (matches msp9 from allMoodStreamPosts - assuming it can be relevant to a hiking group that also visits local markets)
+   { 
     id: "msp9", tribeId: "2", authorName: "LocalFoodie", authorAvatarFallback: "LF",
-    timestamp: new Date(Date.now() - 3600000 * 7), // Adjusted timestamp
+    timestamp: new Date(Date.now() - 3600000 * 7), 
     title: "Post-Hike Find: Amazing Farmers Market!",
     content: "After our hike near Miller's Pond, stumbled upon this fantastic farmers market. Great fuel and cool local crafts! Shared this to Discover stream too.",
     imageUrl: "https://placehold.co/600x420.png", imageAlt: "Farmers market produce", dataAiHintImage: "market food",
     vibes: 85, comments: 12, dataAiHintAvatar: "foodie person",
   },
-  { // Local post for The Local Gig Circuit
+  { 
     id: "tribe_post_music_local1", tribeId: "7", authorName: "GigGoer", authorAvatarFallback: "GG",
     timestamp: new Date(Date.now() - 3600000 * 1),
     title: "Last Night's Show Was Epic! (Tribe Thoughts)",
@@ -79,7 +79,7 @@ const sampleTribePosts: TribePost[] = [
     imageUrl: "https://placehold.co/600x380.png", imageAlt: "Concert crowd", dataAiHintImage: "concert crowd",
     vibes: 95, comments: 22, dataAiHintAvatar: "music fan",
   },
-  { // Promoted post for The Local Gig Circuit (matches msp8)
+  { 
     id: "msp8", tribeId: "7", authorName: "RockstarDev", authorAvatarFallback: "RD",
     timestamp: new Date(Date.now() - 3600000 * 8),
     title: "My Stage Setup for Tonight's Gig",
@@ -87,7 +87,7 @@ const sampleTribePosts: TribePost[] = [
     imageUrl: "https://placehold.co/600x380.png", imageAlt: "Stage setup with instruments", dataAiHintImage: "stage music",
     vibes: 150, comments: 18, dataAiHintAvatar: "musician band",
   },
-  { // Local post for Indie Game Devs
+  { 
     id: "post7", tribeId: "3", authorName: "DevQuest", authorAvatarFallback: "DQ",
     timestamp: new Date(Date.now() - 3600000 * 3),
     title: "Seeking Beta Testers for New Puzzle Game (Tribe Only)",
@@ -96,10 +96,8 @@ const sampleTribePosts: TribePost[] = [
   },
 ];
 
-// Helper to create a Set of IDs from mood stream posts for efficient lookup
 const moodStreamPostIds = new Set(allMoodStreamPosts.map(p => p.id));
 
-// Component to render individual TribePost
 const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMember: boolean }> = ({ post, isPromoted, isUserMember }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
 
@@ -122,7 +120,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
   return (
     <Card className={cn(
         "overflow-hidden shadow-lg",
-        isPromoted && "bg-accent/5 hover:bg-accent/10" // Highlight for promoted posts
+        isPromoted && "bg-accent/5 hover:bg-accent/10 border-accent/30"
       )}>
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start space-x-3">
@@ -150,7 +148,6 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
                 )}
             </div>
           </div>
-          {/* Future: Add options like edit/delete for post author */}
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
@@ -183,6 +180,49 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
   );
 };
 
+const EventHighlightCard: React.FC<{ event: Event }> = ({ event }) => {
+  return (
+    <Card className="overflow-hidden shadow-lg border-primary/50 hover:shadow-xl transition-shadow bg-primary/5">
+      {event.coverImage && (
+        <div className="relative h-32 w-full">
+          <Image
+            src={event.coverImage}
+            alt={event.name}
+            layout="fill"
+            objectFit="cover"
+            data-ai-hint={event.dataAiHintCover || "event banner mini"}
+          />
+           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+        </div>
+      )}
+      <CardHeader className={cn("p-3", event.coverImage && "relative -mt-8 z-10")}>
+        <Badge variant="secondary" className="w-fit mb-1 bg-primary/80 text-primary-foreground text-xs">
+          UPCOMING EVENT
+        </Badge>
+        <CardTitle className={cn("text-lg font-semibold tracking-tight", event.coverImage ? "text-white drop-shadow-md" : "text-primary")}>
+          {event.name}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0 text-sm">
+        <div className="flex items-center text-muted-foreground mb-2">
+          <CalendarDays className="h-4 w-4 mr-2 text-primary" />
+          <span>{format(event.eventDate, "MMM dd, yyyy 'at' p")}</span>
+        </div>
+        <p className="text-muted-foreground line-clamp-2">
+          {event.description}
+        </p>
+      </CardContent>
+      <CardFooter className="p-3 border-t bg-primary/10">
+        <Link href={`/events/${event.id}`} passHref className="w-full">
+          <Button variant="default" size="sm" className="w-full bg-primary hover:bg-primary/90">
+            View Event
+          </Button>
+        </Link>
+      </CardFooter>
+    </Card>
+  );
+};
+
 
 export default function TribeDetailPage() {
   const router = useRouter();
@@ -190,11 +230,7 @@ export default function TribeDetailPage() {
   const tribeId = params.tribeId as string;
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
-
-  // SIMULATE USER MEMBERSHIP - toggle this to test views
   const isUserMember = true;
-  // const isUserMember = false;
-
 
   useEffect(() => {
     if (tribeId) {
@@ -207,17 +243,21 @@ export default function TribeDetailPage() {
     }
   }, [tribeId, router]);
 
+  const tribeEvents = useMemo(() => {
+    if (!tribe) return [];
+    return sampleEventsData
+      .filter(event => event.associatedTribe === tribe.name) // Match by tribe name for now
+      .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime()); // Sort by upcoming
+  }, [tribe]);
+
   const postsInTribe = useMemo(() => {
     if (!tribe) return [];
-
     const allTribeOriginalPosts = sampleTribePosts
         .filter(post => post.tribeId === tribe.id)
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
     if (isUserMember) {
-        return allTribeOriginalPosts; // Members see all posts
+        return allTribeOriginalPosts;
     } else {
-        // Non-members only see posts that are also in mood streams
         return allTribeOriginalPosts.filter(post => moodStreamPostIds.has(post.id));
     }
   }, [tribe, isUserMember]);
@@ -243,7 +283,7 @@ export default function TribeDetailPage() {
         </div>
         <div className="absolute top-4 right-4 z-10">
           <Button variant="outline" size="icon" className="bg-background/70 hover:bg-background/90 backdrop-blur-sm">
-            <Settings className="h-5 w-5" /> {/* Placeholder for Tribe Settings */}
+            <Settings className="h-5 w-5" />
           </Button>
         </div>
         <div className="relative h-48 md:h-64 w-full">
@@ -263,7 +303,7 @@ export default function TribeDetailPage() {
             <Badge variant={tribe.isPublic ? "secondary" : "destructive"} className="text-xs py-1 px-2 backdrop-blur-sm bg-black/30 text-white border-white/50">
               {tribe.isPublic ? "Public Tribe" : "Private Tribe"}
             </Badge>
-            <div className="flex items-center text-xs text-white drop-shadow-md">
+            <div className="flex items-center text-sm text-white drop-shadow-md">
               <Users className="h-4 w-4 mr-1.5" /> {tribe.members} members
             </div>
           </div>
@@ -282,7 +322,26 @@ export default function TribeDetailPage() {
         </CardContent>
       </Card>
 
-      {/* New Post Input Area - Placeholder */}
+      {/* Upcoming Events Section */}
+      {isUserMember && tribeEvents.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground tracking-normal px-1">Upcoming Events</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tribeEvents.slice(0, 3).map(event => ( // Display up to 3 events
+              <EventHighlightCard key={event.id} event={event} />
+            ))}
+          </div>
+           {tribeEvents.length > 3 && (
+            <div className="text-center">
+                <Button variant="link" asChild>
+                    <Link href={`/events?tribeId=${tribe.id}`}>View All Events ({tribeEvents.length})</Link>
+                </Button>
+            </div>
+           )}
+        </section>
+      )}
+
+
       <Card className="shadow-lg">
         <CardHeader className="p-4 flex-row items-center space-x-3">
             <Avatar>
@@ -300,10 +359,9 @@ export default function TribeDetailPage() {
         </CardFooter>
       </Card>
 
-      {/* Feed of Tribe Posts */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground tracking-normal">
-            {isUserMember ? "All Posts" : "Featured Posts in Mood Streams"}
+        <h2 className="text-xl font-semibold text-foreground tracking-normal px-1">
+            {isUserMember ? "Recent Posts" : "Featured Posts in Mood Streams"}
         </h2>
         {postsInTribe.length > 0 ? (
           postsInTribe.map(post => {
@@ -327,3 +385,4 @@ export default function TribeDetailPage() {
     </div>
   );
 }
+

@@ -20,7 +20,7 @@ export interface Event {
   keywords: string;
   description: string;
   eventDate: Date;
-  associatedTribe: string;
+  associatedTribe: string; // This is the tribe's NAME for now for matching
   coverImage?: string; // URL or path to the image
   dataAiHintCover?: string;
   isPublic: boolean;
@@ -28,15 +28,14 @@ export interface Event {
 }
 
 // Sample event data (mimicking what might come from a database)
-// We'll add more as we create them, or link to a central store later.
-const sampleEventsData: Event[] = [
+export const sampleEventsData: Event[] = [
   {
     id: "event1",
     name: "Summer Music Festival Kick-off",
     keywords: "Live Music, Outdoor, Summer, Festival",
     description: "Join us for the grand opening of the Summer Music Festival! Featuring top local bands, food trucks, and amazing vibes. Don't miss out on the biggest party of the summer. Get ready to dance and celebrate with us under the stars. This is an event you won't want to miss, filled with great music and fun for everyone.",
     eventDate: new Date(new Date().setDate(new Date().getDate() + 30)), // Approx 30 days from now
-    associatedTribe: "The Local Gig Circuit",
+    associatedTribe: "The Local Gig Circuit", // Matches Tribe Name
     coverImage: "https://placehold.co/1200x400.png",
     dataAiHintCover: "music festival concert",
     isPublic: true,
@@ -48,7 +47,7 @@ const sampleEventsData: Event[] = [
     keywords: "Technology, AI, Networking, Workshop",
     description: "A deep dive into the latest advancements in Artificial Intelligence. Network with industry leaders, attend insightful workshops, and discover the future of tech. This summit is perfect for developers, researchers, and tech enthusiasts.",
     eventDate: new Date(new Date().setDate(new Date().getDate() + 60)), // Approx 60 days from now
-    associatedTribe: "AI Innovators",
+    associatedTribe: "AI Innovators", // Matches Tribe Name
     coverImage: "https://placehold.co/1200x400.png",
     dataAiHintCover: "technology conference abstract",
     isPublic: true,
@@ -60,10 +59,22 @@ const sampleEventsData: Event[] = [
     keywords: "Crafts, Art, Local, Shopping",
     description: "A special preview night for members of the Artisan Alley Collective. Get first dibs on unique handmade items before the public opening. Support local artists and find beautiful crafts. Light refreshments will be served.",
     eventDate: new Date(new Date().setDate(new Date().getDate() + 15)), // Approx 15 days from now
-    associatedTribe: "Artisan Alley Collective",
+    associatedTribe: "Artisan Alley Collective", // Matches Tribe Name
     // No cover image for this one
     isPublic: false, // Private event
     creatorId: "user789",
+  },
+  {
+    id: "event4",
+    name: "AI Ethics Debate Night",
+    keywords: "AI, Ethics, Discussion, Debate",
+    description: "Join AI Innovators for a lively debate on the ethical implications of current AI trends. Featuring guest speakers and an open Q&A session.",
+    eventDate: new Date(new Date().setDate(new Date().getDate() + 40)), 
+    associatedTribe: "AI Innovators", // Another event for AI Innovators
+    coverImage: "https://placehold.co/1200x400.png",
+    dataAiHintCover: "debate discussion abstract",
+    isPublic: true,
+    creatorId: "user456",
   },
 ];
 
@@ -105,7 +116,7 @@ export default function EventDetailPage() {
         <h1 className="text-2xl font-semibold mb-2">Event Not Found</h1>
         <p className="text-muted-foreground mb-6">The event you are looking for does not exist or may have been moved.</p>
         <Button onClick={() => router.push('/events')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events (Placeholder)
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events List (Placeholder)
         </Button>
       </div>
     );
@@ -160,7 +171,7 @@ export default function EventDetailPage() {
               <div>
                 <p className="font-semibold text-foreground">Organized By</p>
                 <p className="text-muted-foreground">{event.associatedTribe}</p>
-                {/* Future: Link to tribe page: <Link href={`/tribes/${tribeId}`} className="text-primary hover:underline">{event.associatedTribe}</Link> */}
+                {/* Future: Link to tribe page: <Link href={`/tribes/${tribe.associatedTribe}`} className="text-primary hover:underline">{event.associatedTribe}</Link> */}
               </div>
             </div>
           </div>
