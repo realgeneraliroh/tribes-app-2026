@@ -10,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, Share2, Edit3, Settings, Rss } from "lucide-react"; // Added Rss
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, Share2, Edit3, Settings, Rss } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 import { tribesData, type Tribe } from '../page';
 import { moodsData } from '../../moods/page';
@@ -32,7 +34,6 @@ interface TribePost {
   dataAiHintImage?: string;
   vibes?: number;
   comments?: number;
-  isPromotedToMoodStream?: boolean; // Flag to indicate promotion
 }
 
 // Sample data for tribe posts
@@ -130,10 +131,18 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
             <div className="flex items-center space-x-2">
                 <CardDescription className="text-xs">{displayTime}</CardDescription>
                 {isUserMember && isPromoted && (
-                    <div className="flex items-center text-xs text-accent-foreground">
-                        <Rss className="h-3 w-3 mr-1" />
-                        <span>In Mood Stream</span>
-                    </div>
+                    <TooltipProvider delayDuration={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <div className="flex items-center text-xs text-accent-foreground">
+                             <Rss className="h-3.5 w-3.5" />
+                           </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Promoted to Mood Stream</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                 )}
             </div>
           </div>
@@ -314,5 +323,3 @@ export default function TribeDetailPage() {
     </div>
   );
 }
-
-    
