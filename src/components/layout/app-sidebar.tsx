@@ -24,7 +24,8 @@ import {
   FileText,
   PlusCircle,
   Link2,
-  CalendarPlus // Added for Create Event
+  CalendarPlus,
+  CalendarDays // Added for Events link
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/tribes", icon: Users, label: "Tribes", tooltip: "Tribes" },
   { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
+  { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" }, // Added Events link
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
   { href: "/ai-assistant", icon: Bot, label: "AI Assistant", tooltip: "AI Assistant" },
 ];
@@ -77,7 +79,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} passHref legacyBehavior>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathname.startsWith(item.href) && (item.href === "/" ? pathname === "/" : true) } // More precise active check
                   tooltip={item.tooltip}
                   className={cn(
                     "justify-start",
