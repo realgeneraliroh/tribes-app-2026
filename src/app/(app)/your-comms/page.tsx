@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Added ScrollArea
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { moodsData as allMoods } from '../moods/page';
 import { allMoodStreamPosts as globalMoodPosts } from '../moods/[moodSlug]/page';
@@ -255,7 +255,7 @@ export default function YourCommsPage() {
                     <FilterIcon className="mr-2 h-4 w-4" /> Tune Feed
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 max-h-[75vh] flex flex-col">
+            <PopoverContent align="end" className="w-80 p-0 max-h-[75vh] flex flex-col">
                 <div className="p-4 border-b">
                     <h4 className="font-medium leading-none text-sm">Tune Your Intercom</h4>
                     <p className="text-xs text-muted-foreground mt-1">
