@@ -11,10 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from '@/lib/utils';
 
 import { tribesData, type Tribe } from '../page';
@@ -383,72 +384,83 @@ export default function TribeDetailPage() {
       {/* Backend: Access to this Admin Tools card should be gated by user role (e.g., tribe founder, admin, speaker) */}
       {/* This check `isTribeAdmin` is a frontend simulation of that role check. */}
       {isTribeAdmin && (
-        <Card className="shadow-lg border-destructive/30">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <ShieldAlert className="h-6 w-6 text-destructive" />
-              <CardTitle className="text-xl font-semibold tracking-normal text-destructive">Tribe Admin Tools</CardTitle>
-            </div>
-            <CardDescription>Manage members, content, and settings for <span className="font-medium">{tribe.name}</span>.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-2 flex items-center">
-                <UserCog className="mr-2 h-5 w-5 text-muted-foreground" /> Member Management
-              </h3>
-              {mockMembers.length > 0 ? (
-                <ul className="space-y-2">
-                  {mockMembers.map(member => (
-                    <li key={member.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={member.avatar} alt={member.name} data-ai-hint={member.dataAiHint} />
-                          <AvatarFallback>{member.name.substring(0,2)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium">{member.name}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewUserProfile(member.id)}>View</Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleMuteUser(member.id, member.name)}>Mute in Tribe</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRemoveUser(member.id, member.name)} className="text-destructive">Remove from Tribe</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">No members to manage currently.</p>
-              )}
-              {/* Backend: This list should be paginated and searchable for larger tribes. */}
-              {/* Backend: Actions (mute, remove) need to trigger API calls and handle permissions. */}
-            </div>
-            <Separator />
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-2">Reported Content Queue</h3>
-              {mockReportedContent.length > 0 ? (
-                <p className="text-sm text-muted-foreground">Display reported items here...</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">No reported content at this time.</p>
-              )}
-              {/* Backend: This queue needs to be populated by user reports and provide actions for moderators (dismiss, remove content, warn user). */}
-            </div>
-            <Separator />
-            <div>
-                <Button variant="outline" className="w-full sm:w-auto">
-                    <Settings className="mr-2 h-4 w-4"/> Edit Tribe Settings
-                </Button>
-                 {/* Backend: This button should link to a tribe settings page (e.g., /tribes/{tribeId}/settings) */}
-            </div>
-          </CardContent>
-        </Card>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="admin-tools" className="border-destructive/30 rounded-lg shadow-lg overflow-hidden">
+            <Card className="shadow-none border-none">
+                <AccordionTrigger className="w-full p-0 hover:no-underline">
+                    <CardHeader className="w-full flex flex-row items-center justify-between hover:bg-muted/20 transition-colors p-4">
+                        <div className="flex items-center space-x-3">
+                        <ShieldAlert className="h-6 w-6 text-destructive" />
+                        <div>
+                            <CardTitle className="text-xl font-semibold tracking-normal text-destructive">Tribe Admin Tools</CardTitle>
+                            <CardDescription className="text-sm">Manage members, content, and settings for <span className="font-medium">{tribe.name}</span>.</CardDescription>
+                        </div>
+                        </div>
+                        {/* The ChevronDown is part of AccordionTrigger component */}
+                    </CardHeader>
+                </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="space-y-6 p-4 pt-2">
+                  <div>
+                    <h3 className="text-lg font-medium text-foreground mb-2 flex items-center">
+                      <UserCog className="mr-2 h-5 w-5 text-muted-foreground" /> Member Management
+                    </h3>
+                    {/* Backend Comment: This list should be paginated and searchable for larger tribes. */}
+                    {/* Backend Comment: Actions (mute, remove) need to trigger API calls and handle permissions. */}
+                    {mockMembers.length > 0 ? (
+                      <ul className="space-y-2">
+                        {mockMembers.map(member => (
+                          <li key={member.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={member.avatar} alt={member.name} data-ai-hint={member.dataAiHint} />
+                                <AvatarFallback>{member.name.substring(0,2)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">{member.name}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleViewUserProfile(member.id)}>View</Button>
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                          <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleMuteUser(member.id, member.name)}>Mute in Tribe</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleRemoveUser(member.id, member.name)} className="text-destructive">Remove from Tribe</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No members to manage currently.</p>
+                    )}
+                  </div>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium text-foreground mb-2">Reported Content Queue</h3>
+                    {/* Backend Comment: This queue needs to be populated by user reports and provide actions for moderators (dismiss, remove content, warn user). */}
+                    {mockReportedContent.length > 0 ? (
+                      <p className="text-sm text-muted-foreground">Display reported items here...</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No reported content at this time.</p>
+                    )}
+                  </div>
+                  <Separator />
+                  <div>
+                      <Button variant="outline" className="w-full sm:w-auto">
+                          <Settings className="mr-2 h-4 w-4"/> Edit Tribe Settings
+                      </Button>
+                      {/* Backend Comment: This button should link to a tribe settings page (e.g., /tribes/{tribeId}/settings) */}
+                  </div>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+        </Accordion>
       )}
 
 
@@ -555,3 +567,4 @@ export default function TribeDetailPage() {
     </div>
   );
 }
+
