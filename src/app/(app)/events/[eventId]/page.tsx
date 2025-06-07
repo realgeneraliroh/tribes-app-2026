@@ -10,8 +10,10 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info, MapPin, ExternalLink } from "lucide-react";
+import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info, MapPin, ExternalLink, Radio } from "lucide-react";
 import { cn } from '@/lib/utils';
+import InteractiveMap from '@/components/maps/interactive-map';
+
 
 // Define an interface for an Event
 export interface Event {
@@ -27,6 +29,8 @@ export interface Event {
   creatorId: string; // User ID of the event creator
   locationName: string; // e.g., "Community Hall", "Zoom Online"
   locationCityRegion: string; // e.g., "Springfield, IL", "Online"
+  latitude?: number;
+  longitude?: number;
 }
 
 const MOCK_CURRENT_DATE_MS = new Date("2024-07-23T10:00:00.000Z").getTime();
@@ -46,6 +50,8 @@ export const sampleEventsData: Event[] = [
     creatorId: "user123",
     locationName: "Downtown Park Amphitheater",
     locationCityRegion: "Springfield, IL",
+    latitude: 39.7817, 
+    longitude: -89.6501,
   },
   {
     id: "event2",
@@ -60,6 +66,8 @@ export const sampleEventsData: Event[] = [
     creatorId: "user456",
     locationName: "Grand Tech Convention Center",
     locationCityRegion: "New York, NY",
+    latitude: 40.7128,
+    longitude: -74.0060,
   },
   {
     id: "event3",
@@ -73,6 +81,8 @@ export const sampleEventsData: Event[] = [
     creatorId: "user789",
     locationName: "The Artful Space Gallery",
     locationCityRegion: "Portland, OR",
+    latitude: 45.5051,
+    longitude: -122.6750,
   },
   {
     id: "event4",
@@ -87,6 +97,8 @@ export const sampleEventsData: Event[] = [
     creatorId: "user456",
     locationName: "University Lecture Hall B",
     locationCityRegion: "Cambridge, MA",
+    latitude: 42.3736,
+    longitude: -71.1097,
   },
 ];
 
@@ -112,6 +124,12 @@ export default function EventDetailPage() {
       setIsLoading(false);
     }
   }, [eventId]);
+
+  const handleJoinEventStream = () => {
+    if (event) {
+      router.push(`/event/join?eventId=${event.id}&eventName=${encodeURIComponent(event.name)}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -149,8 +167,8 @@ export default function EventDetailPage() {
             <Image
               src={event.coverImage}
               alt={`${event.name} cover image`}
-              layout="fill"
-              objectFit="cover"
+              fill
+              style={{objectFit: "cover"}}
               data-ai-hint={event.dataAiHintCover || "event banner"}
               priority
             />
@@ -228,18 +246,11 @@ export default function EventDetailPage() {
                 <MapPin className="h-4 w-4 mr-2 text-muted-foreground"/>
                 Map Preview
             </h4>
-            <div className="aspect-video bg-muted rounded-md flex items-center justify-center relative overflow-hidden border">
-                <Image 
-                    src="https://placehold.co/600x300.png" 
-                    alt="Map placeholder"
-                    layout="fill"
-                    objectFit="cover"
-                    data-ai-hint="map location placeholder"
-                />
-                <p className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-2 py-1 rounded">
-                    Interactive map preview coming soon
-                </p>
-            </div>
+            <InteractiveMap
+                latitude={event.latitude}
+                longitude={event.longitude}
+                locationName={`${event.locationName}, ${event.locationCityRegion}`}
+            />
           </div>
           
           {event.keywords && (
@@ -257,8 +268,8 @@ export default function EventDetailPage() {
           )}
 
           <div className="pt-4">
-            <Button size="lg" className="w-full md:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
-              RSVP / Get Tickets (Coming Soon)
+            <Button size="lg" className="w-full md:w-auto bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleJoinEventStream}>
+              <Radio className="mr-2 h-5 w-5"/> Join Event Live Stream
             </Button>
           </div>
 
@@ -267,5 +278,4 @@ export default function EventDetailPage() {
     </div>
   );
 }
-
     
