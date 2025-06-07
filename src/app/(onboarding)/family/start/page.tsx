@@ -7,7 +7,7 @@ import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 
 import { ArrowRight } from "lucide-react";
 
 export default function FamilyOnboardingStartPage() {
-  const connectedFamilyMemberName = "Alex"; // Mock data
+  const connectedFamilyMemberName = "Alex"; // Mock data - this could come from a previous step or context in a real app
 
   return (
     <>
@@ -24,7 +24,7 @@ export default function FamilyOnboardingStartPage() {
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-3 pt-6">
         <Button asChild className="w-full sm:w-auto flex-1" size="lg">
-          <Link href="/family/introduce">
+          <Link href={`/family/introduce?name=${encodeURIComponent(connectedFamilyMemberName)}`}>
             Introduce to Family <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </Button>

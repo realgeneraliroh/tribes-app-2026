@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,9 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Send, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React from "react";
 
 export default function FamilyOnboardingIntroducePage() {
-  const connectedFamilyMemberName = "Alex"; // Mock data
+  const searchParams = useSearchParams();
+  const connectedFamilyMemberName = searchParams.get("name") || "this family member"; // Fallback if name is not in URL
+
   const existingFamilyMembers = [ // Mock data
     { id: "fam1", name: "Mom", avatarFallback: "M" },
     { id: "fam2", name: "Dad", avatarFallback: "D" },
@@ -22,7 +26,7 @@ export default function FamilyOnboardingIntroducePage() {
     <>
       <CardHeader>
         <Button asChild variant="ghost" size="sm" className="absolute top-4 left-4 text-muted-foreground hover:text-foreground">
-          <Link href="/family/start"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Link>
+          <Link href={`/family/start?name=${encodeURIComponent(connectedFamilyMemberName)}`}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Link>
         </Button>
         <CardTitle className="text-2xl md:text-3xl font-bold font-mono text-center pt-8 md:pt-2">Introduce {connectedFamilyMemberName}</CardTitle>
         <CardDescription className="text-md text-muted-foreground text-center pt-1">
@@ -62,7 +66,7 @@ export default function FamilyOnboardingIntroducePage() {
       </CardContent>
       <CardFooter className="flex flex-col gap-3 pt-6">
         <Button asChild className="w-full" size="lg">
-          <Link href="/family/complete">
+          <Link href={`/family/complete?name=${encodeURIComponent(connectedFamilyMemberName)}`}>
             Send Introductions <Send className="ml-2 h-5 w-5" />
           </Link>
         </Button>

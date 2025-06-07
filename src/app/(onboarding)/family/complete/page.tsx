@@ -2,12 +2,15 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
+import React from "react";
 
 export default function FamilyOnboardingCompletePage() {
-  const connectedFamilyMemberName = "Alex"; // Mock data
+  const searchParams = useSearchParams();
+  const connectedFamilyMemberName = searchParams.get("name") || "Your family member"; // Fallback
 
   return (
     <>
