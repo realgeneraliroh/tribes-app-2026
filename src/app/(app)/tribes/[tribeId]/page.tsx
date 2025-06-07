@@ -386,22 +386,23 @@ export default function TribeDetailPage() {
       {isTribeAdmin && (
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="admin-tools" className="border-destructive/30 rounded-lg shadow-lg overflow-hidden">
-            <Card className="shadow-none border-none">
+            {/* The Card component is removed from here; its styling is applied to AccordionItem and Trigger/Content */}
               <AccordionTrigger className="w-full hover:bg-muted/20 transition-colors p-4 hover:no-underline rounded-t-lg">
-                {/* Content of the trigger (header) */}
+                {/* Grouping icon and text to ensure they stay left */}
                 <div className="flex items-center space-x-3">
                   <ShieldAlert className="h-6 w-6 text-destructive" />
                   <div>
-                    <CardTitle className="text-xl font-semibold tracking-normal text-destructive">Tribe Admin Tools</CardTitle>
-                    <CardDescription className="text-sm">
+                    <CardTitle className="text-xl font-semibold tracking-normal text-destructive text-left">Tribe Admin Tools</CardTitle>
+                    <CardDescription className="text-sm text-left">
                       Manage members, content, and settings for <span className="font-medium">{tribe.name}</span>.
                     </CardDescription>
                   </div>
                 </div>
-                {/* Chevron is automatically added by AccordionTrigger */}
+                {/* Chevron is automatically added by AccordionTrigger and will be on the right */}
               </AccordionTrigger>
               <AccordionContent>
-                <CardContent className="space-y-6 p-4 pt-2">
+                {/* CardContent's padding is applied here, original CardContent component removed */}
+                <div className="space-y-6 p-4 pt-2">
                   <div>
                     <h3 className="text-lg font-medium text-foreground mb-2 flex items-center">
                       <UserCog className="mr-2 h-5 w-5 text-muted-foreground" /> Member Management
@@ -457,9 +458,8 @@ export default function TribeDetailPage() {
                       </Button>
                       {/* Backend Comment: This button should link to a tribe settings page (e.g., /tribes/{tribeId}/settings) */}
                   </div>
-                </CardContent>
+                </div>
               </AccordionContent>
-            </Card>
           </AccordionItem>
         </Accordion>
       )}
