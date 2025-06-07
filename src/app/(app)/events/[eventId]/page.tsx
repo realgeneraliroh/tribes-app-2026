@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info, MapPin, ExternalLink, Radio } from "lucide-react";
 import { cn } from '@/lib/utils';
 import InteractiveMap from '@/components/maps/interactive-map';
+import { tribesData, type Tribe as TribeInfo } from '../../tribes/page';
 
 
 // Define an interface for an Event
@@ -109,6 +110,7 @@ export default function EventDetailPage() {
   const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
+  const [organizingTribe, setOrganizingTribe] = useState<TribeInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -118,8 +120,11 @@ export default function EventDetailPage() {
       const foundEvent = sampleEventsData.find(e => e.id === eventId);
       if (foundEvent) {
         setEvent(foundEvent);
+        const tribe = tribesData.find(t => t.name === foundEvent.associatedTribe);
+        setOrganizingTribe(tribe || null);
       } else {
-        setEvent(null); // Or redirect to a 404 page
+        setEvent(null);
+        setOrganizingTribe(null);
       }
       setIsLoading(false);
     }
@@ -215,7 +220,13 @@ export default function EventDetailPage() {
               <Users className="h-5 w-5 text-primary mr-3 mt-0.5 shrink-0" />
               <div>
                 <p className="font-semibold text-foreground">Organized By</p>
-                <p className="text-muted-foreground">{event.associatedTribe}</p>
+                {organizingTribe ? (
+                  <Link href={`/tribes/${organizingTribe.id}`} className="text-primary hover:underline">
+                    {event.associatedTribe}
+                  </Link>
+                ) : (
+                  <p className="text-muted-foreground">{event.associatedTribe}</p>
+                )}
               </div>
             </div>
           </div>
@@ -231,7 +242,7 @@ export default function EventDetailPage() {
                   {event.locationName.toLowerCase() === "online" && !event.locationCityRegion && <p className="text-muted-foreground">This is an online event.</p>}
                 </div>
               </div>
-              {event.locationName.toLowerCase() !== "online" && (
+              {event.locationName.toLowerCase() !== "online" && event.latitude && event.longitude && (
                 <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                     <Button variant="outline" size="sm">
                         <ExternalLink className="mr-2 h-4 w-4" /> View on Map
@@ -241,17 +252,19 @@ export default function EventDetailPage() {
             </div>
           )}
 
-          <div className="mt-4 p-3 bg-muted/30 rounded-md space-y-2">
-            <h4 className="text-md font-semibold text-foreground flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-muted-foreground"/>
-                Map Preview
-            </h4>
-            <InteractiveMap
-                latitude={event.latitude}
-                longitude={event.longitude}
-                locationName={`${event.locationName}, ${event.locationCityRegion}`}
-            />
-          </div>
+          {event.latitude && event.longitude && event.locationName.toLowerCase() !== "online" && (
+            <div className="mt-4 p-3 bg-muted/30 rounded-md space-y-2">
+              <h4 className="text-md font-semibold text-foreground flex items-center">
+                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground"/>
+                  Map Preview
+              </h4>
+              <InteractiveMap
+                  latitude={event.latitude}
+                  longitude={event.longitude}
+                  locationName={`${event.locationName}, ${event.locationCityRegion}`}
+              />
+            </div>
+          )}
           
           {event.keywords && (
             <div>
@@ -279,3 +292,5 @@ export default function EventDetailPage() {
   );
 }
     
+
+      
