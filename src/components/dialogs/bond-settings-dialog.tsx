@@ -62,6 +62,9 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
       setDisplayPreference(bond.displayPreferenceForTribeNickname || (bond.pseudonym ? 'my_alias' : 'tribe_assigned_nickname'));
       setCurrentNicknameVibe(bond.tribeNicknameVibe);
     } else if (!isOpen) {
+      // Reset local state when dialog closes to ensure fresh state next time
+      setNotificationsEnabled(true);
+      setAllowChat(true);
       setYourPseudonym("");
       setTheirPseudonymForYou("");
       setDisplayPreference('my_alias');
@@ -84,7 +87,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
             targetPseudonymForMe: bond.targetType === 'user' ? (theirPseudonymForYou.trim() || undefined) : undefined,
             displayPreferenceForTribeNickname: bond.targetType === 'tribe' && bond.tribeAssignedNickname ? displayPreference : undefined,
             tribeNicknameVibe: bond.targetType === 'tribe' && bond.tribeAssignedNickname ? currentNicknameVibe : undefined,
-            isTribeNicknameReported: bond.isTribeNicknameReported // Preserve existing reported status
+            isTribeNicknameReported: bond.isTribeNicknameReported 
         };
         onSave(updatedBond);
     }
@@ -98,9 +101,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
   const handleReportNickname = () => {
     if (bond) {
       alert(`Reporting nickname "${bond.tribeAssignedNickname}" for bond with ${bond.targetName}. (Simulated)`);
-      // In a real app, you'd likely set bond.isTribeNicknameReported = true and save,
-      // then potentially trigger a backend report.
-      // onSave({...bond, isTribeNicknameReported: true }); 
       onOpenChange(false); 
     }
   };
@@ -200,7 +200,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
             )}
 
             {bond.targetType === 'tribe' && bond.tribeAssignedNickname && (
-              <Accordion type="single" collapsible className="w-full" defaultValue="tribe-nickname-controls">
+              <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="tribe-nickname-controls" className="border rounded-lg overflow-hidden bg-muted/50">
                   <AccordionTrigger className="p-3 hover:no-underline w-full text-left data-[state=open]:border-b data-[state=open]:border-border">
                     <div className="flex items-center">
