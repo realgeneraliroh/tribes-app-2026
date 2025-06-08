@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Share2, Search, ChevronLeft, ChevronRight, Filter as FilterIcon, X as XIcon, Ticket, Star, PartyPopper, ArrowUp, ArrowDown, ChevronsUpDown, AtSign, UserCheck } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Share2, Search, ChevronLeft, ChevronRight, Filter as FilterIcon, X as XIcon, Ticket, Star, PartyPopper, ArrowUp, ArrowDown, ChevronsUpDown, AtSign, UserCheck, UserCog } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,16 +30,16 @@ import { IntroductionDialog } from '@/components/dialogs/introduction-dialog';
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
 
 const generateInitialBondsData = (): Bond[] => [
-  { id: "1", targetName: "AI Innovators Tribe", targetType: "tribe", bondType: "follower", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 30), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 2, showInIntercom: true, allowChatInitiation: false, keyType: "standard", pseudonym: "TechWatcher" },
+  { id: "1", targetName: "AI Innovators Tribe", targetType: "tribe", bondType: "follower", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 30), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 2, showInIntercom: true, allowChatInitiation: false, keyType: "standard", pseudonym: "TechWatcher", tribeAssignedNickname: "SynthMind" },
   { id: "2", targetName: "Alice Wonderland", targetType: "user", bondType: "friend", formationMethod: "rfid_tap", passkeyStatus: "expires_soon", expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 5), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 25), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: true, keyType: "standard", pseudonym: "WonderBuddy", targetPseudonymForMe: "MadHatter" },
   { id: "3", targetName: "Weekend Hikers", targetType: "tribe", bondType: "follower", formationMethod: "rfid_tap", passkeyStatus: "active", expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 80), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 10), reconnectsCount: 0, showInIntercom: false, allowChatInitiation: false, keyType: "standard" },
   { id: "4", targetName: "Bob The Builder", targetType: "user", bondType: "professional", formationMethod: "rfid_tap", passkeyStatus: "expired", expiresAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 2), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 62), reconnectsCount: 3, showInIntercom: true, allowChatInitiation: false, keyType: "standard" },
   { id: "5", targetName: "Mom", targetType: "user", bondType: "family", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 10), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 365 * 86400000), reconnectsCount: 5, showInIntercom: true, allowChatInitiation: true, keyType: "standard" },
-  { id: "6", targetName: "Design Masters", targetType: "tribe", bondType: "professional", formationMethod: "rfid_tap", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 180), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: false, keyType: "standard", pseudonym: "PixelPusher" },
+  { id: "6", targetName: "Design Masters", targetType: "tribe", bondType: "professional", formationMethod: "rfid_tap", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 180), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: false, keyType: "standard", pseudonym: "PixelPusher", tribeAssignedNickname: "The Visionary" },
   { id: "7", targetName: "Project Collab", targetType: "tribe", bondType: "collaborator", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 15), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 15), reconnectsCount: 7, showInIntercom: true, allowChatInitiation: false, keyType: "standard" },
   { id: "8", targetName: "Art Patronage Inc.", targetType: "tribe", bondType: "supporter", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 15), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (45)), reconnectsCount: 4, showInIntercom: true, allowChatInitiation: false, keyType: "standard" },
-  { id: "9", targetName: "Book Club Collective", targetType: "tribe", bondType: "follower", formationMethod: "rfid_tap", passkeyStatus: "expires_soon", expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 12), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 18), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: true, keyType: "standard", targetPseudonymForMe: "PageTurner" },
-  { id: "10", targetName: "John Doe (Dev)", targetType: "user", bondType: "collaborator", formationMethod: "rfid_tap", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 90), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 10, showInIntercom: false, allowChatInitiation: false, keyType: "standard" },
+  { id: "9", targetName: "Book Club Collective", targetType: "tribe", bondType: "follower", formationMethod: "rfid_tap", passkeyStatus: "expires_soon", expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 12), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 18), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: true, keyType: "standard" },
+  { id: "10", targetName: "John Doe (Dev)", targetType: "user", bondType: "collaborator", formationMethod: "rfid_tap", passkeyStatus: "needs_refresh", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 90), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (30)), reconnectsCount: 10, showInIntercom: false, allowChatInitiation: false, keyType: "standard", pseudonym: "CodeNinja", targetPseudonymForMe: "TheArchitect" },
   { id: "11", targetName: "Charlie Chaplin", targetType: "user", bondType: "friend", formationMethod: "rfid_tap", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 5), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (25)), reconnectsCount: 2, showInIntercom: true, allowChatInitiation: true, keyType: "standard" },
   { id: "12", targetName: "David Copperfield", targetType: "user", bondType: "collaborator", formationMethod: "digital_introduction", passkeyStatus: "active", lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 2), expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * (28)), reconnectsCount: 0, showInIntercom: true, allowChatInitiation: true, keyType: "standard" },
   { id: "13", targetName: "Emily Elephant", targetType: "user", bondType: "professional", formationMethod: "rfid_tap", passkeyStatus: "expires_soon", expiresAt: new Date(MOCK_CURRENT_DATE_MS + 86400000 * 3), lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 27), reconnectsCount: 1, showInIntercom: false, allowChatInitiation: true, keyType: "standard" },
@@ -139,7 +139,7 @@ const ConnectVibeIcon: React.FC<{ bond: Bond }> = ({ bond }) => {
     if (bond.passkeyStatus === 'expires_soon') {
       iconElement = <PartyPopper className="h-6 w-6 text-yellow-500" />;
       baseText += " Expires Soon";
-    } else { 
+    } else {
       iconElement = <PartyPopper className="h-6 w-6 text-purple-500" />;
       baseText += " Active";
     }
@@ -221,8 +221,8 @@ export default function BondsPage() {
       bond.id === bondId ? {
         ...bond,
         passkeyStatus: "active",
-        lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS), 
-        expiresAt: new Date(MOCK_CURRENT_DATE_MS + (bond.bondType === 'family' ? 365 : 30) * 86400000), 
+        lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS),
+        expiresAt: new Date(MOCK_CURRENT_DATE_MS + (bond.bondType === 'family' ? 365 : 30) * 86400000),
         reconnectsCount: (bond.reconnectsCount || 0) + 1,
       } : bond
     ) : null);
@@ -242,7 +242,7 @@ export default function BondsPage() {
         ...bond,
         bondType: "family",
         passkeyStatus: "active",
-        lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS), 
+        lastRefreshedAt: new Date(MOCK_CURRENT_DATE_MS),
         expiresAt: new Date(MOCK_CURRENT_DATE_MS + 365 * 86400000),
         reconnectsCount: (bond.reconnectsCount || 0) + 1,
       } : bond
@@ -294,7 +294,7 @@ export default function BondsPage() {
         return 0;
     }
 
-    const now = MOCK_CURRENT_DATE_MS; 
+    const now = MOCK_CURRENT_DATE_MS;
     const expiresAtTime = bond.expiresAt.getTime();
     const lastRefreshedAtTime = bond.lastRefreshedAt.getTime();
 
@@ -317,7 +317,8 @@ export default function BondsPage() {
     return bonds.filter(bond =>
       bond.targetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (bond.pseudonym && bond.pseudonym.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (bond.targetPseudonymForMe && bond.targetPseudonymForMe.toLowerCase().includes(searchTerm.toLowerCase()))
+      (bond.targetPseudonymForMe && bond.targetPseudonymForMe.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (bond.tribeAssignedNickname && bond.tribeAssignedNickname.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [bonds, searchTerm]);
 
@@ -325,17 +326,17 @@ export default function BondsPage() {
     if (!filteredBonds) return [];
     let sortableBonds = [...filteredBonds];
 
-    if (sortConfig.key === null) { 
+    if (sortConfig.key === null) {
       sortableBonds.sort((a, b) => {
         const isAEvent = a.keyType === 'event_promo' || a.keyType === 'event_attendee';
         const isBEvent = b.keyType === 'event_promo' || b.keyType === 'event_attendee';
 
-        if (isAEvent && !isBEvent) return -1; 
-        if (!isAEvent && isBEvent) return 1; 
+        if (isAEvent && !isBEvent) return -1;
+        if (!isAEvent && isBEvent) return 1;
 
         return a.targetName.localeCompare(b.targetName);
       });
-    } else { 
+    } else {
       sortableBonds.sort((a, b) => {
         const aValue = a[sortConfig.key as keyof Bond];
         const bValue = b[sortConfig.key as keyof Bond];
@@ -474,7 +475,7 @@ export default function BondsPage() {
               </PopoverTrigger>
               <PopoverContent className="w-80 space-y-4 p-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bond-search-input">Search by Name or Pseudonym</Label>
+                  <Label htmlFor="bond-search-input">Search by Name or Alias</Label>
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -559,9 +560,14 @@ export default function BondsPage() {
                               <AtSign className="h-3 w-3 mr-1 text-primary" /> Your alias: {bond.pseudonym}
                             </div>
                           )}
-                          {bond.targetPseudonymForMe && (
+                          {bond.targetType === 'user' && bond.targetPseudonymForMe && (
                             <div className="text-xs text-muted-foreground flex items-center">
                               <UserCheck className="h-3 w-3 mr-1 text-sky-600" /> Known as to them: {bond.targetPseudonymForMe}
+                            </div>
+                          )}
+                          {bond.targetType === 'tribe' && bond.tribeAssignedNickname && (
+                            <div className="text-xs text-muted-foreground flex items-center">
+                               <UserCog className="h-3 w-3 mr-1 text-orange-500" /> Your tribe nickname: {bond.tribeAssignedNickname}
                             </div>
                           )}
                         </div>

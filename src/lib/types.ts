@@ -46,7 +46,9 @@ export interface Bond {
   eventId?: string;
   accessTier?: AccessTier;
   pseudonym?: string; // Your alias when interacting with this bond target
-  targetPseudonymForMe?: string; // The alias the bond target uses for you (if known/applicable)
+  targetPseudonymForMe?: string; // The alias the bond target (if user) uses for you
+  tribeAssignedNickname?: string; // The nickname assigned to YOU by the tribe (if target is tribe)
 }
 
 // Other shared types can be added here as the application grows.
+

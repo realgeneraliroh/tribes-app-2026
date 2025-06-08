@@ -16,7 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import type { Bond } from '@/lib/types'; // Import Bond from centralized location
-import { AtSign, UserCheck } from 'lucide-react';
+import { AtSign, UserCheck, UserCog, Info as InfoIcon } from 'lucide-react';
 
 
 interface BondSettingsDialogProps {
@@ -44,17 +44,24 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
   const [allowChat, setAllowChat] = useState(true);
   const [yourPseudonym, setYourPseudonym] = useState("");
   const [theirPseudonymForYou, setTheirPseudonymForYou] = useState("");
+  // tribeAssignedNickname is read-only here, just for display
+  // const [tribeAssignedNickname, setTribeAssignedNickname] = useState(""); 
 
   useEffect(() => {
     if (isOpen && bond) {
       setNotificationsEnabled(bond.showInIntercom ?? true);
       setAllowChat(bond.allowChatInitiation ?? (bond.targetType === 'user' && !bond.keyType?.startsWith('event_')));
       setYourPseudonym(bond.pseudonym || "");
-      setTheirPseudonymForYou(bond.targetPseudonymForMe || "");
+      if (bond.targetType === 'user') {
+        setTheirPseudonymForYou(bond.targetPseudonymForMe || "");
+      }
+      // For tribe-assigned nickname, it's just displayed if present, not edited here.
+      // setTribeAssignedNickname(bond.tribeAssignedNickname || "");
     } else if (!isOpen) {
       // Reset when dialog closes
       setYourPseudonym("");
       setTheirPseudonymForYou("");
+      // setTribeAssignedNickname("");
     }
   }, [isOpen, bond]);
 
@@ -69,8 +76,9 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
             ...bond,
             showInIntercom: notificationsEnabled,
             allowChatInitiation: allowChat,
-            pseudonym: yourPseudonym.trim() || undefined, // Save as undefined if empty
-            targetPseudonymForMe: theirPseudonymForYou.trim() || undefined, // Save as undefined if empty
+            pseudonym: yourPseudonym.trim() || undefined,
+            targetPseudonymForMe: bond.targetType === 'user' ? (theirPseudonymForYou.trim() || undefined) : undefined,
+            // tribeAssignedNickname is not editable here, so it's not included in the update
         };
         onSave(updatedBond);
     }
@@ -92,7 +100,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
           Manage preferences for your bond with <span className="italic font-semibold">{bond.targetName}</span> ({bond.targetType === 'user' ? 'User' : 'Tribe'} - {getBondTypeDisplay(bond.bondType)}).
           {bond.keyType && bond.keyType !== 'standard' && (
             <span className="block mt-2 text-xs text-purple-600 font-medium p-2 bg-purple-500/10 rounded-md">
-              This is an '{bond.keyType.replace(/_/g, ' ')}' key {bond.eventId ? `for event '${bond.eventId}'` : ''} with '{bond.accessTier}' access.
+              This is an '{bond.keyType.replace(/_/g, ' ')}' key {bond.eventId ? `for event '${bond.eventId}'` : ''} {bond.accessTier ? `with '${bond.accessTier}' access` : ''}.
             </span>
           )}
         </DialogDescriptionComponent>
@@ -132,7 +140,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
         <Separator />
 
         <fieldset>
-            <legend className="text-base font-semibold text-foreground mb-3">Pseudonym Settings</legend>
+            <legend className="text-base font-semibold text-foreground mb-3">Alias & Nickname Settings</legend>
             <div className="space-y-4">
                 <div>
                     <Label htmlFor={`your-pseudonym-${bond.id}`} className="flex items-center mb-1.5">
@@ -150,7 +158,8 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
                         How you appear to this bond target if set. Leave blank to use your main profile name.
                     </p>
                 </div>
-                 {bond.targetType === 'user' && ( // Only makes sense for user bonds
+
+                 {bond.targetType === 'user' && (
                     <div>
                         <Label htmlFor={`their-pseudonym-${bond.id}`} className="flex items-center mb-1.5">
                             <UserCheck className="h-4 w-4 mr-2 text-sky-600"/>
@@ -165,6 +174,30 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
                         />
                         <p className="text-xs text-muted-foreground mt-1 px-1">
                             If <span className="italic font-semibold">{bond.targetName}</span> uses an alias for you, note it here.
+                        </p>
+                    </div>
+                )}
+
+                {bond.targetType === 'tribe' && bond.tribeAssignedNickname && (
+                    <div className="p-3 rounded-lg border bg-muted/50">
+                        <Label className="flex items-center mb-1">
+                            <UserCog className="h-4 w-4 mr-2 text-orange-500"/>
+                            Your Nickname in this Tribe
+                        </Label>
+                        <p className="text-sm font-semibold text-foreground pl-6">{bond.tribeAssignedNickname}</p>
+                        <p className="text-xs text-muted-foreground mt-1 pl-6">
+                            This nickname is assigned by the tribe leadership and cannot be changed here.
+                        </p>
+                    </div>
+                )}
+                 {bond.targetType === 'tribe' && !bond.tribeAssignedNickname && (
+                     <div className="p-3 rounded-lg border border-dashed">
+                        <Label className="flex items-center mb-1">
+                            <InfoIcon className="h-4 w-4 mr-2 text-muted-foreground"/>
+                            Tribe-Assigned Nickname
+                        </Label>
+                        <p className="text-xs text-muted-foreground pl-6">
+                            This tribe has not assigned you a specific nickname.
                         </p>
                     </div>
                 )}
@@ -202,3 +235,4 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
     </RootComponent>
   );
 }
+
