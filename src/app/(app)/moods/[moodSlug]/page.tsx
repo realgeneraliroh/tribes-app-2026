@@ -7,9 +7,11 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MessageSquareText, Settings2, Smile } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageSquareText, Smile, Filter as FilterIcon, Settings2 } from 'lucide-react'; // Added FilterIcon
 import { moodsData } from '../page'; 
 import { cn } from '@/lib/utils';
 
@@ -168,38 +170,70 @@ const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
 export default function MoodStreamPage() {
   const router = useRouter();
   const params = useParams();
-  const moodSlug = params.moodSlug as string;
+  const moodSlugFromUrl = params.moodSlug as string;
 
-  const [currentMoodObject, setCurrentMoodObject] = useState(moodsData.find(m => m.slug === moodSlug) || moodsData[0]);
-  const [selectedMoodForTuner, setSelectedMoodForTuner] = useState(moodSlug || moodsData[0].slug);
-
-  const VibeIcon = currentMoodObject.icon || (() => <Smile className="h-7 w-7 md:h-8 md:w-8 text-primary" />);
-
+  const [selectedMoodSlugs, setSelectedMoodSlugs] = useState<string[]>(moodSlugFromUrl ? [moodSlugFromUrl] : []);
+  const [isTunerOpen, setIsTunerOpen] = useState(false);
 
   useEffect(() => {
-    const moodObj = moodsData.find(m => m.slug === moodSlug);
-    if (moodObj) {
-      setCurrentMoodObject(moodObj);
-      setSelectedMoodForTuner(moodSlug); 
-    } else if (moodSlug && moodsData.length > 0) { 
-      router.replace(`/moods/${moodsData[0].slug}`);
+    // Update selected slugs if URL changes directly
+    if (moodSlugFromUrl && (selectedMoodSlugs.length !== 1 || selectedMoodSlugs[0] !== moodSlugFromUrl)) {
+      setSelectedMoodSlugs([moodSlugFromUrl]);
+    } else if (!moodSlugFromUrl && selectedMoodSlugs.length > 0) {
+        // If URL has no slug but we have selections, this indicates user interaction with tuner.
+        // We don't need to reset, but we might want to clear the URL slug if it's a specific navigation pattern.
+        // For now, let's allow tuner to override URL slug for subsequent filtering.
     }
-  }, [moodSlug, router]);
+  }, [moodSlugFromUrl, selectedMoodSlugs]);
+
+
+  const handleMoodSelectionChange = (moodSlug: string, checked: boolean | "indeterminate") => {
+    setSelectedMoodSlugs(prev => {
+        const newSlugs = checked ? [...prev, moodSlug] : prev.filter(slug => slug !== moodSlug);
+        // Optional: Update URL when tuner is used, but this can get complex.
+        // If only one mood is selected, navigate to its slug. Otherwise, maybe to a generic /moods/tuned page or clear slug.
+        // For simplicity, let's not manage URL updates from tuner for now.
+        // if (newSlugs.length === 1) {
+        //   router.replace(`/moods/${newSlugs[0]}`, { scroll: false });
+        // } else if (newSlugs.length === 0 && moodSlugFromUrl) {
+        //   router.replace(`/moods`, { scroll: false }); // Or some other default
+        // }
+        return newSlugs;
+    });
+  };
 
   const filteredPosts = useMemo(() => {
-    if (!moodSlug) return [];
-    return allMoodStreamPosts.filter(post => post.moodTags.includes(moodSlug))
+    if (selectedMoodSlugs.length === 0) return [];
+    return allMoodStreamPosts.filter(post => 
+        selectedMoodSlugs.some(slug => post.moodTags.includes(slug))
+      )
       .sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [moodSlug]);
+  }, [selectedMoodSlugs]);
 
-  const handleMoodSelectChange = (newSlug: string) => {
-    if (newSlug && newSlug !== moodSlug) {
-      router.push(`/moods/${newSlug}`);
-    }
-  };
   
-  const CurrentMoodIcon = currentMoodObject.icon || (() => null);
+  const getHeaderInfo = () => {
+    if (selectedMoodSlugs.length === 1) {
+      const mood = moodsData.find(m => m.slug === selectedMoodSlugs[0]);
+      return {
+        title: mood ? `${mood.name} Stream` : "Mood Stream",
+        Icon: mood?.icon || Smile,
+        description: mood ? `Content curated for your '${mood.name.toLowerCase()}' mood.` : "Tune your mood to discover content."
+      };
+    } else if (selectedMoodSlugs.length > 1) {
+      return {
+        title: "Custom Mood Stream",
+        Icon: Smile,
+        description: `Content from ${selectedMoodSlugs.length} selected moods.`
+      };
+    }
+    return {
+      title: "Select Moods",
+      Icon: Smile,
+      description: "Tune your feed by selecting moods below."
+    };
+  };
 
+  const { title: headerTitle, Icon: HeaderIcon, description: headerDescription } = getHeaderInfo();
 
   return (
     <div className="space-y-4 md:space-y-6 relative">
@@ -207,34 +241,54 @@ export default function MoodStreamPage() {
         <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3 flex flex-row items-center justify-between">
           <div className='flex items-center'>
             <Settings2 className="h-5 w-5 mr-2 text-primary" />
-            <CardTitle className="text-md sm:text-lg font-semibold tracking-normal">Tune Your Stream</CardTitle>
+            <CardTitle className="text-md sm:text-lg font-semibold tracking-normal">Tune Your Feed</CardTitle>
           </div>
+           <Popover open={isTunerOpen} onOpenChange={setIsTunerOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <FilterIcon className="mr-2 h-4 w-4" /> Moods ({selectedMoodSlugs.length})
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-0 max-h-[60vh] flex flex-col">
+                <div className="p-3 border-b">
+                    <h4 className="font-medium leading-none text-sm">Select Moods</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Filter posts by your preferred moods.
+                    </p>
+                </div>
+                <ScrollArea className="flex-1 p-3">
+                    <div className="space-y-2">
+                        {moodsData.map(mood => (
+                            <div key={mood.slug} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`mood-check-${mood.slug}`}
+                                    checked={selectedMoodSlugs.includes(mood.slug)}
+                                    onCheckedChange={(checked) => handleMoodSelectionChange(mood.slug, checked)}
+                                />
+                                <Label htmlFor={`mood-check-${mood.slug}`} className="text-sm font-normal cursor-pointer flex items-center">
+                                   <span className="mr-1.5 text-base">{mood.emoji}</span> {mood.name}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+                <div className="p-3 border-t">
+                    <Button size="sm" onClick={() => setIsTunerOpen(false)} className="w-full">Done</Button>
+                </div>
+            </PopoverContent>
+        </Popover>
         </CardHeader>
-        <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
-          <Select value={selectedMoodForTuner} onValueChange={handleMoodSelectChange}>
-            <SelectTrigger className="w-full text-base">
-              <SelectValue placeholder="Select a mood..." />
-            </SelectTrigger>
-            <SelectContent>
-              {moodsData.map(mood => (
-                <SelectItem key={mood.slug} value={mood.slug} className="text-base">
-                  <span className="mr-2">{mood.emoji}</span>{mood.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
       </Card>
 
       <header className="mb-4 md:mb-6 pt-4"> 
         <div className="flex items-center space-x-2 mb-1">
-            <CurrentMoodIcon className="h-7 w-7 md:h-8 md:w-8 text-primary" /> 
+            <HeaderIcon className="h-7 w-7 md:h-8 md:w-8 text-primary" /> 
             <h1 className="text-2xl md:text-3xl font-bold tracking-normal text-foreground font-mono">
-             {currentMoodObject.name} Stream
+             {headerTitle}
             </h1>
         </div>
         <p className="text-md md:text-lg text-muted-foreground">
-          Content curated for your '{currentMoodObject.name.toLowerCase()}' mood.
+          {headerDescription}
         </p>
       </header>
       
@@ -247,10 +301,12 @@ export default function MoodStreamPage() {
       ) : (
         <Card className="text-center py-12 shadow-none sm:shadow-lg">
             <CardContent className="p-4 sm:p-6">
-                <CurrentMoodIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground opacity-50 mb-4 sm:mb-6" /> 
-                <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 tracking-normal">No posts for '{currentMoodObject.name}' yet!</h3>
+                <HeaderIcon className="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground opacity-50 mb-4 sm:mb-6" /> 
+                <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2 tracking-normal">
+                    {selectedMoodSlugs.length > 0 ? "No posts for your selected moods yet!" : "No moods selected!"}
+                </h3>
                 <p className="text-muted-foreground text-sm sm:text-base">
-                    Try tuning to a different mood or check back later.
+                    {selectedMoodSlugs.length > 0 ? "Try different mood combinations or check back later." : "Open the tuner above to select moods and discover content."}
                 </p>
             </CardContent>
         </Card>
@@ -258,6 +314,8 @@ export default function MoodStreamPage() {
     </div>
   );
 }
+
+    
 
     
 
