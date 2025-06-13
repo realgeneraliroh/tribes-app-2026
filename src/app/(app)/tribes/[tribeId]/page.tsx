@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
@@ -21,10 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 
 import { tribesData, type Tribe } from '../page';
 import { moodsData } from '../../moods/page';
-import { allMoodStreamPosts } from '../../moods/[moodSlug]/page'; 
+import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
 import type { Event } from '../../events/[eventId]/page';
 import { sampleEventsData } from '../../events/[eventId]/page';
-import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog'; // Component renamed, filename is boost-post-dialog
+import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog'; // Component filename is boost-post-dialog, but exports PromotePostDialog
 
 export interface TribePost {
   id: string;
@@ -54,7 +54,7 @@ const sampleTribePosts: TribePost[] = [
     vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
   },
   {
-    id: "msp2", tribeId: "1", authorName: "ProductivePro", authorAvatarFallback: "PP", 
+    id: "msp2", tribeId: "1", authorName: "ProductivePro", authorAvatarFallback: "PP",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 3),
     title: "My Top 5 Productivity Hacks for Deep Work",
     content: "Sharing my secrets to staying in the zone! Tip #1: Time blocking is key. This was also shared to the Focus mood stream.",
@@ -70,7 +70,7 @@ const sampleTribePosts: TribePost[] = [
     vibes: 210, comments: 32, dataAiHintAvatar: "hiker adventurer",
   },
    {
-    id: "msp9", tribeId: "2", authorName: "LocalFoodie", authorAvatarFallback: "LF", 
+    id: "msp9", tribeId: "2", authorName: "LocalFoodie", authorAvatarFallback: "LF",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 7),
     title: "Post-Hike Find: Amazing Farmers Market!",
     content: "After our hike near Miller's Pond, stumbled upon this fantastic farmers market. Great fuel and cool local crafts! Shared this to Discover stream too.",
@@ -86,7 +86,7 @@ const sampleTribePosts: TribePost[] = [
     vibes: 95, comments: 22, dataAiHintAvatar: "music fan",
   },
   {
-    id: "msp8", tribeId: "7", authorName: "RockstarDev", authorAvatarFallback: "RD", 
+    id: "msp8", tribeId: "7", authorName: "RockstarDev", authorAvatarFallback: "RD",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 8),
     title: "My Stage Setup for Tonight's Gig",
     content: "Sound check done! Ready to rock the 'Music Hall' tonight. Who's coming? Also shared to Create mood stream!",
@@ -104,7 +104,21 @@ const sampleTribePosts: TribePost[] = [
 
 const moodStreamPostIds = new Set(allMoodStreamPosts.map(p => p.id));
 
-const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMember: boolean; isTribeAdmin: boolean; onPromoteClick: (post: TribePost) => void; }> = ({ post, isPromoted, isUserMember, isTribeAdmin, onPromoteClick }) => {
+interface ReportedPost {
+  postId: string;
+  postTitle?: string; // Use title for easier display
+  reporterName: string; // Mocked
+  reportedAt: Date;
+  reason?: string; // Optional
+}
+
+const mockReportedContentData: ReportedPost[] = [
+  { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser1", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 5), reason: "Spamming irrelevant content" },
+  { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "Sharing potentially dangerous trail info without proper warnings." },
+];
+
+
+const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMember: boolean; isTribeAdmin: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; }> = ({ post, isPromoted, isUserMember, isTribeAdmin, onPromoteClick, onReportClick }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
 
   useEffect(() => {
@@ -123,9 +137,6 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
     setDisplayTime(timeSince(post.timestamp));
   }, [post.timestamp]);
 
-  const handleReportPost = () => {
-    alert(`Post "${post.title || post.id}" reported. (Simulated)`);
-  };
 
   return (
     <Card className={cn(
@@ -174,7 +185,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={handleReportPost}>
+                <DropdownMenuItem onClick={() => onReportClick(post)}>
                   <Flag className="mr-2 h-4 w-4" /> Report Post
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -270,19 +281,20 @@ export default function TribeDetailPage() {
   const { toast } = useToast();
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
-  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false); 
-  const [postToPromote, setPostToPromote] = useState<TribePost | null>(null); 
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
+  const [postToPromote, setPostToPromote] = useState<TribePost | null>(null);
   const [locallyPromotedPostIds, setLocallyPromotedPostIds] = useState<Set<string>>(new Set());
+  const [reportedContent, setReportedContent] = useState<ReportedPost[]>(mockReportedContentData);
 
-  const isUserMember = true; 
-  const isTribeAdmin = true; 
+
+  const isUserMember = true;
+  const isTribeAdmin = true;
 
   const mockMembers = [
     { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person' },
     { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character' },
     { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person' },
   ];
-  const mockReportedContent: any[] = [];
 
 
   useEffect(() => {
@@ -344,26 +356,62 @@ export default function TribeDetailPage() {
   }, [tribe, tribeEvents, postsInTribe, isUserMember, locallyPromotedPostIds]);
 
 
-  const handleOpenPromoteDialog = (post: TribePost) => { 
+  const handleOpenPromoteDialog = (post: TribePost) => {
     if (moodStreamPostIds.has(post.id) || locallyPromotedPostIds.has(post.id)) {
       toast({
         title: "Already Promoted",
-        description: `"${post.title || 'This post'}" is already promoted.`,
+        description: `"${post.title || 'This post'}" is already promoted to mood streams.`,
+        variant: "default",
       });
       return;
     }
-    setPostToPromote(post); 
-    setIsPromoteDialogOpen(true); 
+    setPostToPromote(post);
+    setIsPromoteDialogOpen(true);
   };
 
-  const handleConfirmPromotion = (postId: string, selectedMoodSlugs: string[]) => { 
-    console.log(`Promoting post ID: ${postId} to moods: ${selectedMoodSlugs.join(', ')}`);
+  const handleConfirmPromotion = (postId: string, selectedMoodSlugs: string[]) => {
+    console.log(`User confirmed promotion: Post ID ${postId} to moods: ${selectedMoodSlugs.join(', ')}`);
     setLocallyPromotedPostIds(prev => new Set(prev).add(postId));
     toast({
       title: "Post Promoted",
       description: `Post "${postToPromote?.title || postId}" has been successfully promoted to ${selectedMoodSlugs.length} mood stream(s).`,
     });
-    setPostToPromote(null); 
+    setPostToPromote(null);
+  };
+
+  const handleUserReportPost = (post: TribePost) => {
+    toast({
+      title: "Post Reported (Simulated)",
+      description: `Thank you for reporting "${post.title || 'this post'}". An admin will review it.`,
+    });
+    // In a real app, you'd send this to a backend.
+    // For simulation, we could add it to a local `reportedContent` state if needed for the admin view.
+    // For now, the admin view uses static mock data.
+  };
+
+  const handleAdminViewReportedPost = (postId: string) => {
+    alert(`Admin action: View details for reported post ID: ${postId}. (Simulated)`);
+    // Could scroll to the post or open a modal with post details.
+  };
+  
+  const handleAdminDismissReport = (postId: string) => {
+    setReportedContent(prev => prev.filter(report => report.postId !== postId));
+    toast({
+      title: "Report Dismissed",
+      description: `Report for post ID ${postId} has been dismissed.`,
+    });
+  };
+  
+  const handleAdminRemovePost = (postId: string) => {
+    // This is more complex as it would need to remove the post from `sampleTribePosts`
+    // and then cause a re-render of `combinedFeedItems`.
+    // For now, just an alert and remove from reported list.
+    setReportedContent(prev => prev.filter(report => report.postId !== postId));
+    toast({
+      title: "Post Removed (Simulated)",
+      description: `Post ID ${postId} has been removed from the tribe.`,
+      variant: "destructive",
+    });
   };
 
 
@@ -396,7 +444,7 @@ export default function TribeDetailPage() {
         <Accordion type="single" collapsible className="w-full" defaultValue="admin-tools-closed">
           <AccordionItem value="admin-tools" className="border-destructive/30 rounded-lg shadow-lg overflow-hidden">
               <AccordionTrigger className="w-full hover:bg-muted/20 transition-colors p-4 hover:no-underline rounded-t-lg">
-                <div className="flex items-center space-x-3"> 
+                <div className="flex items-center space-x-3">
                   <ShieldAlert className="h-6 w-6 text-destructive" />
                   <div>
                     <CardTitle className="text-xl font-semibold tracking-normal text-destructive text-left">Tribe Admin Tools</CardTitle>
@@ -446,9 +494,36 @@ export default function TribeDetailPage() {
                   </div>
                   <Separator />
                   <div>
-                    <h3 className="text-lg font-medium text-foreground mb-2">Reported Content Queue</h3>
-                    {mockReportedContent.length > 0 ? (
-                      <p className="text-sm text-muted-foreground">Display reported items here...</p>
+                    <h3 className="text-lg font-medium text-foreground mb-3 flex items-center">
+                      <Inbox className="mr-2 h-5 w-5 text-muted-foreground" /> Reported Content Queue ({reportedContent.length})
+                    </h3>
+                    {reportedContent.length > 0 ? (
+                      <ul className="space-y-3">
+                        {reportedContent.map(report => (
+                          <li key={report.postId} className="p-3 bg-muted/30 rounded-md border border-destructive/20">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                <div>
+                                    <p className="text-sm font-semibold">
+                                        <Link href={`#post-${report.postId}`} className="hover:underline text-primary">
+                                            {report.postTitle || `Post ID: ${report.postId}`}
+                                        </Link>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Reported by: {report.reporterName} on {format(report.reportedAt, "MMM d, yyyy h:mm a")}
+                                    </p>
+                                    {report.reason && <p className="text-xs text-destructive italic mt-1">Reason: {report.reason}</p>}
+                                </div>
+                                <div className="flex items-center space-x-1.5 mt-2 sm:mt-0 shrink-0">
+                                    <Button variant="outline" size="xs" onClick={() => handleAdminViewReportedPost(report.postId)}>View</Button>
+                                    <Button variant="outline" size="xs" onClick={() => handleAdminDismissReport(report.postId)}>Dismiss</Button>
+                                    <Button variant="destructive" size="xs" onClick={() => handleAdminRemovePost(report.postId)}>
+                                        <Trash2 className="h-3 w-3 mr-1"/>Remove Post
+                                    </Button>
+                                </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     ) : (
                       <p className="text-sm text-muted-foreground">No reported content at this time.</p>
                     )}
@@ -544,7 +619,19 @@ export default function TribeDetailPage() {
               return <EventHighlightCard key={item.id} event={item.data as Event} />;
             }
             const post = item.data as TribePost;
-            return <TribePostCard key={item.id} post={post} isPromoted={item.isPromoted} isUserMember={isUserMember} isTribeAdmin={isTribeAdmin} onPromoteClick={handleOpenPromoteDialog} />;
+            const postKey = `post-${post.id}`; // Ensure unique key for React list
+            return (
+              <div key={postKey} id={postKey}> {/* Add ID for potential scrolling */}
+                <TribePostCard                 
+                  post={post} 
+                  isPromoted={item.isPromoted} 
+                  isUserMember={isUserMember} 
+                  isTribeAdmin={isTribeAdmin} 
+                  onPromoteClick={handleOpenPromoteDialog}
+                  onReportClick={handleUserReportPost}
+                />
+              </div>
+            );
           })
         ) : (
           <Card className="text-center py-12 shadow-md">
@@ -561,14 +648,13 @@ export default function TribeDetailPage() {
         )}
       </section>
       {postToPromote && (
-        <PromotePostDialog 
+        <PromotePostDialog
           isOpen={isPromoteDialogOpen}
           onOpenChange={setIsPromoteDialogOpen}
           post={postToPromote}
-          onConfirmPromotion={handleConfirmPromotion} 
+          onConfirmPromotion={handleConfirmPromotion}
         />
       )}
     </div>
   );
 }
-
