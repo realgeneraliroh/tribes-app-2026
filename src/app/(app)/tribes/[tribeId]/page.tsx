@@ -11,7 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
@@ -115,6 +118,20 @@ export interface ReportedPost {
 export const mockReportedContentData: ReportedPost[] = [
   { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser1", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 5), reason: "Spamming irrelevant content" },
   { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "Sharing potentially dangerous trail info without proper warnings." },
+];
+
+interface TribeMember {
+  id: string;
+  name: string;
+  avatar: string;
+  dataAiHint: string;
+  tribeAssignedNickname?: string;
+}
+
+const initialMockMembers: Omit<TribeMember, 'tribeAssignedNickname'>[] = [
+  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person' },
+  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character' },
+  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person' },
 ];
 
 
@@ -302,23 +319,31 @@ export default function TribeDetailPage() {
   
   const [currentTribePostsData, setCurrentTribePostsData] = useState<TribePost[]>(initialSampleTribePosts);
   const [reportedContent, setReportedContent] = useState<ReportedPost[]>(mockReportedContentData);
+  const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>(
+    initialMockMembers.map(member => ({ ...member, tribeAssignedNickname: undefined }))
+  );
+  const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
+  const [memberToEditNickname, setMemberToEditNickname] = useState<TribeMember | null>(null);
+  const [nicknameInputValue, setNicknameInputValue] = useState("");
 
 
   const isUserMember = true;
   const isTribeAdmin = true;
-
-  const mockMembers = [
-    { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person' },
-    { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character' },
-    { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person' },
-  ];
-
 
   useEffect(() => {
     if (tribeId) {
       const currentTribeData = tribesData.find(t => t.id === tribeId);
       if (currentTribeData) {
         setTribe(currentTribeData);
+        // Here you might filter initialMockMembers to only include actual members of this tribe if that data was available.
+        // For now, we assume initialMockMembers are generic users who *could* be in this tribe.
+        const membersWithPossibleNicknames = initialMockMembers.map(member => ({
+            ...member,
+            // In a real app, this nickname would be fetched based on tribeId and member.id
+            tribeAssignedNickname: member.id === 'user1' && tribeId === '1' ? 'AI Lead' : undefined 
+        }));
+        setCurrentTribeMembers(membersWithPossibleNicknames);
+
       } else {
         router.push('/tribes');
       }
@@ -413,12 +438,6 @@ export default function TribeDetailPage() {
   };
 
   const handleUserReportPost = (post: TribePost) => {
-    // In a real app, this would send data to a backend.
-    // For now, we can simulate adding it to our mockReportedContentData if not already there
-    // or just show a toast.
-    // To avoid complexity with global state update from child component,
-    // this example will just show a toast.
-    // If we were adding to a central reported list, we'd need a context or Zustand.
     const alreadyReported = reportedContent.some(r => r.postId === post.id);
     if(alreadyReported){
          toast({
@@ -428,10 +447,6 @@ export default function TribeDetailPage() {
         });
         return;
     }
-    // Simulate adding:
-    // const newReport: ReportedPost = { postId: post.id, postTitle: post.title, reporterName: "CurrentUser", reportedAt: new Date(), reason: "User reported from card" };
-    // setReportedContent(prev => [...prev, newReport]); // This would show in global queue but not directly on card unless passed down
-
     toast({
       title: "Post Reported (Simulated)",
       description: `Thank you for reporting "${post.title || 'this post'}". An admin will review it.`,
@@ -474,6 +489,28 @@ export default function TribeDetailPage() {
     });
   };
 
+  const handleOpenNicknameDialog = (member: TribeMember) => {
+    setMemberToEditNickname(member);
+    setNicknameInputValue(member.tribeAssignedNickname || "");
+    setIsNicknameDialogOpen(true);
+  };
+
+  const handleSaveNickname = () => {
+    if (!memberToEditNickname) return;
+    setCurrentTribeMembers(prevMembers => 
+      prevMembers.map(member => 
+        member.id === memberToEditNickname.id 
+          ? { ...member, tribeAssignedNickname: nicknameInputValue.trim() || undefined } 
+          : member
+      )
+    );
+    toast({
+      title: "Nickname Updated",
+      description: `Nickname for ${memberToEditNickname.name} has been set to "${nicknameInputValue.trim() || '(cleared)'}".`,
+    });
+    setIsNicknameDialogOpen(false);
+    setMemberToEditNickname(null);
+  };
 
   if (!tribe) {
     return (
@@ -520,19 +557,27 @@ export default function TribeDetailPage() {
                     <h3 className="text-lg font-medium text-foreground mb-2 flex items-center">
                       <UserCog className="mr-2 h-5 w-5 text-muted-foreground" /> Member Management
                     </h3>
-                    {mockMembers.length > 0 ? (
+                    {currentTribeMembers.length > 0 ? (
                       <ul className="space-y-2">
-                        {mockMembers.map(member => (
+                        {currentTribeMembers.map(member => (
                           <li key={member.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md">
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={member.avatar} alt={member.name} data-ai-hint={member.dataAiHint} />
-                                <AvatarFallback>{member.name.substring(0,2)}</AvatarFallback>
+                                <AvatarFallback>{member.name.substring(0,2).toUpperCase()}</AvatarFallback>
                               </Avatar>
-                              <span className="text-sm font-medium">{member.name}</span>
+                              <div>
+                                <span className="text-sm font-medium">{member.name}</span>
+                                {member.tribeAssignedNickname && (
+                                  <p className="text-xs text-primary italic">Nickname: {member.tribeAssignedNickname}</p>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Button variant="ghost" size="sm" onClick={() => handleViewUserProfile(member.id)}>View</Button>
+                              <Button variant="outline" size="sm" onClick={() => handleOpenNicknameDialog(member)}>
+                                <Pencil className="h-3.5 w-3.5 mr-1.5" /> {member.tribeAssignedNickname ? "Edit" : "Assign"} Nickname
+                              </Button>
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -717,6 +762,39 @@ export default function TribeDetailPage() {
           tribeMoodSlugs={tribe.moods || []}
         />
       )}
+      {memberToEditNickname && (
+        <Dialog open={isNicknameDialogOpen} onOpenChange={setIsNicknameDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Nickname for {memberToEditNickname.name}</DialogTitle>
+                    <DialogDescription>
+                        Set a tribe-specific nickname for this member. This will be visible within this tribe.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="nickname" className="text-right">
+                            Nickname
+                        </Label>
+                        <Input
+                            id="nickname"
+                            value={nicknameInputValue}
+                            onChange={(e) => setNicknameInputValue(e.target.value)}
+                            placeholder="Enter nickname (optional)"
+                            className="col-span-3"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="button" onClick={handleSaveNickname}>Save Nickname</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
