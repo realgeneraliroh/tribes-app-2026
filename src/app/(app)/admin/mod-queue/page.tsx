@@ -30,8 +30,8 @@ export default function ModQueuePage() {
   const { toast } = useToast();
 
   const [reports, setReports] = useState<ReportedPost[]>(mockReportedContentData);
-  const [allPosts] = useState<TribePost[]>(initialSampleTribePosts); // Not modifying posts directly here
-  const [allTribes] = useState<Tribe[]>(tribesData);
+  const [allPosts, setAllPosts] = useState<TribePost[]>(initialSampleTribePosts); // State for all posts
+  const [allTribes, setAllTribes] = useState<Tribe[]>(tribesData); // State for all tribes
 
   const getPostById = (postId: string): TribePost | undefined => {
     return allPosts.find(post => post.id === postId);
@@ -51,11 +51,11 @@ export default function ModQueuePage() {
 
   const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
     setReports(prev => prev.filter(report => report.postId !== postIdToRemove));
-    // In a real app, this would trigger a backend action to remove the post from its tribe
-    // and potentially notify the reporter. For simulation:
+    // Simulate removing the post from the "system"
+    setAllPosts(prevPosts => prevPosts.filter(post => post.id !== postIdToRemove));
     toast({
       title: "Post Removal Actioned (Simulated)",
-      description: `Post "${postTitle || postIdToRemove}" has been flagged for removal from its tribe. The report is dismissed.`,
+      description: `Post "${postTitle || postIdToRemove}" has been flagged for removal from its tribe and the system. The report is dismissed.`,
       variant: "destructive",
     });
   };
@@ -64,16 +64,20 @@ export default function ModQueuePage() {
     router.push(`/tribes/${tribeId}`);
   };
   
-  const handleEscalate = (reportId: string) => {
+  const handleEscalate = (reportPostId: string) => { // Changed parameter to avoid conflict
       toast({
         title: "Report Escalated (Simulated)",
-        description: `Report for post ID ${reportId} has been escalated to platform administrators.`,
+        description: `Report for post ID ${reportPostId} has been escalated to platform administrators.`,
       });
   };
 
 
   if (!reports || !allPosts || !allTribes) {
-      return <p>Loading moderation data...</p>;
+      return (
+        <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+            <p className="text-muted-foreground">Loading moderation data...</p>
+        </div>
+    );
   }
 
   return (
@@ -184,3 +188,5 @@ export default function ModQueuePage() {
     </div>
   );
 }
+
+    
