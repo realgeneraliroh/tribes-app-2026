@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ListChecks, ShieldAlert, Inbox, Trash2, Eye, AlertCircle, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
+import { ArrowLeft, ListChecks, ShieldAlert, Trash2, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -93,7 +93,7 @@ export default function TribeModQueuePage() {
         if (tribeId) {
             const currentTribeData = tribesData.find(t => t.id === tribeId);
             if (currentTribeData) {
-                const activeTribePostIds = new Set(
+                const activePostIds = new Set(
                   initialSampleTribePosts.filter(p => p.tribeId === tribeId && !p.isRemoved).map(p => p.id)
                 );
                 setAllReportsForTribe(mockReportedContentData.filter(report => activeTribePostIds.has(report.postId)));
@@ -489,5 +489,4 @@ export default function TribeModQueuePage() {
     </div>
   );
 }
-
     
