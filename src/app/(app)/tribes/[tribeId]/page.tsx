@@ -23,7 +23,7 @@ import { moodsData } from '../../moods/page';
 import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
 import type { Event } from '../../events/[eventId]/page';
 import { sampleEventsData } from '../../events/[eventId]/page';
-import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog'; // Corrected import path
+import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 import { RepostDialog } from '@/components/dialogs/repost-dialog';
 
@@ -50,7 +50,7 @@ export interface TribePost {
 }
 
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
-const MOCK_CURRENT_USER_ID = "authorAE";
+const MOCK_CURRENT_USER_ID = "authorAE"; // Alice Example is our test user
 
 export let initialSampleTribePosts: TribePost[] = [
   {
@@ -59,18 +59,19 @@ export let initialSampleTribePosts: TribePost[] = [
     title: "Local Discussion: Ethics in AI Development",
     content: "Starting a thread specifically for our tribe members on the ethical considerations of recent AI breakthroughs. What are your immediate thoughts?",
     vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
-    isRemoved: false, // Not removed by default
+    isRemoved: false, 
+    canBeReposted: true,
   },
   {
-    id: "msp2", tribeId: "1", authorId: MOCK_CURRENT_USER_ID, authorName: "ProductivePro", authorAvatarFallback: "PP",
+    id: "msp2", tribeId: "1", authorId: MOCK_CURRENT_USER_ID, authorName: "ProductivePro (You)", authorAvatarFallback: "PP",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 3),
     title: "My Top 5 Productivity Hacks for Deep Work",
     content: "Sharing my secrets to staying in the zone! Tip #1: Time blocking is key. This was also shared to the Focus mood stream.",
     imageUrl: "https://placehold.co/600x400.png?text=FocusHacks", imageAlt: "Productivity hacks", dataAiHintImage: "productivity office",
     vibes: 125, comments: 18, dataAiHintAvatar: "work professional",
-    isRemoved: true, // This is our example removed post
-    canBeReposted: true,
-    removalReason: "Content marked as removed for testing repost.",
+    isRemoved: true, 
+    canBeReposted: true, 
+    removalReason: "Content marked as removed by admin. Eligible for reposting.",
   },
   {
     id: "tribe_post_hikers_local1", tribeId: "2", authorId: "authorTB", authorName: "Trail Blazer", authorAvatarFallback: "TB",
@@ -110,6 +111,9 @@ export let initialSampleTribePosts: TribePost[] = [
     title: "Seeking Beta Testers for New Puzzle Game (Tribe Only)",
     content: "Our indie studio is looking for beta testers for our upcoming mobile puzzle game 'Color Grid'. DM me if you're interested! This is a private post for tribe members.",
     vibes: 40, comments: 5, dataAiHintAvatar: "game developer",
+    isRemoved: true, // Test case for a removed post that cannot be reposted by default.
+    canBeReposted: false,
+    removalReason: "Content removed due to policy violation (Simulated). Reposting not allowed."
   },
 ];
 
@@ -126,7 +130,8 @@ export interface ReportedPost {
 export let mockReportedContentData: ReportedPost[] = [
   { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser42", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "This post seems off-topic for the AI Innovators tribe." },
   { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Sharing potentially dangerous trail info without proper warnings." },
-  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "RuleFollower99", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 0.5), reason: "A standard report for a non-removed item, to test queue visibility." }
+  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "RuleFollower99", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 0.5), reason: "A standard report for a non-removed item, to test queue visibility." },
+  { postId: "post7", postTitle: "Seeking Beta Testers for New Puzzle Game (Tribe Only)", reporterName: "QualityAssuranceBot", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Post content violated beta testing guidelines." }
 ];
 
 export interface TribeMember {
@@ -175,7 +180,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
             <Badge variant="destructive" className="text-md p-2 px-3">POST REMOVED</Badge>
             {isCurrentUserAuthor && post.canBeReposted !== false && (
                 <Button
-                    variant="secondary"
+                    variant="secondary" 
                     size="sm"
                     onClick={() => onRepostClick(post)}
                     className="pointer-events-auto mt-2"
@@ -186,6 +191,11 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
             {post.removalReason && (
                 <p className="text-xs text-white/90 text-center italic max-w-xs bg-black/40 p-1.5 rounded mt-1">
                     Reason: {post.removalReason}
+                </p>
+            )}
+             {!post.canBeReposted && post.removalReason && (
+                <p className="text-xs text-white/90 font-semibold text-center max-w-xs bg-destructive/50 p-1.5 rounded mt-1">
+                    Reposting of this content has been prevented by moderation.
                 </p>
             )}
         </div>
@@ -279,8 +289,8 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
             <MessageSquareText className="mr-1.5 h-4 w-4" /> {post.comments || 0}
           </Button>
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
-              <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
+           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+            <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
           </Button>
         </CardFooter>
       </div>
@@ -408,7 +418,7 @@ export default function TribeDetailPage() {
     return initialSampleTribePosts
       .filter(post =>
         post.tribeId === tribe.id &&
-        !(post.isRemoved === true && post.canBeReposted === false)
+        !(post.isRemoved === true && post.canBeReposted === false) 
       )
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }, [tribe, dataTimestamp]);
@@ -549,7 +559,7 @@ export default function TribeDetailPage() {
       vibes: 0,
       comments: 0,
       isRemoved: false,
-      canBeReposted: true,
+      canBeReposted: true, // A new repost is itself repostable unless removed again
       originalPostId: postBeingReposted.id,
     };
 
@@ -557,13 +567,13 @@ export default function TribeDetailPage() {
     if (originalPostIndex > -1) {
       initialSampleTribePosts[originalPostIndex] = {
         ...initialSampleTribePosts[originalPostIndex],
-        canBeReposted: false,
+        canBeReposted: false, // Original can no longer be reposted
       };
     }
 
-    initialSampleTribePosts.unshift(newPost);
+    initialSampleTribePosts.unshift(newPost); // Add new post to the top
 
-    setDataTimestamp(Date.now());
+    setDataTimestamp(Date.now()); // Trigger re-render
     toast({
       title: "Post Reposted",
       description: `Your post has been successfully reposted to ${tribe.name}.`,
@@ -774,6 +784,4 @@ export default function TribeDetailPage() {
     </div>
   );
 }
-    
-
     

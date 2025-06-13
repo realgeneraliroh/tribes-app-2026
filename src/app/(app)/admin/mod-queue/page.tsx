@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ShieldAlert, Inbox, Trash2, Users as TribeIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
+import { ShieldAlert, Inbox, Trash2, Users as TribeIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from "lucide-react"; // Added Ban
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
@@ -62,6 +63,8 @@ export default function ModQueuePage() {
   const [userToBanDetails, setUserToBanDetails] = useState<{ userId: string; userName: string; postId: string } | null>(null);
   const [banDuration, setBanDuration] = useState("permanent");
   const [banReason, setBanReason] = useState("");
+  const [preventRepostState, setPreventRepostState] = useState<{ [postId: string]: boolean }>({});
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentSortValue, setCurrentSortValue] = useState<string>(sortOptions[0].value);
@@ -105,11 +108,13 @@ export default function ModQueuePage() {
       mockReportedContentData.splice(reportIndexGlobal, 1);
     }
     const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
+    const shouldPreventRepost = preventRepostState[postIdToRemove] || false;
+
     if (postIndexGlobal > -1) {
       initialSampleTribePosts[postIndexGlobal] = {
         ...initialSampleTribePosts[postIndexGlobal],
         isRemoved: true,
-        canBeReposted: true, 
+        canBeReposted: !shouldPreventRepost, 
         removalReason: "Content removed by Global Admin.",
       };
     }
@@ -117,22 +122,42 @@ export default function ModQueuePage() {
     setReports(prev => prev.filter(report => report.postId !== postIdToRemove));
     setAllPosts(prevPosts => prevPosts.map(p => 
         p.id === postIdToRemove 
-        ? { ...p, isRemoved: true, canBeReposted: true, removalReason: "Content removed by Global Admin." } 
+        ? { ...p, isRemoved: true, canBeReposted: !shouldPreventRepost, removalReason: "Content removed by Global Admin." } 
         : p
     ));
     
     toast({
-      title: "Post Marked as Removed (Simulated)",
-      description: `Post "${postTitle || postIdToRemove}" has been marked as removed. The report is dismissed.`,
+      title: "Post Marked as Removed",
+      description: `Post "${postTitle || postIdToRemove}" has been marked as removed. ${shouldPreventRepost ? "Reposting has been prevented." : "It can be reposted by the author."}`,
       variant: "destructive",
     });
+    // Reset checkbox state for this post
+    setPreventRepostState(prev => ({ ...prev, [postIdToRemove]: false }));
   };
 
   const handleViewTribe = (tribeId: string) => {
-    const post = reports.find(r => r.postId)?.postId ? allPosts.find(p => p.id === reports.find(r => r.postId)?.postId && p.tribeId === tribeId) : undefined;
-    if (post) router.push(`/tribes/${post.tribeId}`);
-    else toast({title: "Error", description: "Could not find tribe for this post.", variant: "destructive"});
+    // Find a post associated with the report that matches the tribeId
+    const reportWithTribe = reports.find(r => {
+        const post = getPostById(r.postId);
+        return post?.tribeId === tribeId;
+    });
+
+    if (reportWithTribe) {
+        const post = getPostById(reportWithTribe.postId);
+        if (post) {
+            router.push(`/tribes/${post.tribeId}`);
+            return;
+        }
+    }
+    // Fallback if no direct match, try to find any post by ID first then tribe
+    const anyPost = reports.find(r => r.postId)?.postId ? allPosts.find(p => p.id === reports.find(r => r.postId)?.postId) : undefined;
+    if (anyPost && anyPost.tribeId === tribeId) {
+        router.push(`/tribes/${anyPost.tribeId}`);
+    } else {
+        toast({title: "Error", description: "Could not find a matching post in the specified tribe.", variant: "destructive"});
+    }
   };
+
 
   const handleEscalate = (reportPostId: string) => {
     toast({
@@ -280,7 +305,7 @@ export default function ModQueuePage() {
           <h1 className="text-3xl sm:text-4xl font-bold tracking-normal text-foreground font-mono">Global Moderation Queue</h1>
         </div>
         <p className="text-md sm:text-lg text-muted-foreground mt-2">
-          Review and manage reported content from across all tribes. Admins see all; tribe owners/moderators see content for their tribes only.
+          Review and manage reported content from across all tribes. Admins see all; tribe owners/moderators see content for their tribes only. Reports for already removed posts are hidden.
         </p>
       </header>
 
@@ -378,7 +403,6 @@ export default function ModQueuePage() {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
                           {report.postTitle || post?.title || "Untitled Post"}
-                          {/* Badge for removed is handled by the post content preview if post exists */}
                         </p>
                         <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
                           <span>Reported by: {report.reporterName}</span>
@@ -413,19 +437,34 @@ export default function ModQueuePage() {
                                   <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{ objectFit: "cover" }} data-ai-hint={post.dataAiHintImage || "post image"} />
                                 </div>
                               )}
-                               {post.isRemoved && ( // This will show if the post was removed by any mod action
+                               {post.isRemoved && ( 
                                 <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
                                     <p className="text-xs font-semibold text-destructive">This post has been marked as removed by an administrator.</p>
                                     {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
+                                    {!post.canBeReposted && <p className="text-xs text-destructive font-medium mt-1">Future reposting of this content has been prevented.</p>}
                                 </div>
                               )}
                             </div>
                           </div>
+                          {!post?.isRemoved && (
+                            <div className="flex items-center space-x-3 pt-1">
+                                <Checkbox
+                                id={`prevent-repost-${post.id}`}
+                                checked={preventRepostState[post.id] || false}
+                                onCheckedChange={(checked) => {
+                                    setPreventRepostState(prev => ({ ...prev, [post.id]: !!checked }));
+                                }}
+                                />
+                                <Label htmlFor={`prevent-repost-${post.id}`} className="text-xs font-medium text-muted-foreground">
+                                Prevent future reposts of this content
+                                </Label>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2 pt-2">
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
-                            {!post.isRemoved && ( // Only show if post isn't already removed
+                            {!post.isRemoved && ( 
                                 <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Mark Post as Removed
                                 </Button>
@@ -517,6 +556,4 @@ export default function ModQueuePage() {
     </div>
   );
 }
-
-
     
