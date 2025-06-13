@@ -16,8 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
-import { ArrowLeft, ListChecks, ShieldAlert, Inbox, Trash2, Eye, AlertCircle, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from 'lucide-react'; // Added Ban
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, ListChecks, ShieldAlert, Inbox, Trash2, Eye, AlertCircle, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
@@ -390,8 +390,9 @@ export default function TribeModQueuePage() {
                                 )}
                             </div>
                           </div>
+                          
                           {!post?.isRemoved && (
-                             <div className="flex items-center space-x-3 pt-1">
+                             <div className="flex items-center space-x-3 pt-3 border-t mt-3">
                                 <Checkbox
                                 id={`prevent-repost-tribe-${post.id}`}
                                 checked={preventRepostState[post.id] || false}
@@ -399,12 +400,13 @@ export default function TribeModQueuePage() {
                                     setPreventRepostState(prev => ({ ...prev, [post.id]: !!checked }));
                                 }}
                                 />
-                                <Label htmlFor={`prevent-repost-tribe-${post.id}`} className="text-xs font-medium text-muted-foreground">
-                                Prevent future reposts of this content
+                                <Label htmlFor={`prevent-repost-tribe-${post.id}`} className="text-sm font-medium text-foreground flex items-center">
+                                  <Ban className="mr-2 h-4 w-4 text-destructive"/> Prevent future reposts of this content
                                 </Label>
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-2 pt-2">
+
+                          <div className="flex flex-wrap gap-2 pt-4 border-t mt-4">
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
