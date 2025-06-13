@@ -61,6 +61,9 @@ export let initialSampleTribePosts: TribePost[] = [
     title: "Local Discussion: Ethics in AI Development",
     content: "Starting a thread specifically for our tribe members on the ethical considerations of recent AI breakthroughs. What are your immediate thoughts?",
     vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
+    isRemoved: true, // For testing the repost button
+    canBeReposted: true,
+    removalReason: "Marked for testing repost functionality."
   },
   {
     id: "msp2", tribeId: "1", authorId: "authorPP", authorName: "ProductivePro", authorAvatarFallback: "PP",
@@ -124,6 +127,7 @@ export interface ReportedPost {
 export let mockReportedContentData: ReportedPost[] = [
   { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser1", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 5), reason: "Spamming irrelevant content" },
   { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "Sharing potentially dangerous trail info without proper warnings." },
+  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "AdminTestReport", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Test report for removed post." }
 ];
 
 export interface TribeMember {
@@ -166,29 +170,28 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
         "overflow-hidden shadow-lg relative",
         isPromoted && "bg-accent/5 hover:bg-accent/10 border-accent/30",
         isReported && !post.isRemoved && "border-destructive/50 ring-2 ring-destructive/30",
-        // Removed: post.isRemoved && "opacity-60 bg-muted/70" // Opacity is handled by the overlay now
       )}>
       {post.isRemoved && (
-        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-10 p-4">
-            <Badge variant="destructive" className="text-md p-2 px-3 mb-3">POST REMOVED</Badge>
+        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 p-4 space-y-2">
+            <Badge variant="destructive" className="text-md p-2 px-3">POST REMOVED</Badge>
             {isCurrentUserAuthor && post.canBeReposted !== false && (
                 <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => onRepostClick(post)}
-                    className="pointer-events-auto"
+                    className="pointer-events-auto" 
                 >
                     <RefreshCcw className="mr-1.5 h-4 w-4" /> Repost
                 </Button>
             )}
             {post.removalReason && (
-                <p className="text-xs text-white/90 mt-3 text-center italic max-w-xs bg-black/30 p-1.5 rounded">
+                <p className="text-xs text-white/90 text-center italic max-w-xs bg-black/40 p-1.5 rounded">
                     Reason: {post.removalReason}
                 </p>
             )}
         </div>
       )}
-      <div className={cn(post.isRemoved && "opacity-50 pointer-events-none")}> {/* Apply opacity and disable interaction on content below overlay */}
+      <div className={cn(post.isRemoved && "opacity-40 pointer-events-none")}>
         <CardHeader className="p-4 pb-2">
           <div className="flex items-start space-x-3">
             <Avatar className="h-10 w-10 border">
@@ -269,17 +272,15 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
             </div>
           )}
           <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
-          {/* Removed display of removalReason from here as it's now in the overlay */}
         </CardContent>
         <CardFooter className="p-4 pt-2 flex items-center justify-between border-t bg-muted/30">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
             <ThumbsUp className="mr-1.5 h-4 w-4" /> {post.vibes || 0}
           </Button>
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
             <MessageSquareText className="mr-1.5 h-4 w-4" /> {post.comments || 0}
           </Button>
-          {/* Repost button is now handled by the overlay */}
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
             <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
           </Button>
         </CardFooter>
@@ -484,7 +485,7 @@ export default function TribeDetailPage() {
 
   const handleOpenReportDialog = (post: TribePost) => {
     const alreadyReported = mockReportedContentData.some(r => r.postId === post.id);
-    if(alreadyReported){
+    if(alreadyReported && !post.isRemoved){ // Check if not removed, as removed posts might still be in mockReportedContentData
          toast({
             title: "Already Reported",
             description: `You or someone else has already reported "${post.title || 'this post'}". An admin will review it.`,
@@ -528,7 +529,7 @@ export default function TribeDetailPage() {
     const newPost: TribePost = {
       id: `repost-${postBeingReposted.id}-${Date.now()}`,
       tribeId: tribe.id,
-      authorId: postBeingReposted.authorId, // Retain original author for new post
+      authorId: postBeingReposted.authorId, 
       authorName: postBeingReposted.authorName,
       authorAvatar: postBeingReposted.authorAvatar,
       authorAvatarFallback: postBeingReposted.authorAvatarFallback,
@@ -542,7 +543,7 @@ export default function TribeDetailPage() {
       vibes: 0,
       comments: 0,
       isRemoved: false,
-      canBeReposted: true, // A new post can be reposted if removed later
+      canBeReposted: true, 
       originalPostId: postBeingReposted.id,
     };
 
@@ -769,3 +770,4 @@ export default function TribeDetailPage() {
 }
     
 
+    
