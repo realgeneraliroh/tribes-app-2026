@@ -57,7 +57,10 @@ export default function TribeModQueuePage() {
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [allReportsForTribe, setAllReportsForTribe] = useState<ReportedPost[]>([]);
-  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>(initialSampleTribePosts); 
+  // Ensure postsForThisTribe also reflects the global state for 'isRemoved' flags if necessary
+  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>(() => 
+    initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p}))
+  ); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentSortValue, setCurrentSortValue] = useState<string>(sortOptionsTribe[0].value);
@@ -71,15 +74,34 @@ export default function TribeModQueuePage() {
       setTribe(currentTribeData || null);
 
       if (currentTribeData) {
+        // Filter reports for the current tribe
         const tribePostIds = new Set(
             initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => p.id)
         );
         const filteredReports = mockReportedContentData.filter(report => tribePostIds.has(report.postId));
         setAllReportsForTribe(filteredReports);
-        setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id));
-        setCurrentPage(1); // Reset page on tribe change
+        
+        // Filter posts for this tribe and ensure they are copies reflecting global state
+        setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => ({...p})));
+        setCurrentPage(1); 
       }
     }
+  }, [tribeId]);
+
+  // Re-sync local state if global data changes (e.g. post removed by global admin)
+   useEffect(() => {
+    const handleFocus = () => {
+        if (tribeId) {
+            const currentTribeData = tribesData.find(t => t.id === tribeId);
+            if (currentTribeData) {
+                const tribePostIds = new Set(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => p.id));
+                setAllReportsForTribe(mockReportedContentData.filter(report => tribePostIds.has(report.postId)));
+                setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p})));
+            }
+        }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [tribeId]);
   
   const getPostById = (postId: string): TribePost | undefined => {
@@ -87,45 +109,46 @@ export default function TribeModQueuePage() {
   };
 
   const handleDismissReport = (postIdToDismiss: string) => {
-    let found = false;
-    for (let i = mockReportedContentData.length - 1; i >= 0; i--) {
-        if (mockReportedContentData[i].postId === postIdToDismiss) {
-            mockReportedContentData.splice(i, 1);
-            found = true;
-            break; 
-        }
+    // Update global mock data
+    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
+    if (reportIndexGlobal > -1) {
+      mockReportedContentData.splice(reportIndexGlobal, 1);
     }
-
-    if (found) {
-        setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToDismiss));
-        toast({
-            title: "Report Dismissed",
-            description: `Report for post ID ${postIdToDismiss} has been dismissed. The post remains.`,
-        });
-    } else {
-         toast({
-            title: "Dismissal Error",
-            description: `Could not find report for post ID ${postIdToDismiss} to dismiss.`,
-            variant: "destructive"
-        });
-    }
+    // Update local state
+    setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToDismiss));
+    toast({
+        title: "Report Dismissed",
+        description: `Report for post ID ${postIdToDismiss} has been dismissed. The post remains.`,
+    });
   };
 
   const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
-    let reportFoundAndDismissed = false;
-    for (let i = mockReportedContentData.length - 1; i >= 0; i--) {
-        if (mockReportedContentData[i].postId === postIdToRemove) {
-            mockReportedContentData.splice(i, 1);
-            reportFoundAndDismissed = true;
-            break;
-        }
+     // Update global mock data for reports
+    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
+    if (reportIndexGlobal > -1) {
+      mockReportedContentData.splice(reportIndexGlobal, 1);
+    }
+    // Update global mock data for posts (mark as removed)
+    const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
+    if (postIndexGlobal > -1) {
+      initialSampleTribePosts[postIndexGlobal] = {
+        ...initialSampleTribePosts[postIndexGlobal],
+        isRemoved: true,
+        canBeReposted: true, // Default for now
+        removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.`,
+      };
     }
     
+    // Update local states
     setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToRemove));
-    setPostsForThisTribe(prev => prev.filter(post => post.id !== postIdToRemove)); 
+    setPostsForThisTribe(prev => prev.map(p => 
+        p.id === postIdToRemove 
+        ? { ...p, isRemoved: true, canBeReposted: true, removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.` } 
+        : p
+    )); 
     toast({
-      title: "Post Removed (Simulated)",
-      description: `Post "${postTitle || postIdToRemove}" has been removed from this tribe. ${reportFoundAndDismissed ? 'The report is dismissed.' : 'Report was not found.'}`,
+      title: "Post Marked as Removed (Simulated)",
+      description: `Post "${postTitle || postIdToRemove}" has been marked as removed from this tribe. The report is dismissed.`,
       variant: "destructive",
     });
   };
@@ -320,11 +343,12 @@ export default function TribeModQueuePage() {
               {paginatedReports.map((report) => {
                 const post = getPostById(report.postId);
                 return (
-                  <AccordionItem key={report.postId} value={report.postId} className="border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors">
+                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5")}>
                     <AccordionTrigger className="p-3 hover:no-underline text-left w-full">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
                           {report.postTitle || post?.title || "Untitled Post"}
+                           {post?.isRemoved && <Badge variant="destructive" className="ml-2 text-xs">REMOVED</Badge>}
                         </p>
                          <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
                           <span>Reported by: {report.reporterName}</span>
@@ -340,7 +364,7 @@ export default function TribeModQueuePage() {
                         <div className="space-y-4">
                           <div>
                             <h4 className="text-xs uppercase text-muted-foreground mb-1">Reported Post Content:</h4>
-                            <div className="p-3 border rounded-md bg-muted/20">
+                            <div className={cn("p-3 border rounded-md bg-muted/20", post.isRemoved && "border-destructive/30")}>
                                 <div className="flex items-center space-x-2 mb-2">
                                     <Avatar className="h-8 w-8">
                                         {post.authorAvatar && <AvatarImage src={post.authorAvatar} alt={post.authorName} data-ai-hint={post.dataAiHintAvatar || "avatar"} />}
@@ -358,15 +382,23 @@ export default function TribeModQueuePage() {
                                     <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{objectFit:"cover"}} data-ai-hint={post.dataAiHintImage || "post image"}/>
                                     </div>
                                 )}
+                                {post.isRemoved && (
+                                    <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
+                                        <p className="text-xs font-semibold text-destructive">This post has been marked as removed.</p>
+                                        {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
+                                    </div>
+                                )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2 pt-2">
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
-                              <Trash2 className="mr-1.5 h-3.5 w-3.5"/> Remove Post & Notify
-                            </Button>
+                            {!post.isRemoved && (
+                                <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5"/> Mark Post as Removed
+                                </Button>
+                            )}
                              <Button size="sm" variant="secondary" onClick={() => handleEscalateReport(report.postId)}>
                                 <AlertCircle className="mr-1.5 h-3.5 w-3.5"/> Escalate to Global
                             </Button>

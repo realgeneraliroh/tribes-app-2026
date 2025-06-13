@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2, ListChecks, UsersRound, FileWarning } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, ThumbsUp, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2, ListChecks, UsersRound, FileWarning, RefreshCcw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
@@ -26,7 +26,7 @@ import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
 import type { Event } from '../../events/[eventId]/page';
 import { sampleEventsData } from '../../events/[eventId]/page';
 import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
-import { ReportPostDialog } from '@/components/dialogs/report-post-dialog'; // New Dialog
+import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 
 export interface TribePost {
   id: string;
@@ -44,11 +44,17 @@ export interface TribePost {
   dataAiHintImage?: string;
   vibes?: number;
   comments?: number;
+  isRemoved?: boolean;
+  canBeReposted?: boolean;
+  removalReason?: string;
+  originalPostId?: string;
 }
 
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
+// Mock current user ID - replace with actual auth context in a real app
+const MOCK_CURRENT_USER_ID = "authorAE"; // Assuming 'AI Enthusiast' is one of our test authors
 
-export const initialSampleTribePosts: TribePost[] = [
+export let initialSampleTribePosts: TribePost[] = [ // Changed to let
   {
     id: "tribe_post_ai_local1", tribeId: "1", authorId: "authorAE", authorName: "AI Enthusiast", authorAvatarFallback: "AE",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2),
@@ -115,7 +121,7 @@ export interface ReportedPost {
   reason?: string;
 }
 
-export let mockReportedContentData: ReportedPost[] = [
+export let mockReportedContentData: ReportedPost[] = [ // Changed to let
   { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser1", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 5), reason: "Spamming irrelevant content" },
   { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "Sharing potentially dangerous trail info without proper warnings." },
   { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "Ethicist22", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Heated discussion, potential personal attacks." },
@@ -136,7 +142,7 @@ export const initialMockMembers: Omit<TribeMember, 'tribeAssignedNickname'>[] = 
 ];
 
 
-const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMember: boolean; isTribeAdmin: boolean; isReported: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; }> = ({ post, isPromoted, isUserMember, isTribeAdmin, isReported, onPromoteClick, onReportClick }) => {
+const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMember: boolean; isTribeAdmin: boolean; isReported: boolean; isCurrentUserAuthor: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; onRepostClick: (post: TribePost) => void; }> = ({ post, isPromoted, isUserMember, isTribeAdmin, isReported, isCurrentUserAuthor, onPromoteClick, onReportClick, onRepostClick }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
 
   useEffect(() => {
@@ -158,10 +164,16 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
 
   return (
     <Card className={cn(
-        "overflow-hidden shadow-lg",
+        "overflow-hidden shadow-lg relative", // Added relative for banner
         isPromoted && "bg-accent/5 hover:bg-accent/10 border-accent/30",
-        isReported && "border-destructive/50 ring-2 ring-destructive/30"
+        isReported && !post.isRemoved && "border-destructive/50 ring-2 ring-destructive/30",
+        post.isRemoved && "opacity-60 bg-muted/70"
       )}>
+      {post.isRemoved && (
+        <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10 pointer-events-none">
+            <Badge variant="destructive" className="text-sm p-2">POST REMOVED</Badge>
+        </div>
+      )}
       <CardHeader className="p-4 pb-2">
         <div className="flex items-start space-x-3">
           <Avatar className="h-10 w-10 border">
@@ -172,7 +184,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
             <CardTitle className="text-md font-semibold tracking-normal">{post.authorName}</CardTitle>
             <div className="flex items-center space-x-2">
                 <CardDescription className="text-xs">{displayTime}</CardDescription>
-                {isUserMember && isPromoted && (
+                {isUserMember && isPromoted && !post.isRemoved && (
                     <TooltipProvider delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -186,7 +198,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
                       </Tooltip>
                     </TooltipProvider>
                 )}
-                {isReported && (
+                {isReported && !post.isRemoved && (
                    <TooltipProvider delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -202,7 +214,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
                 )}
             </div>
           </div>
-           {isUserMember && (
+           {(isUserMember || isCurrentUserAuthor) && !post.isRemoved && ( // Show menu if member or author (and not removed)
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
@@ -218,9 +230,11 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={() => onReportClick(post)}>
-                  <Flag className="mr-2 h-4 w-4" /> Report Post
-                </DropdownMenuItem>
+                {!isCurrentUserAuthor && ( // Don't let users report their own posts easily
+                    <DropdownMenuItem onClick={() => onReportClick(post)}>
+                    <Flag className="mr-2 h-4 w-4" /> Report Post
+                    </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -240,17 +254,26 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
           </div>
         )}
         <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
+        {post.isRemoved && post.removalReason && (
+            <p className="text-xs text-destructive italic mt-2">Reason: {post.removalReason}</p>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-2 flex items-center justify-between border-t bg-muted/30">
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
           <ThumbsUp className="mr-1.5 h-4 w-4" /> {post.vibes || 0}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
           <MessageSquareText className="mr-1.5 h-4 w-4" /> {post.comments || 0}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-          <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
-        </Button>
+        {isCurrentUserAuthor && post.isRemoved && (post.canBeReposted !== false) ? (
+            <Button variant="outline" size="sm" onClick={() => onRepostClick(post)}>
+                 <RefreshCcw className="mr-1.5 h-4 w-4" /> Repost
+            </Button>
+        ) : (
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+            <SquareArrowUp className="mr-1.5 h-4 w-4" /> Share
+            </Button>
+        )}
       </CardFooter>
     </Card>
   );
@@ -304,7 +327,7 @@ const EventHighlightCard: React.FC<{ event: Event }> = ({ event }) => {
 
 type FeedItem =
   | { id: string; type: 'event'; timestamp: Date; isPinned: true; data: Event }
-  | { id: string; type: 'post'; timestamp: Date; isPinned: boolean; data: TribePost; isPromoted: boolean; isReported: boolean; };
+  | { id: string; type: 'post'; timestamp: Date; isPinned: boolean; data: TribePost; isPromoted: boolean; isReported: boolean; isCurrentUserAuthor: boolean; };
 
 
 export default function TribeDetailPage() {
@@ -322,13 +345,12 @@ export default function TribeDetailPage() {
   const [postToReport, setPostToReport] = useState<TribePost | null>(null);
   const [reportReason, setReportReason] = useState("");
 
-  const [currentTribePostsData, setCurrentTribePostsData] = useState<TribePost[]>(initialSampleTribePosts);
   const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>([]);
-  const [reportsLastUpdated, setReportsLastUpdated] = useState(Date.now());
+  const [dataTimestamp, setDataTimestamp] = useState(Date.now()); // Used to force re-memoization
 
+  const isUserMember = true; // Mock
+  const isTribeAdmin = true; // Mock
 
-  const isUserMember = true;
-  const isTribeAdmin = true;
 
   useEffect(() => {
     if (tribeId) {
@@ -341,7 +363,7 @@ export default function TribeDetailPage() {
                                    (member.id === 'user2' && tribeId === '2') ? 'Trail Master' : undefined
         }));
         setCurrentTribeMembers(membersForThisTribe);
-        setReportsLastUpdated(Date.now());
+        setDataTimestamp(Date.now()); // Trigger re-calculation of memos
       } else {
         router.push('/tribes');
       }
@@ -350,7 +372,7 @@ export default function TribeDetailPage() {
 
   useEffect(() => {
     const handleFocus = () => {
-        setReportsLastUpdated(Date.now());
+        setDataTimestamp(Date.now());
     };
     window.addEventListener('focus', handleFocus);
     return () => {
@@ -364,29 +386,30 @@ export default function TribeDetailPage() {
     return sampleEventsData
       .filter(event => event.associatedTribe === tribe.name)
       .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime());
-  }, [tribe]);
+  }, [tribe, dataTimestamp]);
 
   const postsInTribe = useMemo(() => {
     if (!tribe) return [];
-    return currentTribePostsData
+    // Directly use initialSampleTribePosts as it's being mutated by mod queues
+    return initialSampleTribePosts
         .filter(post => post.tribeId === tribe.id)
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [tribe, currentTribePostsData]);
+  }, [tribe, dataTimestamp]); // Added dataTimestamp
 
   const activeReportedPostIds = useMemo(() => {
     return new Set(mockReportedContentData.map(report => report.postId));
-  }, [reportsLastUpdated]);
+  }, [dataTimestamp]); // Added dataTimestamp
 
 
   const currentTribeReportedPostsForDashboard = useMemo(() => {
-    if (!tribe || !currentTribePostsData) return [];
+    if (!tribe) return [];
     const postsInThisTribeIds = new Set(
-        currentTribePostsData
+        initialSampleTribePosts // Use mutated shared data
             .filter(p => p.tribeId === tribe.id)
             .map(p => p.id)
     );
     return mockReportedContentData.filter(report => postsInThisTribeIds.has(report.postId));
-  }, [tribe, currentTribePostsData, reportsLastUpdated]);
+  }, [tribe, dataTimestamp]); // Added dataTimestamp
 
 
   const combinedFeedItems = useMemo(() => {
@@ -409,7 +432,8 @@ export default function TribeDetailPage() {
         isPinned: false,
         data: post,
         isPromoted: moodStreamPostIds.has(post.id) || locallyPromotedPostIds.has(post.id),
-        isReported: activeReportedPostIds.has(post.id),
+        isReported: activeReportedPostIds.has(post.id) && !post.isRemoved, // Only show report flag if not removed
+        isCurrentUserAuthor: post.authorId === MOCK_CURRENT_USER_ID,
       }));
 
     const allItems: FeedItem[] = [...eventItems, ...postItems];
@@ -421,7 +445,7 @@ export default function TribeDetailPage() {
     });
 
     return allItems;
-  }, [tribe, tribeEvents, postsInTribe, isUserMember, locallyPromotedPostIds, activeReportedPostIds]);
+  }, [tribe, tribeEvents, postsInTribe, isUserMember, locallyPromotedPostIds, activeReportedPostIds, dataTimestamp]);
 
 
   const handleOpenPromoteDialog = (post: TribePost) => {
@@ -456,7 +480,7 @@ export default function TribeDetailPage() {
         return;
     }
     setPostToReport(post);
-    setReportReason(""); // Reset reason
+    setReportReason(""); 
     setIsReportDialogOpen(true);
   };
 
@@ -466,11 +490,11 @@ export default function TribeDetailPage() {
     mockReportedContentData.push({
         postId: postToReport.id,
         postTitle: postToReport.title,
-        reporterName: "You (Simulated User)", // In a real app, this would be the current user's name/ID
+        reporterName: "You (Simulated User)", 
         reportedAt: new Date(),
         reason: reportReason.trim() || "No reason provided.",
     });
-    setReportsLastUpdated(Date.now());
+    setDataTimestamp(Date.now()); // Trigger re-render
 
     toast({
       title: "Post Reported",
@@ -479,6 +503,13 @@ export default function TribeDetailPage() {
     setIsReportDialogOpen(false);
     setPostToReport(null);
     setReportReason("");
+  };
+  
+  const handleRepostPlaceholder = (post: TribePost) => {
+    toast({
+        title: "Repost Clicked (Placeholder)",
+        description: `Logic for reposting "${post.title || 'this post'}" will be implemented soon.`,
+    });
   };
 
 
@@ -622,17 +653,19 @@ export default function TribeDetailPage() {
               return <EventHighlightCard key={item.id} event={item.data as Event} />;
             }
             const post = item.data as TribePost;
-            const postKey = `post-${post.id}`;
+            const postKey = `post-${post.id}-${post.isRemoved}-${post.isReported}`; // Ensure re-render if these change
             return (
-              <div key={postKey} id={postKey}>
+              <div key={postKey} id={`post-${post.id}`}>
                 <TribePostCard
                   post={post}
                   isPromoted={item.isPromoted}
                   isUserMember={isUserMember}
                   isTribeAdmin={isTribeAdmin}
                   isReported={item.isReported}
+                  isCurrentUserAuthor={item.isCurrentUserAuthor}
                   onPromoteClick={handleOpenPromoteDialog}
                   onReportClick={handleOpenReportDialog}
+                  onRepostClick={handleRepostPlaceholder}
                 />
               </div>
             );
@@ -673,6 +706,4 @@ export default function TribeDetailPage() {
     </div>
   );
 }
-    
-
     

@@ -22,7 +22,8 @@ import { ShieldAlert, Inbox, Trash2, Users as TribeIcon, AlertCircle, CheckCircl
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
-import { initialSampleTribePosts, type TribePost, mockReportedContentData, type ReportedPost } from '../../tribes/[tribeId]/page';
+import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; // Keep mockReportedContentData mutable here as well if needed or centralize
+import type { ReportedPost } from '../../tribes/[tribeId]/page';
 import { tribesData, type Tribe } from '../../tribes/page';
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15, 20];
@@ -43,7 +44,6 @@ const sortOptions: SortOption[] = [
   { value: 'postTitle_desc', label: 'Post Title (Z-A)', key: 'postTitle', direction: 'descending' },
   { value: 'reporterName_asc', label: 'Reporter (A-Z)', key: 'reporterName', direction: 'ascending' },
   { value: 'reporterName_desc', label: 'Reporter (Z-A)', key: 'reporterName', direction: 'descending' },
-  // Tribe name sorting might require fetching tribe name first or storing it on report
 ];
 
 
@@ -51,9 +51,10 @@ export default function ModQueuePage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [reports, setReports] = useState<ReportedPost[]>(mockReportedContentData);
-  const [allPosts, setAllPosts] = useState<TribePost[]>(initialSampleTribePosts);
-  const [allTribes, setAllTribes] = useState<Tribe[]>(tribesData);
+  // Use local state for reports, but initialize from potentially mutated shared data
+  const [reports, setReports] = useState<ReportedPost[]>(() => [...mockReportedContentData]);
+  const [allPosts, setAllPosts] = useState<TribePost[]>(() => initialSampleTribePosts.map(p => ({...p}))); // Deep copy for local state
+  const [allTribes] = useState<Tribe[]>(tribesData); // Tribes data is static for now
 
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [userToBanDetails, setUserToBanDetails] = useState<{ userId: string; userName: string; postId: string } | null>(null);
@@ -65,6 +66,17 @@ export default function ModQueuePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
 
+  // Effect to re-sync local reports state if the global mockReportedContentData changes
+  // This is a mock scenario, real apps would use proper state management or API calls
+  useEffect(() => {
+    const handleFocus = () => {
+        setReports([...mockReportedContentData]);
+        setAllPosts(initialSampleTribePosts.map(p => ({...p}))); // Re-sync posts too
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
 
   const getPostById = (postId: string): TribePost | undefined => {
     return allPosts.find(post => post.id === postId);
@@ -75,6 +87,12 @@ export default function ModQueuePage() {
   };
 
   const handleDismissReport = (postIdToDismiss: string) => {
+    // Update global mock data
+    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
+    if (reportIndexGlobal > -1) {
+      mockReportedContentData.splice(reportIndexGlobal, 1);
+    }
+    // Update local state
     setReports(prev => prev.filter(report => report.postId !== postIdToDismiss));
     toast({
       title: "Report Dismissed",
@@ -83,11 +101,33 @@ export default function ModQueuePage() {
   };
 
   const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
+    // Update global mock data for reports
+    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
+    if (reportIndexGlobal > -1) {
+      mockReportedContentData.splice(reportIndexGlobal, 1);
+    }
+    // Update global mock data for posts (mark as removed)
+    const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
+    if (postIndexGlobal > -1) {
+      initialSampleTribePosts[postIndexGlobal] = {
+        ...initialSampleTribePosts[postIndexGlobal],
+        isRemoved: true,
+        canBeReposted: true, // Default for now
+        removalReason: "Content removed by Global Admin.",
+      };
+    }
+
+    // Update local state
     setReports(prev => prev.filter(report => report.postId !== postIdToRemove));
-    setAllPosts(prevPosts => prevPosts.filter(post => post.id !== postIdToRemove));
+    setAllPosts(prevPosts => prevPosts.map(p => 
+        p.id === postIdToRemove 
+        ? { ...p, isRemoved: true, canBeReposted: true, removalReason: "Content removed by Global Admin." } 
+        : p
+    ));
+    
     toast({
-      title: "Post Removal Actioned (Simulated)",
-      description: `Post "${postTitle || postIdToRemove}" has been flagged for removal from its tribe and the system. The report is dismissed.`,
+      title: "Post Marked as Removed (Simulated)",
+      description: `Post "${postTitle || postIdToRemove}" has been marked as removed. The report is dismissed.`,
       variant: "destructive",
     });
   };
@@ -146,7 +186,7 @@ export default function ModQueuePage() {
         (tribe?.name && tribe.name.toLowerCase().includes(lowerSearchTerm))
       );
     });
-  }, [reports, searchTerm, allPosts, allTribes]); // Added allPosts and allTribes
+  }, [reports, searchTerm, allPosts, allTribes]); 
 
   const sortedAndFilteredReports = useMemo(() => {
     const sortConfig = sortOptions.find(opt => opt.value === currentSortValue);
@@ -185,7 +225,7 @@ export default function ModQueuePage() {
       }
       return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
     });
-  }, [filteredReports, currentSortValue, allPosts, allTribes]); // Added allPosts and allTribes
+  }, [filteredReports, currentSortValue, allPosts, allTribes]); 
 
   const totalPages = Math.ceil(sortedAndFilteredReports.length / itemsPerPage);
   const paginatedReports = useMemo(() => {
@@ -225,7 +265,6 @@ export default function ModQueuePage() {
   }
   
   const availableSortOptions = useMemo(() => {
-    // Dynamically add tribe name sorting if tribes are available
     const options = [...sortOptions];
     if (allTribes.length > 0) {
       options.push(
@@ -338,11 +377,12 @@ export default function ModQueuePage() {
                 const tribe = post ? getTribeById(post.tribeId) : undefined;
 
                 return (
-                  <AccordionItem key={report.postId} value={report.postId} className="border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors">
+                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5")}>
                     <AccordionTrigger className="p-3 hover:no-underline text-left w-full">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
                           {report.postTitle || post?.title || "Untitled Post"}
+                          {post?.isRemoved && <Badge variant="destructive" className="ml-2 text-xs">REMOVED</Badge>}
                         </p>
                         <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
                           <span>Reported by: {report.reporterName}</span>
@@ -359,7 +399,7 @@ export default function ModQueuePage() {
                         <div className="space-y-4">
                           <div>
                             <h4 className="text-xs uppercase text-muted-foreground mb-1">Reported Post Content:</h4>
-                            <div className="p-3 border rounded-md bg-muted/20">
+                            <div className={cn("p-3 border rounded-md bg-muted/20", post.isRemoved && "border-destructive/30")}>
                               <div className="flex items-center space-x-2 mb-2">
                                 <Avatar className="h-8 w-8">
                                   {post.authorAvatar && <AvatarImage src={post.authorAvatar} alt={post.authorName} data-ai-hint={post.dataAiHintAvatar || "avatar"} />}
@@ -377,15 +417,23 @@ export default function ModQueuePage() {
                                   <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{ objectFit: "cover" }} data-ai-hint={post.dataAiHintImage || "post image"} />
                                 </div>
                               )}
+                               {post.isRemoved && (
+                                <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
+                                    <p className="text-xs font-semibold text-destructive">This post has been marked as removed by an administrator.</p>
+                                    {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2 pt-2">
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
-                              <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove Post & Notify
-                            </Button>
+                            {!post.isRemoved && (
+                                <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Mark Post as Removed
+                                </Button>
+                            )}
                             <Button size="sm" variant="destructive" className="bg-red-700 hover:bg-red-800" onClick={() => handleOpenBanDialog(post)}>
                               <Hammer className="mr-1.5 h-3.5 w-3.5" /> Ban Author
                             </Button>
@@ -400,7 +448,7 @@ export default function ModQueuePage() {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-destructive">Original post content not found. It may have been deleted.</p>
+                        <p className="text-sm text-destructive">Original post content not found. It may have been deleted or data is out of sync.</p>
                       )}
                     </AccordionContent>
                   </AccordionItem>
@@ -473,6 +521,3 @@ export default function ModQueuePage() {
     </div>
   );
 }
-
-
-    
