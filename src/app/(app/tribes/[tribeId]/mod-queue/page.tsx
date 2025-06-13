@@ -23,13 +23,13 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
-import { tribesData, type Tribe } from '../../page'; 
-import { 
-    initialSampleTribePosts, 
-    type TribePost, 
-    mockReportedContentData, 
-    type ReportedPost 
-} from '../page'; 
+import { tribesData, type Tribe } from '../../page';
+import {
+    initialSampleTribePosts,
+    type TribePost,
+    mockReportedContentData,
+    type ReportedPost
+} from '../page';
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15];
 const DEFAULT_ITEMS_PER_PAGE = 5;
@@ -60,7 +60,7 @@ export default function TribeModQueuePage() {
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [allReportsForTribe, setAllReportsForTribe] = useState<ReportedPost[]>([]);
-  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>([]); 
+  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>([]);
   const [preventRepostState, setPreventRepostState] = useState<{ [postId: string]: boolean }>({});
 
 
@@ -81,9 +81,9 @@ export default function TribeModQueuePage() {
         );
         const filteredReports = mockReportedContentData.filter(report => activeTribePostIds.has(report.postId));
         setAllReportsForTribe(filteredReports);
-        
+
         setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => ({...p})));
-        setCurrentPage(1); 
+        setCurrentPage(1);
       }
     }
   }, [tribeId]);
@@ -104,7 +104,7 @@ export default function TribeModQueuePage() {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [tribeId]);
-  
+
   const getPostById = (postId: string): TribePost | undefined => {
     return postsForThisTribe.find(post => post.id === postId);
   };
@@ -133,17 +133,17 @@ export default function TribeModQueuePage() {
       initialSampleTribePosts[postIndexGlobal] = {
         ...initialSampleTribePosts[postIndexGlobal],
         isRemoved: true,
-        canBeReposted: !shouldPreventRepost, 
+        canBeReposted: !shouldPreventRepost,
         removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.`,
       };
     }
-    
+
     setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToRemove));
-    setPostsForThisTribe(prev => prev.map(p => 
-        p.id === postIdToRemove 
-        ? { ...p, isRemoved: true, canBeReposted: !shouldPreventRepost, removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.` } 
+    setPostsForThisTribe(prev => prev.map(p =>
+        p.id === postIdToRemove
+        ? { ...p, isRemoved: true, canBeReposted: !shouldPreventRepost, removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.` }
         : p
-    )); 
+    ));
     toast({
       title: "Post Marked as Removed",
       description: `Post "${postTitle || postIdToRemove}" has been marked as removed from this tribe. ${shouldPreventRepost ? "Reposting has been prevented." : "It can be reposted by the author."}`,
@@ -151,7 +151,7 @@ export default function TribeModQueuePage() {
     });
     setPreventRepostState(prev => ({ ...prev, [postIdToRemove]: false }));
   };
-  
+
   const handleEscalateReport = (postId: string) => {
     toast({
         title: "Report Escalated (Simulated)",
@@ -193,7 +193,7 @@ export default function TribeModQueuePage() {
          aValue = (a as any)[sortConfig.key];
          bValue = (b as any)[sortConfig.key];
       }
-      
+
       if (aValue === undefined || aValue === null) return 1;
       if (bValue === undefined || bValue === null) return -1;
 
@@ -217,7 +217,7 @@ export default function TribeModQueuePage() {
     setSearchTerm(event.target.value);
     setCurrentPage(1);
   };
-  
+
   const handleClearSearch = () => {
     setSearchTerm("");
     setCurrentPage(1);
@@ -232,7 +232,7 @@ export default function TribeModQueuePage() {
     setItemsPerPage(Number(value));
     setCurrentPage(1);
   };
-  
+
   const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const handlePreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
@@ -383,7 +383,7 @@ export default function TribeModQueuePage() {
                                     <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{objectFit:"cover"}} data-ai-hint={post.dataAiHintImage || "post image"}/>
                                     </div>
                                 )}
-                                {post.isRemoved && ( 
+                                {post.isRemoved && (
                                     <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
                                         <p className="text-xs font-semibold text-destructive">This post has been marked as removed.</p>
                                         {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
@@ -392,7 +392,7 @@ export default function TribeModQueuePage() {
                                 )}
                             </div>
                           </div>
-                          
+
                           {!post?.isRemoved && (
                              <div className="flex items-center space-x-3 pt-3 border-t mt-3">
                                 <Checkbox
@@ -421,7 +421,7 @@ export default function TribeModQueuePage() {
                               </Tooltip>
                             </TooltipProvider>
 
-                            {!post.isRemoved && ( 
+                            {!post.isRemoved && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
