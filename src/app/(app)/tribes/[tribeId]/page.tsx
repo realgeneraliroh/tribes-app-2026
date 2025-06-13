@@ -27,7 +27,7 @@ import type { Event } from '../../events/[eventId]/page';
 import { sampleEventsData } from '../../events/[eventId]/page';
 import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
-import { RepostDialog } from '@/components/dialogs/repost-dialog'; // Added RepostDialog
+import { RepostDialog } from '@/components/dialogs/repost-dialog'; 
 
 export interface TribePost {
   id: string;
@@ -469,6 +469,7 @@ export default function TribeDetailPage() {
       description: `Post "${postToPromote?.title || postId}" has been successfully promoted to ${selectedMoodSlugs.length} mood stream(s). (Simulated)`,
     });
     setPostToPromote(null);
+    setIsPromoteDialogOpen(false); // Close dialog
   };
 
   const handleOpenReportDialog = (post: TribePost) => {
@@ -517,7 +518,7 @@ export default function TribeDetailPage() {
     const newPost: TribePost = {
       id: `repost-${postBeingReposted.id}-${Date.now()}`,
       tribeId: tribe.id,
-      authorId: postBeingReposted.authorId,
+      authorId: postBeingReposted.authorId, // Retain original author for new post
       authorName: postBeingReposted.authorName,
       authorAvatar: postBeingReposted.authorAvatar,
       authorAvatarFallback: postBeingReposted.authorAvatarFallback,
@@ -535,7 +536,6 @@ export default function TribeDetailPage() {
       originalPostId: postBeingReposted.id,
     };
 
-    // Mark original post as no longer repostable
     const originalPostIndex = initialSampleTribePosts.findIndex(p => p.id === postBeingReposted.id);
     if (originalPostIndex > -1) {
       initialSampleTribePosts[originalPostIndex] = {
@@ -544,7 +544,7 @@ export default function TribeDetailPage() {
       };
     }
 
-    initialSampleTribePosts.unshift(newPost); // Add to the beginning
+    initialSampleTribePosts.unshift(newPost); 
 
     setDataTimestamp(Date.now());
     toast({
@@ -696,7 +696,7 @@ export default function TribeDetailPage() {
               return <EventHighlightCard key={item.id} event={item.data as Event} />;
             }
             const post = item.data as TribePost;
-            const postKey = `post-${post.id}-${post.isRemoved}-${post.canBeReposted}-${post.isReported}`; 
+            const postKey = `post-${post.id}-${post.isRemoved}-${post.canBeReposted}-${item.isReported}`; 
             return (
               <div key={postKey} id={`post-${post.id}`}>
                 <TribePostCard
