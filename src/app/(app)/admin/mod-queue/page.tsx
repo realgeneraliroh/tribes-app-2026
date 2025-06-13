@@ -22,7 +22,7 @@ import { ShieldAlert, Inbox, Trash2, Users as TribeIcon, AlertCircle, CheckCircl
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
-import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; // Keep mockReportedContentData mutable here as well if needed or centralize
+import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; 
 import type { ReportedPost } from '../../tribes/[tribeId]/page';
 import { tribesData, type Tribe } from '../../tribes/page';
 
@@ -51,10 +51,12 @@ export default function ModQueuePage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Use local state for reports, but initialize from potentially mutated shared data
-  const [reports, setReports] = useState<ReportedPost[]>(() => [...mockReportedContentData]);
-  const [allPosts, setAllPosts] = useState<TribePost[]>(() => initialSampleTribePosts.map(p => ({...p}))); // Deep copy for local state
-  const [allTribes] = useState<Tribe[]>(tribesData); // Tribes data is static for now
+  const [reports, setReports] = useState<ReportedPost[]>(() => {
+    const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
+    return mockReportedContentData.filter(report => activePostIds.has(report.postId));
+  });
+  const [allPosts, setAllPosts] = useState<TribePost[]>(() => initialSampleTribePosts.map(p => ({...p}))); 
+  const [allTribes] = useState<Tribe[]>(tribesData); 
 
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [userToBanDetails, setUserToBanDetails] = useState<{ userId: string; userName: string; postId: string } | null>(null);
@@ -66,12 +68,11 @@ export default function ModQueuePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
 
-  // Effect to re-sync local reports state if the global mockReportedContentData changes
-  // This is a mock scenario, real apps would use proper state management or API calls
   useEffect(() => {
     const handleFocus = () => {
-        setReports([...mockReportedContentData]);
-        setAllPosts(initialSampleTribePosts.map(p => ({...p}))); // Re-sync posts too
+        const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
+        setReports(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
+        setAllPosts(initialSampleTribePosts.map(p => ({...p}))); 
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -87,12 +88,10 @@ export default function ModQueuePage() {
   };
 
   const handleDismissReport = (postIdToDismiss: string) => {
-    // Update global mock data
     const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
     if (reportIndexGlobal > -1) {
       mockReportedContentData.splice(reportIndexGlobal, 1);
     }
-    // Update local state
     setReports(prev => prev.filter(report => report.postId !== postIdToDismiss));
     toast({
       title: "Report Dismissed",
@@ -101,23 +100,20 @@ export default function ModQueuePage() {
   };
 
   const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
-    // Update global mock data for reports
     const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
     if (reportIndexGlobal > -1) {
       mockReportedContentData.splice(reportIndexGlobal, 1);
     }
-    // Update global mock data for posts (mark as removed)
     const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
     if (postIndexGlobal > -1) {
       initialSampleTribePosts[postIndexGlobal] = {
         ...initialSampleTribePosts[postIndexGlobal],
         isRemoved: true,
-        canBeReposted: true, // Default for now
+        canBeReposted: true, 
         removalReason: "Content removed by Global Admin.",
       };
     }
 
-    // Update local state
     setReports(prev => prev.filter(report => report.postId !== postIdToRemove));
     setAllPosts(prevPosts => prevPosts.map(p => 
         p.id === postIdToRemove 
@@ -346,7 +342,7 @@ export default function ModQueuePage() {
             </Popover>
           </div>
            <CardDescription className="pt-2">
-            Expand items to view post details and take action.
+            Expand items to view post details and take action. Reports for already removed posts are hidden.
           </CardDescription>
         </CardHeader>
         {searchTerm && (
@@ -367,7 +363,7 @@ export default function ModQueuePage() {
                 {searchTerm ? "No reports match your search." : "All Clear!"}
               </p>
               <p className="text-muted-foreground">
-                {searchTerm ? "Try a different search term or clear the filter." : "There are no reported items in the queue."}
+                {searchTerm ? "Try a different search term or clear the filter." : "There are no active reported items in the queue."}
               </p>
             </div>
           ) : (
@@ -382,7 +378,7 @@ export default function ModQueuePage() {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
                           {report.postTitle || post?.title || "Untitled Post"}
-                          {post?.isRemoved && <Badge variant="destructive" className="ml-2 text-xs">REMOVED</Badge>}
+                          {/* Badge for removed is handled by the post content preview if post exists */}
                         </p>
                         <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
                           <span>Reported by: {report.reporterName}</span>
@@ -417,7 +413,7 @@ export default function ModQueuePage() {
                                   <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{ objectFit: "cover" }} data-ai-hint={post.dataAiHintImage || "post image"} />
                                 </div>
                               )}
-                               {post.isRemoved && (
+                               {post.isRemoved && ( // This will show if the post was removed by any mod action
                                 <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
                                     <p className="text-xs font-semibold text-destructive">This post has been marked as removed by an administrator.</p>
                                     {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
@@ -429,7 +425,7 @@ export default function ModQueuePage() {
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
-                            {!post.isRemoved && (
+                            {!post.isRemoved && ( // Only show if post isn't already removed
                                 <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Mark Post as Removed
                                 </Button>
@@ -521,3 +517,6 @@ export default function ModQueuePage() {
     </div>
   );
 }
+
+
+    

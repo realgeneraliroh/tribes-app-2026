@@ -57,22 +57,24 @@ const MOCK_CURRENT_USER_ID = "authorAE";
 
 export let initialSampleTribePosts: TribePost[] = [
   {
-    id: "tribe_post_ai_local1", tribeId: "1", authorId: "authorAE", authorName: "AI Enthusiast", authorAvatarFallback: "AE",
+    id: "tribe_post_ai_local1", tribeId: "1", authorId: "authorUserX", authorName: "AI Ethicist", authorAvatarFallback: "AE", // Different author
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2),
     title: "Local Discussion: Ethics in AI Development",
     content: "Starting a thread specifically for our tribe members on the ethical considerations of recent AI breakthroughs. What are your immediate thoughts?",
     vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
-    isRemoved: true, 
+    isRemoved: false, 
     canBeReposted: true,
-    removalReason: "Marked for testing repost functionality."
   },
   {
-    id: "msp2", tribeId: "1", authorId: "authorPP", authorName: "ProductivePro", authorAvatarFallback: "PP",
+    id: "msp2", tribeId: "1", authorId: MOCK_CURRENT_USER_ID, authorName: "ProductivePro", authorAvatarFallback: "PP", // Author is MOCK_CURRENT_USER_ID
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 3),
     title: "My Top 5 Productivity Hacks for Deep Work",
     content: "Sharing my secrets to staying in the zone! Tip #1: Time blocking is key. This was also shared to the Focus mood stream.",
     imageUrl: "https://placehold.co/600x400.png?text=FocusHacks", imageAlt: "Productivity hacks", dataAiHintImage: "productivity office",
     vibes: 125, comments: 18, dataAiHintAvatar: "work professional",
+    isRemoved: true, // Now this post is removed
+    canBeReposted: true,
+    removalReason: "Marked for testing repost functionality."
   },
   {
     id: "tribe_post_hikers_local1", tribeId: "2", authorId: "authorTB", authorName: "Trail Blazer", authorAvatarFallback: "TB",
@@ -126,9 +128,11 @@ export interface ReportedPost {
 }
 
 export let mockReportedContentData: ReportedPost[] = [
-  { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser1", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 5), reason: "Spamming irrelevant content" },
-  { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "Sharing potentially dangerous trail info without proper warnings." },
-  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "AdminTestReport", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Test report for removed post." }
+  // Report for the new removed post example
+  { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "RuleFollower99", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2), reason: "This post is too generic and not specific to AI." },
+  { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Sharing potentially dangerous trail info without proper warnings." },
+  // Report for tribe_post_ai_local1 can be removed or kept as a non-removed reported item
+  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "AdminTestReport", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 0.5), reason: "Standard content report, not removed." }
 ];
 
 export interface TribeMember {
@@ -175,7 +179,7 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isUserMemb
       {post.isRemoved && (
         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 p-4 space-y-2">
             <Badge variant="destructive" className="text-md p-2 px-3">POST REMOVED</Badge>
-             {isCurrentUserAuthor && post.canBeReposted !== false && (
+            {isCurrentUserAuthor && post.canBeReposted !== false && (
                 <Button
                     variant="secondary"
                     size="sm"
@@ -410,18 +414,20 @@ export default function TribeDetailPage() {
   }, [tribe, dataTimestamp]); 
 
   const activeReportedPostIds = useMemo(() => {
-    return new Set(mockReportedContentData.map(report => report.postId));
-  }, [dataTimestamp]); 
+    // Only include reports for posts that are NOT marked as removed
+    const notRemovedPostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
+    return new Set(mockReportedContentData.filter(report => notRemovedPostIds.has(report.postId)).map(report => report.postId));
+  }, [dataTimestamp]);
 
 
   const currentTribeReportedPostsForDashboard = useMemo(() => {
     if (!tribe) return [];
-    const postsInThisTribeIds = new Set(
+    const postsInThisTribeNotRemovedIds = new Set(
         initialSampleTribePosts 
-            .filter(p => p.tribeId === tribe.id)
+            .filter(p => p.tribeId === tribe.id && !p.isRemoved)
             .map(p => p.id)
     );
-    return mockReportedContentData.filter(report => postsInThisTribeIds.has(report.postId));
+    return mockReportedContentData.filter(report => postsInThisTribeNotRemovedIds.has(report.postId));
   }, [tribe, dataTimestamp]); 
 
 
@@ -485,7 +491,7 @@ export default function TribeDetailPage() {
   };
 
   const handleOpenReportDialog = (post: TribePost) => {
-    const alreadyReported = mockReportedContentData.some(r => r.postId === post.id);
+    const alreadyReported = activeReportedPostIds.has(post.id); // Use activeReportedPostIds
     if(alreadyReported && !post.isRemoved){ 
          toast({
             title: "Already Reported",
@@ -552,13 +558,13 @@ export default function TribeDetailPage() {
     if (originalPostIndex > -1) {
       initialSampleTribePosts[originalPostIndex] = {
         ...initialSampleTribePosts[originalPostIndex],
-        canBeReposted: false,
+        canBeReposted: false, // Mark original as no longer repostable
       };
     }
 
-    initialSampleTribePosts.unshift(newPost); 
+    initialSampleTribePosts.unshift(newPost); // Add new post to the top of the array
 
-    setDataTimestamp(Date.now());
+    setDataTimestamp(Date.now()); // Trigger re-render
     toast({
       title: "Post Reposted",
       description: `Your post has been successfully reposted to ${tribe.name}.`,
@@ -769,6 +775,8 @@ export default function TribeDetailPage() {
     </div>
   );
 }
+    
+
     
 
     

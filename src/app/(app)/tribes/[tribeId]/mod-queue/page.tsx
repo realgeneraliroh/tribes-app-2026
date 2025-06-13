@@ -57,10 +57,7 @@ export default function TribeModQueuePage() {
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [allReportsForTribe, setAllReportsForTribe] = useState<ReportedPost[]>([]);
-  // Ensure postsForThisTribe also reflects the global state for 'isRemoved' flags if necessary
-  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>(() => 
-    initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p}))
-  ); 
+  const [postsForThisTribe, setPostsForThisTribe] = useState<TribePost[]>([]); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentSortValue, setCurrentSortValue] = useState<string>(sortOptionsTribe[0].value);
@@ -74,28 +71,27 @@ export default function TribeModQueuePage() {
       setTribe(currentTribeData || null);
 
       if (currentTribeData) {
-        // Filter reports for the current tribe
-        const tribePostIds = new Set(
-            initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => p.id)
+        const activeTribePostIds = new Set(
+          initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id && !p.isRemoved).map(p => p.id)
         );
-        const filteredReports = mockReportedContentData.filter(report => tribePostIds.has(report.postId));
+        const filteredReports = mockReportedContentData.filter(report => activeTribePostIds.has(report.postId));
         setAllReportsForTribe(filteredReports);
         
-        // Filter posts for this tribe and ensure they are copies reflecting global state
         setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => ({...p})));
         setCurrentPage(1); 
       }
     }
   }, [tribeId]);
 
-  // Re-sync local state if global data changes (e.g. post removed by global admin)
    useEffect(() => {
     const handleFocus = () => {
         if (tribeId) {
             const currentTribeData = tribesData.find(t => t.id === tribeId);
             if (currentTribeData) {
-                const tribePostIds = new Set(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => p.id));
-                setAllReportsForTribe(mockReportedContentData.filter(report => tribePostIds.has(report.postId)));
+                const activeTribePostIds = new Set(
+                  initialSampleTribePosts.filter(p => p.tribeId === tribeId && !p.isRemoved).map(p => p.id)
+                );
+                setAllReportsForTribe(mockReportedContentData.filter(report => activeTribePostIds.has(report.postId)));
                 setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p})));
             }
         }
@@ -109,12 +105,10 @@ export default function TribeModQueuePage() {
   };
 
   const handleDismissReport = (postIdToDismiss: string) => {
-    // Update global mock data
     const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
     if (reportIndexGlobal > -1) {
       mockReportedContentData.splice(reportIndexGlobal, 1);
     }
-    // Update local state
     setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToDismiss));
     toast({
         title: "Report Dismissed",
@@ -123,23 +117,20 @@ export default function TribeModQueuePage() {
   };
 
   const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
-     // Update global mock data for reports
     const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
     if (reportIndexGlobal > -1) {
       mockReportedContentData.splice(reportIndexGlobal, 1);
     }
-    // Update global mock data for posts (mark as removed)
     const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
     if (postIndexGlobal > -1) {
       initialSampleTribePosts[postIndexGlobal] = {
         ...initialSampleTribePosts[postIndexGlobal],
         isRemoved: true,
-        canBeReposted: true, // Default for now
+        canBeReposted: true, 
         removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.`,
       };
     }
     
-    // Update local states
     setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToRemove));
     setPostsForThisTribe(prev => prev.map(p => 
         p.id === postIdToRemove 
@@ -316,6 +307,9 @@ export default function TribeModQueuePage() {
               </PopoverContent>
             </Popover>
           </div>
+           <CardDescription className="pt-2">
+            Expand items to view post details and take action. Reports for already removed posts are hidden.
+          </CardDescription>
         </CardHeader>
          {searchTerm && (
           <div className="px-6 pt-0 pb-4">
@@ -335,7 +329,7 @@ export default function TribeModQueuePage() {
                  {searchTerm ? "No reports match your search." : "All Clear!"}
               </p>
               <p className="text-muted-foreground">
-                {searchTerm ? "Try a different search term." : `There are no reported items for ${tribe.name}.`}
+                {searchTerm ? "Try a different search term." : `There are no active reported items for ${tribe.name}.`}
               </p>
             </div>
           ) : (
@@ -348,7 +342,7 @@ export default function TribeModQueuePage() {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
                           {report.postTitle || post?.title || "Untitled Post"}
-                           {post?.isRemoved && <Badge variant="destructive" className="ml-2 text-xs">REMOVED</Badge>}
+                           {/* Badge for removed is handled by the post content preview if post exists */}
                         </p>
                          <div className="text-xs text-muted-foreground mt-0.5 space-x-2">
                           <span>Reported by: {report.reporterName}</span>
@@ -382,7 +376,7 @@ export default function TribeModQueuePage() {
                                     <Image src={post.imageUrl} alt={post.imageAlt || "Post image"} fill style={{objectFit:"cover"}} data-ai-hint={post.dataAiHintImage || "post image"}/>
                                     </div>
                                 )}
-                                {post.isRemoved && (
+                                {post.isRemoved && ( // This will show if the post was removed by any mod action
                                     <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded-md">
                                         <p className="text-xs font-semibold text-destructive">This post has been marked as removed.</p>
                                         {post.removalReason && <p className="text-xs text-destructive/80 italic mt-0.5">Reason: {post.removalReason}</p>}
@@ -394,7 +388,7 @@ export default function TribeModQueuePage() {
                             <Button size="sm" variant="outline" onClick={() => handleDismissReport(report.postId)}>
                               Dismiss Report
                             </Button>
-                            {!post.isRemoved && (
+                            {!post.isRemoved && ( // Only show if post isn't already removed
                                 <Button size="sm" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5"/> Mark Post as Removed
                                 </Button>
@@ -446,3 +440,6 @@ export default function TribeModQueuePage() {
     </div>
   );
 }
+
+
+    
