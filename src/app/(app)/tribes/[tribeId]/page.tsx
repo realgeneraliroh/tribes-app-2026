@@ -45,7 +45,7 @@ export interface TribePost {
 
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
 
-const sampleTribePosts: TribePost[] = [
+const initialSampleTribePosts: TribePost[] = [ // Renamed for initial state
   {
     id: "tribe_post_ai_local1", tribeId: "1", authorName: "AI Enthusiast", authorAvatarFallback: "AE",
     timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2),
@@ -106,10 +106,10 @@ const moodStreamPostIds = new Set(allMoodStreamPosts.map(p => p.id));
 
 interface ReportedPost {
   postId: string;
-  postTitle?: string; // Use title for easier display
-  reporterName: string; // Mocked
+  postTitle?: string;
+  reporterName: string;
   reportedAt: Date;
-  reason?: string; // Optional
+  reason?: string;
 }
 
 const mockReportedContentData: ReportedPost[] = [
@@ -285,6 +285,7 @@ export default function TribeDetailPage() {
   const [postToPromote, setPostToPromote] = useState<TribePost | null>(null);
   const [locallyPromotedPostIds, setLocallyPromotedPostIds] = useState<Set<string>>(new Set());
   const [reportedContent, setReportedContent] = useState<ReportedPost[]>(mockReportedContentData);
+  const [currentTribePostsData, setCurrentTribePostsData] = useState<TribePost[]>(initialSampleTribePosts);
 
 
   const isUserMember = true;
@@ -299,9 +300,11 @@ export default function TribeDetailPage() {
 
   useEffect(() => {
     if (tribeId) {
-      const currentTribe = tribesData.find(t => t.id === tribeId);
-      if (currentTribe) {
-        setTribe(currentTribe);
+      const currentTribeData = tribesData.find(t => t.id === tribeId);
+      if (currentTribeData) {
+        setTribe(currentTribeData);
+        // Initialize currentTribePostsData with all posts, filtering will happen in useMemo
+        setCurrentTribePostsData(initialSampleTribePosts);
       } else {
         router.push('/tribes');
       }
@@ -317,10 +320,11 @@ export default function TribeDetailPage() {
 
   const postsInTribe = useMemo(() => {
     if (!tribe) return [];
-    return sampleTribePosts
+    return currentTribePostsData // Use stateful data
         .filter(post => post.tribeId === tribe.id)
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [tribe]);
+  }, [tribe, currentTribePostsData]);
+
 
   const combinedFeedItems = useMemo(() => {
     if (!tribe) return [];
@@ -398,11 +402,15 @@ export default function TribeDetailPage() {
     });
   };
   
-  const handleAdminRemovePost = (postId: string) => {
+  const handleAdminRemovePost = (postId: string, postTitle?: string) => {
+    // Remove from reported content queue
     setReportedContent(prev => prev.filter(report => report.postId !== postId));
+    // Remove from the tribe's posts data
+    setCurrentTribePostsData(prevPosts => prevPosts.filter(post => post.id !== postId));
+    
     toast({
-      title: "Post Removed (Simulated)",
-      description: `Post ID ${postId} has been removed from the tribe.`,
+      title: "Post Removed",
+      description: `Post "${postTitle || postId}" has been removed from the tribe feed.`,
       variant: "destructive",
     });
   };
@@ -509,7 +517,7 @@ export default function TribeDetailPage() {
                                 <div className="flex items-center space-x-1.5 mt-2 sm:mt-0 shrink-0">
                                     <Button variant="outline" size="xs" onClick={() => handleAdminViewReportedPost(report.postId)}>View</Button>
                                     <Button variant="outline" size="xs" onClick={() => handleAdminDismissReport(report.postId)}>Dismiss</Button>
-                                    <Button variant="destructive" size="xs" onClick={() => handleAdminRemovePost(report.postId)}>
+                                    <Button variant="destructive" size="xs" onClick={() => handleAdminRemovePost(report.postId, report.postTitle)}>
                                         <Trash2 className="h-3 w-3 mr-1"/>Remove Post
                                     </Button>
                                 </div>
@@ -653,3 +661,4 @@ export default function TribeDetailPage() {
   );
 }
 
+    
