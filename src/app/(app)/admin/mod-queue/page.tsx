@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShieldAlert, Inbox, Trash2, Users as TribeIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Users, Eye } from "lucide-react";
+import { ShieldAlert, Inbox, Trash2, Users as UsersIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,12 +53,9 @@ export default function ModQueuePage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [reports, setReports] = useState<ReportedPost[]>(() => {
-    const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
-    return mockReportedContentData.filter(report => activePostIds.has(report.postId));
-  });
-  const [allPosts, setAllPosts] = useState<TribePost[]>(() => initialSampleTribePosts.map(p => ({...p}))); 
-  const [allTribes] = useState<Tribe[]>(tribesData); 
+  const [reports, setReports] = useState<ReportedPost[]>([]);
+  const [allPosts, setAllPosts] = useState<TribePost[]>([]); 
+  const [allTribes, setAllTribes] = useState<Tribe[]>([]); 
 
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
   const [userToBanDetails, setUserToBanDetails] = useState<{ userId: string; userName: string; postId: string } | null>(null);
@@ -70,13 +67,24 @@ export default function ModQueuePage() {
   const [currentSortValue, setCurrentSortValue] = useState<string>(sortOptions[0].value);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
 
   useEffect(() => {
-    const handleFocus = () => {
+    const loadData = () => {
         const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
         setReports(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
         setAllPosts(initialSampleTribePosts.map(p => ({...p}))); 
+        setAllTribes(tribesData);
+    };
+    loadData(); // Initial load
+
+    const handleFocus = () => {
+        loadData(); // Reload data on window focus
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -148,15 +156,10 @@ export default function ModQueuePage() {
             return;
         }
     }
-    // Fallback if the direct report's post doesn't match the tribeId (should be rare)
-    // or to provide a more generic navigation if needed.
     const anyPostInTribe = allPosts.find(p => p.tribeId === tribeId);
     if (anyPostInTribe) {
         router.push(`/tribes/${anyPostInTribe.tribeId}`);
     } else {
-        // If no post in current reports or allPosts matches, it's an issue or the tribe has no posts.
-        // Potentially, the tribeId passed to handleViewTribe comes directly from a post object,
-        // ensuring it should exist in allPosts if allPosts is comprehensive.
         toast({title: "Error", description: "Could not find the specified tribe or it has no content.", variant: "destructive"});
     }
   };
@@ -197,7 +200,9 @@ export default function ModQueuePage() {
   };
 
   const filteredReports = useMemo(() => {
-    if (!searchTerm) return reports;
+    if (!searchTerm && reports.length > 0) return reports; // Ensure reports is not empty before returning
+    if (reports.length === 0 && !searchTerm) return []; // if reports is empty and no search term, return empty
+
     const lowerSearchTerm = searchTerm.toLowerCase();
     return reports.filter(report => {
       const post = getPostById(report.postId);
@@ -414,7 +419,7 @@ export default function ModQueuePage() {
                         {report.reason && <p className="text-xs text-destructive italic mt-1">Reason: {report.reason}</p>}
                       </div>
                       <Badge variant="outline" className="ml-auto mr-2 whitespace-nowrap text-xs">
-                        {format(new Date(report.reportedAt), "MMM d, h:mm a")}
+                        {isClient ? format(new Date(report.reportedAt), "MMM d, h:mm a") : ""}
                       </Badge>
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t bg-background">
@@ -430,7 +435,7 @@ export default function ModQueuePage() {
                                 </Avatar>
                                 <div>
                                   <p className="text-xs font-semibold">{post.authorName}</p>
-                                  <p className="text-xs text-muted-foreground">{format(new Date(post.timestamp), "MMM d, yyyy 'at' h:mm a")}</p>
+                                  <p className="text-xs text-muted-foreground">{isClient ? format(new Date(post.timestamp), "MMM d, yyyy 'at' h:mm a") : ""}</p>
                                 </div>
                               </div>
                               {post.title && <h5 className="font-semibold text-sm mb-1">{post.title}</h5>}
