@@ -8,38 +8,38 @@ body {
 
 @layer base {
   :root {
-    --background: 180 10% 95%; /* #F4F6F6 - Light Gray */
-    --foreground: 200 5% 20%; /* Dark gray/blue for text */
+    --background: 180 8% 96%; /* PRD: #F4F6F6 - Light Gray */
+    --foreground: 0 0% 13%; /* Image: Grey 900 #212121 - Dark Gray */
 
-    --muted: 180 10% 88%;
-    --muted-foreground: 180 5% 45%;
+    --muted: 0 0% 93%; /* Image: Grey 300 #EDEDED */
+    --muted-foreground: 0 0% 38%; /* Image: Grey 700 #616161 */
 
-    --popover: 180 10% 99%;
-    --popover-foreground: 200 5% 20%;
+    --popover: 0 0% 100%; /* Image: Misc Paper #FFFFFF */
+    --popover-foreground: 0 0% 13%; /* Image: Grey 900 #212121 */
 
-    --card: 180 10% 99%; /* Slightly off-white */
-    --card-foreground: 200 5% 20%;
+    --card: 0 0% 100%; /* Image: Misc Paper #FFFFFF */
+    --card-foreground: 0 0% 13%; /* Image: Grey 900 #212121 */
 
-    --border: 180 8% 85%;
-    --input: 180 8% 88%;
+    --border: 0 0% 74%; /* Image: Grey 400 #BDBDBD */
+    --input: 0 0% 93%; /* Image: Grey 300 #EDEDED */
 
-    --primary: 200 68% 62%; /* #5DADE2 - Calm Blue */
-    --primary-foreground: 0 0% 100%; /* White for contrast */
+    --primary: 207 89% 54%; /* Image: Primary Main #2196F3 */
+    --primary-foreground: 0 0% 100%; /* Image: Primary Contrast Text #FFFFFF */
 
-    --secondary: 200 60% 90%; /* Lighter blue */
-    --secondary-foreground: 200 68% 30%; /* Darker blue text */
+    --secondary: 340 82% 52%; /* Image: Secondary Main #E91E63 */
+    --secondary-foreground: 0 0% 100%; /* Image: Secondary Contrast Text #FFFFFF */
 
-    --accent: 165 50% 77%; /* #A3E4D7 - Soft Green */
-    --accent-foreground: 165 60% 25%; /* Darker green text */
+    --accent: 165 50% 77%; /* PRD: #A3E4D7 - Soft Green */
+    --accent-foreground: 165 60% 25%; /* Current Darker green text for contrast */
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 4 90% 58%; /* Image: Error Main #F44336 */
+    --destructive-foreground: 0 0% 100%; /* Image: Error Contrast Text #FFFFFF */
 
-    --ring: 200 68% 62%; /* Primary color */
+    --ring: 207 89% 54%; /* New Primary color */
     --radius: 0.5rem;
 
     /* Sidebar specific theme variables from shadcn/ui/sidebar */
-    /* Using a dark theme for sidebar for "terminal-inspired" look */
+    /* Using a dark theme for sidebar for "terminal-inspired" look - Kept as is */
     --sidebar-background: 220 15% 15%; /* Dark blue-gray */
     --sidebar-foreground: 210 15% 85%; /* Light gray text */
     --sidebar-primary: 165 50% 77%; /* Accent green for active items */
@@ -57,7 +57,7 @@ body {
   }
 
   .dark {
-    /* Dark mode theme (can be refined further if dark mode is a primary feature) */
+    /* Dark mode theme (can be refined further if dark mode is a primary feature) - Kept as is */
     --background: 220 15% 10%;
     --foreground: 210 15% 90%;
 
@@ -73,21 +73,21 @@ body {
     --border: 220 15% 25%;
     --input: 220 15% 25%;
 
-    --primary: 200 68% 62%; /* Calm Blue */
+    --primary: 207 89% 54%; /* Updated Primary for dark if needed, using light's for now */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 200 60% 30%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 340 82% 52%; /* Updated Secondary for dark if needed */
+    --secondary-foreground: 0 0% 100%;
 
     --accent: 165 50% 77%; /* Soft Green */
     --accent-foreground: 165 60% 25%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 4 90% 58%; /* Updated Destructive for dark if needed */
+    --destructive-foreground: 0 0% 100%;
 
-    --ring: 200 68% 62%;
+    --ring: 207 89% 54%; /* Updated Ring for dark */
 
-    /* Dark mode sidebar variables should match the general dark theme or provide a distinct sidebar style */
+    /* Dark mode sidebar variables should match the general dark theme or provide a distinct sidebar style - Kept as is */
     --sidebar-background: 220 15% 15%;
     --sidebar-foreground: 210 15% 85%;
     --sidebar-primary: 165 50% 77%;
