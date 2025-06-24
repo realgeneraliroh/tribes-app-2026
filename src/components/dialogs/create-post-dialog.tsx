@@ -102,7 +102,8 @@ export function CreatePostDialog({
           </DialogDescriptionComponent>
         </DialogHeaderComponent>
 
-        <div className="py-4 space-y-4 flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -110,7 +111,7 @@ export function CreatePostDialog({
                 <FormItem>
                   <FormLabel>Post Title (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="A catchy title for your post" {...field} />
+                    <Input placeholder="Title your thread (optional)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,7 +126,7 @@ export function CreatePostDialog({
                   <FormLabel>Content</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="What's on your mind?"
+                      placeholder="Share your thoughts, questions, or updates with the tribe..."
                       className="resize-none min-h-[150px]"
                       {...field}
                     />
@@ -158,6 +159,7 @@ export function CreatePostDialog({
                 </FormItem>
               )}
             />
+          </div>
         </div>
 
         <DialogFooterComponent className="pt-4 border-t">
@@ -188,3 +190,4 @@ export function CreatePostDialog({
     </RootComponent>
   );
 }
+
