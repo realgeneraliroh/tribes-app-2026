@@ -26,6 +26,7 @@ import { sampleEventsData } from '../../events/[eventId]/page';
 import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 import { RepostDialog } from '@/components/dialogs/repost-dialog';
+import { CreatePostDialog, type PostFormValues } from '@/components/dialogs/create-post-dialog';
 
 export interface TribePost {
   id: string;
@@ -366,6 +367,8 @@ export default function TribeDetailPage() {
 
   const [isRepostDialogOpen, setIsRepostDialogOpen] = useState(false);
   const [postBeingReposted, setPostBeingReposted] = useState<TribePost | null>(null);
+  
+  const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false);
 
   const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>([]);
   const [dataTimestamp, setDataTimestamp] = useState(Date.now());
@@ -582,6 +585,37 @@ export default function TribeDetailPage() {
     setPostBeingReposted(null);
   };
 
+  const handlePostCreated = (newPostData: PostFormValues) => {
+    if (!tribe) return;
+
+    const newPost: TribePost = {
+        id: `new-post-${Date.now()}`,
+        tribeId: tribe.id,
+        authorId: MOCK_CURRENT_USER_ID,
+        authorName: "You (Current User)",
+        authorAvatarFallback: "ME",
+        timestamp: new Date(),
+        title: newPostData.title || undefined,
+        content: newPostData.content,
+        // This is a simulation. In a real app, you'd handle file upload separately and get a URL.
+        imageUrl: newPostData.image ? URL.createObjectURL(newPostData.image) : undefined,
+        imageAlt: newPostData.image ? "User uploaded image" : undefined,
+        dataAiHintImage: newPostData.image ? "user upload" : undefined,
+        vibes: 0,
+        comments: 0,
+        isRemoved: false,
+        canBeReposted: true,
+    };
+
+    initialSampleTribePosts.unshift(newPost);
+    setDataTimestamp(Date.now()); // Trigger re-render of the feed
+
+    toast({
+        title: "Post Created!",
+        description: "Your post has been added to the tribe feed.",
+    });
+    setIsCreatePostDialogOpen(false);
+  };
 
   if (!tribe) {
     return (
@@ -701,12 +735,12 @@ export default function TribeDetailPage() {
                     <AvatarImage src="https://placehold.co/40x40.png" alt="User" data-ai-hint="current user avatar"/>
                     <AvatarFallback>ME</AvatarFallback>
                 </Avatar>
-                <Button variant="outline" className="flex-1 justify-start text-muted-foreground">
+                <Button variant="outline" className="flex-1 justify-start text-muted-foreground" onClick={() => setIsCreatePostDialogOpen(true)}>
                     What's on your mind, User?
                 </Button>
             </CardHeader>
             <CardFooter className="p-4 pt-0 flex justify-end">
-                <Button className="bg-primary hover:bg-primary/90">
+                <Button className="bg-primary hover:bg-primary/90" onClick={() => setIsCreatePostDialogOpen(true)}>
                     <Edit3 className="mr-2 h-4 w-4" /> Create Post
                 </Button>
             </CardFooter>
@@ -781,7 +815,14 @@ export default function TribeDetailPage() {
           onConfirmRepost={handleConfirmRepost}
         />
       )}
+      {tribe && (
+        <CreatePostDialog
+            isOpen={isCreatePostDialogOpen}
+            onOpenChange={setIsCreatePostDialogOpen}
+            onPostCreated={handlePostCreated}
+            tribeName={tribe.name}
+        />
+      )}
     </div>
   );
 }
-    
