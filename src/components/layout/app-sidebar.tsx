@@ -15,7 +15,6 @@ import {
 import { AppLogo } from "@/components/icons/app-logo";
 import {
   LayoutDashboard, 
-  MessageSquare,
   Users,
   Smile,
   Bot,
@@ -34,7 +33,6 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/your-comms", icon: LayoutDashboard, label: "Intercom", tooltip: "Intercom" }, 
-  { href: "/chat", icon: MessageSquare, label: "Chats", tooltip: "Chats" },
   { href: "/tribes", icon: Users, label: "Tribes", tooltip: "Tribes" },
   { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },

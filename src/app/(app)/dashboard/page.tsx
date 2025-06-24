@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, MessageSquare, Users, Zap } from "lucide-react";
+import { Activity, Users, Zap } from "lucide-react";
 import Image from "next/image";
 
 export default function DashboardPage() {
@@ -13,7 +13,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Tribes</CardTitle>
@@ -23,18 +23,6 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">12</div>
             <p className="text-xs text-muted-foreground">
               +2 since last week
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">58</div>
-            <p className="text-xs text-muted-foreground">
-              in 5 active chats
             </p>
           </CardContent>
         </Card>

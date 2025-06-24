@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, MessageSquare, Settings, Share2, Search, ChevronLeft, ChevronRight, Filter as FilterIcon, X as XIcon, Ticket, Star, PartyPopper, ArrowUp, ArrowDown, ChevronsUpDown, AtSign, UserCheck, UserCog } from "lucide-react";
+import { Link2, RefreshCw, Trash2, Users, User, HeartHandshake, Rss, CheckCircle2, AlertTriangle, XCircle, Info, MoreVertical, Heart, Meh, Smile, SmilePlus, Ghost as GhostIcon, Ban, Settings, Share2, Search, ChevronLeft, ChevronRight, Filter as FilterIcon, X as XIcon, Ticket, Star, PartyPopper, ArrowUp, ArrowDown, ChevronsUpDown, AtSign, UserCheck, UserCog } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -258,11 +258,6 @@ export default function BondsPage() {
   const handleBlockBond = (bondId: string, targetName: string) => {
     console.log(`Block action initiated for bond ID: ${bondId}, Target: ${targetName}`);
     alert(`Simulating block for ${targetName}. In a real app, this bond might be hidden or marked as blocked.`);
-  };
-
-  const handleStartChat = (bondId: string, targetName: string) => {
-    console.log(`Start chat action initiated for bond ID: ${bondId}, Target: ${targetName}`);
-    alert(`Simulating start chat with ${targetName}. In a real app, this would navigate to the chat interface.`);
   };
 
   const handleOpenBondSettings = (bond: Bond) => {
@@ -542,7 +537,6 @@ export default function BondsPage() {
                 {paginatedBonds.map((bond) => {
                   const timeBasedProgress = calculateTimeProgress(bond);
                   const canUpgradeToFamily = bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
-                  const canStartChat = bond.targetType === 'user' && bond.allowChatInitiation !== false && !bond.keyType?.startsWith('event_');
                   const canIntroduce = bond.targetType === 'user' && !bond.keyType?.startsWith('event_');
                   const isEventBond = bond.keyType === 'event_promo' || bond.keyType === 'event_attendee';
 
@@ -625,32 +619,6 @@ export default function BondsPage() {
                           >
                             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                           </DropdownMenuItem>
-
-                          <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <div className={cn(!canStartChat && "cursor-not-allowed")}>
-                                        <DropdownMenuItem
-                                            onClick={() => canStartChat && handleStartChat(bond.id, bond.targetName)}
-                                            disabled={!canStartChat}
-                                            className={cn(!canStartChat && "opacity-50 cursor-not-allowed")}
-                                        >
-                                        <MessageSquare className="mr-2 h-4 w-4" /> Start Chat
-                                        </DropdownMenuItem>
-                                    </div>
-                                </TooltipTrigger>
-                                {!canStartChat && (
-                                    <TooltipContent>
-                                    <p>
-                                        {bond.targetType === 'tribe' ? 'Tribes cannot be chatted with directly.' :
-                                        bond.keyType?.startsWith('event_') ? 'Event passes cannot initiate chats.' :
-                                        bond.allowChatInitiation === false ? `${bond.targetName} has disabled chat initiation.` :
-                                        'Chat not available for this bond.'}
-                                    </p>
-                                    </TooltipContent>
-                                )}
-                            </Tooltip>
-                          </TooltipProvider>
 
                           <TooltipProvider delayDuration={100}>
                             <Tooltip>

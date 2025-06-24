@@ -44,7 +44,6 @@ const getBondTypeDisplay = (bondType: Bond["bondType"]): string => {
 export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondSettingsDialogProps) {
   const isMobile = useIsMobile();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [allowChat, setAllowChat] = useState(true);
   const [yourPseudonym, setYourPseudonym] = useState("");
   const [theirPseudonymForYou, setTheirPseudonymForYou] = useState("");
   const [displayPreference, setDisplayPreference] = useState<'my_alias' | 'tribe_assigned_nickname'>('my_alias');
@@ -54,7 +53,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
   useEffect(() => {
     if (isOpen && bond) {
       setNotificationsEnabled(bond.showInIntercom ?? true);
-      setAllowChat(bond.allowChatInitiation ?? (bond.targetType === 'user' && !bond.keyType?.startsWith('event_')));
       setYourPseudonym(bond.pseudonym || "");
       if (bond.targetType === 'user') {
         setTheirPseudonymForYou(bond.targetPseudonymForMe || "");
@@ -64,7 +62,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
     } else if (!isOpen) {
       // Reset local state when dialog closes to ensure fresh state next time
       setNotificationsEnabled(true);
-      setAllowChat(true);
       setYourPseudonym("");
       setTheirPseudonymForYou("");
       setDisplayPreference('my_alias');
@@ -82,7 +79,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
         const updatedBond: Bond = {
             ...bond,
             showInIntercom: notificationsEnabled,
-            allowChatInitiation: allowChat,
             pseudonym: yourPseudonym.trim() || undefined,
             targetPseudonymForMe: bond.targetType === 'user' ? (theirPseudonymForYou.trim() || undefined) : undefined,
             displayPreferenceForTribeNickname: bond.targetType === 'tribe' && bond.tribeAssignedNickname ? displayPreference : undefined,
@@ -142,19 +138,6 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
                 aria-label="Toggle Intercom updates for this bond"
                 />
             </div>
-            {bond.targetType === 'user' && !bond.keyType?.startsWith('event_') && (
-                <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                    <Label htmlFor={`allowChat-${bond.id}`} className="cursor-pointer flex-1 text-sm">
-                    Allow <span className="italic font-semibold">{bond.targetName}</span> to initiate chat with you
-                    </Label>
-                    <Switch
-                    id={`allowChat-${bond.id}`}
-                    checked={allowChat}
-                    onCheckedChange={setAllowChat}
-                    aria-label={`Toggle allowing ${bond.targetName} to initiate chat with you`}
-                    />
-                </div>
-            )}
           </div>
         </fieldset>
 
