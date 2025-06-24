@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bot, Send, User, HelpCircle, Zap } from "lucide-react";
+import { Bot, Send, User, HelpCircle, Zap, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { askAssistant } from '@/ai/flows/assistant-flow';
 
@@ -81,6 +82,10 @@ export default function AiAssistantPage() {
 
     setIsLoading(false);
   };
+  
+  const handleClearChat = () => {
+    setMessages([]);
+  };
 
   const quickActions = [
     { label: "How do I create a tribe?", query: "How do I create a new tribe?" },
@@ -91,24 +96,27 @@ export default function AiAssistantPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height,4rem)-2rem)] items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-3xl h-full flex flex-col shadow-2xl">
-        <CardHeader className="border-b p-4">
+        <CardHeader className="border-b p-4 flex flex-row items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10 border-2 border-primary">
-              <AvatarImage src="https://placehold.co/100x100.png?text=AI" alt="AI Assistant" data-ai-hint="robot bot" />
+              <AvatarImage src="https://placehold.co/100x100.png?text=AI" alt="Tribe Holocron" data-ai-hint="robot hologram" />
               <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-xl font-mono text-foreground">AI Assistant</CardTitle>
-              <p className="text-sm text-muted-foreground">Your friendly helper for Tribes.app</p>
+              <CardTitle className="text-xl font-mono text-foreground">Tribe Holocron</CardTitle>
+              <p className="text-sm text-muted-foreground">Your guide to all things Tribes.app</p>
             </div>
           </div>
+          <Button variant="outline" size="sm" onClick={handleClearChat}>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Chat
+          </Button>
         </CardHeader>
         <ScrollArea className="flex-1 p-2 sm:p-4" ref={scrollAreaRef}>
           <CardContent className="space-y-4 ">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground py-10">
                 <HelpCircle className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p className="font-semibold">Welcome to your AI Assistant!</p>
+                <p className="font-semibold">Welcome to the Tribe Holocron!</p>
                 <p>Ask me anything about Tribes.app, or try one of the suggestions below.</p>
               </div>
             )}

@@ -39,7 +39,7 @@ const navItems = [
   { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" },
   { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" }, // New Item
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
-  { href: "/ai-assistant", icon: Bot, label: "AI Assistant", tooltip: "AI Assistant" },
+  { href: "/ai-assistant", icon: Bot, label: "Holocron", tooltip: "Tribe Holocron" },
   { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue" },
 ];
 

@@ -1,6 +1,7 @@
+
 'use server';
 /**
- * @fileOverview A helpful AI assistant for the Tribes.app.
+ * @fileOverview A helpful AI assistant for the Tribes.app, referred to as the Tribe Holocron.
  *
  * - askAssistant - A function that handles chat interactions.
  * - AssistantInput - The input type for the askAssistant function.
