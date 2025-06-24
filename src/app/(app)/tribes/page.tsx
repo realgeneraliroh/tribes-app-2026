@@ -43,10 +43,14 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean }> = ({ tribe, 
 export default function TribesPage() {
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
-  // My Tribes: Private tribes OR tribes with > 100 members
-  const myTribes = tribesData.filter(t => !t.isPublic || t.members > 100);
-  // Discover Tribes: Public tribes with <= 100 members
-  const discoverTribes = tribesData.filter(t => t.isPublic && t.members <= 100);
+  // Mock data for subscribed tribes
+  const mySubscribedTribeIds = ['1', '3', '6', '7'];
+
+  // My Tribes are the ones the user is subscribed to.
+  const myTribes = tribesData.filter(t => mySubscribedTribeIds.includes(t.id));
+
+  // Discover Tribes are public tribes the user is NOT subscribed to.
+  const discoverTribes = tribesData.filter(t => !mySubscribedTribeIds.includes(t.id) && t.isPublic);
 
   const renderTribeList = (tribes: Tribe[], isMyTribeList: boolean) => (
     <Card className="shadow-lg">
