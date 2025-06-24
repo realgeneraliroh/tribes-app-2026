@@ -99,11 +99,11 @@ export default function AiAssistantPage() {
         <CardHeader className="border-b p-4 flex flex-row items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10 border-2 border-primary">
-              <AvatarImage src="https://placehold.co/100x100.png?text=AI" alt="Tribe Holocron" data-ai-hint="robot hologram" />
+              <AvatarImage src="https://placehold.co/100x100.png?text=AI" alt="T-Codex Prime" data-ai-hint="robot hologram" />
               <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-xl font-mono text-foreground">Tribe Holocron</CardTitle>
+              <CardTitle className="text-xl font-mono text-foreground">T-Codex Prime</CardTitle>
               <p className="text-sm text-muted-foreground">Your guide to all things Tribes.app</p>
             </div>
           </div>
@@ -116,7 +116,7 @@ export default function AiAssistantPage() {
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground py-10">
                 <HelpCircle className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p className="font-semibold">Welcome to the Tribe Holocron!</p>
+                <p className="font-semibold">Welcome to T-Codex Prime!</p>
                 <p>Ask me anything about Tribes.app, or try one of the suggestions below.</p>
               </div>
             )}

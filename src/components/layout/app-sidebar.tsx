@@ -39,7 +39,7 @@ const navItems = [
   { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" },
   { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" }, // New Item
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
-  { href: "/ai-assistant", icon: Bot, label: "Holocron", tooltip: "Tribe Holocron" },
+  { href: "/ai-assistant", icon: Bot, label: "T-Codex Prime", tooltip: "T-Codex Prime" },
   { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue" },
 ];
 
@@ -64,14 +64,14 @@ export function AppSidebar() {
         <SidebarMenu className="space-y-1">
           <Link href="/tribes/create" passHref>
             <Button variant="default" className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90">
-                <PlusCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                <PlusCircle className="mr-2 h-5 w-5 group-data-[collapsible=icon]:mr-0" />
                 <span className="group-data-[collapsible=icon]:hidden">New Tribe</span>
             </Button>
           </Link>
           
           <Link href="/events/create" passHref>
             <Button variant="default" className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90">
-                <CalendarPlus className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                <CalendarPlus className="mr-2 h-5 w-5 group-data-[collapsible=icon]:mr-0" />
                 <span className="group-data-[collapsible=icon]:hidden">New Event</span>
             </Button>
           </Link>
