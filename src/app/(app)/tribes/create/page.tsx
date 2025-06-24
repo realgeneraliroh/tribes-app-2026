@@ -14,6 +14,9 @@ import { Users, Image as ImageIcon, Globe, Lock, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { generateTribeDescription } from "@/ai/flows/tribe-description-generator";
 import React from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { tribesData } from "@/lib/data";
 
 const createTribeFormSchema = z.object({
   name: z.string().min(3, { message: "Tribe name must be at least 3 characters." }).max(50),
@@ -26,6 +29,8 @@ const createTribeFormSchema = z.object({
 type CreateTribeFormValues = z.infer<typeof createTribeFormSchema>;
 
 export default function CreateTribePage() {
+  const router = useRouter();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [coverPreview, setCoverPreview] = React.useState<string | null>(null);
   
@@ -41,14 +46,31 @@ export default function CreateTribePage() {
 
   async function onSubmit(values: CreateTribeFormValues) {
     setIsLoading(true);
-    console.log(values);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newTribe = {
+      id: `tribe-${Date.now()}`, // More unique ID
+      name: values.name,
+      description: values.description,
+      members: 1,
+      isPublic: values.isPublic,
+      cover: coverPreview || `https://placehold.co/400x200.png?text=${encodeURIComponent(values.name.substring(0,10))}`,
+      dataAiHint: "community group",
+      moods: values.moods.split(',').map(m => m.trim().toLowerCase()).filter(m => m),
+    };
+    
+    tribesData.unshift(newTribe);
+
     setIsLoading(false);
-    // Handle actual submission, e.g., redirect or show success message
-    alert("Tribe created (simulated): " + values.name);
-    form.reset();
-    setCoverPreview(null);
+
+    toast({
+      title: "Tribe Created!",
+      description: `Your new tribe "${values.name}" is now live.`,
+    });
+
+    router.push('/tribes');
   }
 
   async function handleGenerateDescription() {
@@ -59,7 +81,7 @@ export default function CreateTribePage() {
     }
     setIsLoading(true);
     try {
-      const result = await generateTribeDescription({ moods }); // Pass moods to the AI flow
+      const result = await generateTribeDescription({ moods });
       form.setValue("description", result.description);
     } catch (error) {
       console.error("Failed to generate description:", error);
@@ -77,6 +99,9 @@ export default function CreateTribePage() {
         setCoverPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      form.setValue("coverImage", undefined);
+      setCoverPreview(null);
     }
   };
 
