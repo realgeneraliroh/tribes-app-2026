@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -43,14 +42,14 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean }> = ({ tribe, 
 export default function TribesPage() {
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
-  // Mock data for subscribed tribes
-  const mySubscribedTribeIds = ['1', '3', '6', '7'];
+  // Mock data for tribe memberships.
+  const myTribeMemberships = ['1', '3', '6', '7'];
 
-  // My Tribes are the ones the user is subscribed to.
-  const myTribes = tribesData.filter(t => mySubscribedTribeIds.includes(t.id));
+  // "My Tribes" are the ones the user is a member of.
+  const myTribes = tribesData.filter(t => myTribeMemberships.includes(t.id));
 
-  // Discover Tribes are public tribes the user is NOT subscribed to.
-  const discoverTribes = tribesData.filter(t => !mySubscribedTribeIds.includes(t.id) && t.isPublic);
+  // "Discover Tribes" are public tribes the user is NOT a member of.
+  const discoverTribes = tribesData.filter(t => !myTribeMemberships.includes(t.id) && t.isPublic);
 
   const renderTribeList = (tribes: Tribe[], isMyTribeList: boolean) => (
     <Card className="shadow-lg">
@@ -167,5 +166,4 @@ export default function TribesPage() {
     </div>
   );
 }
-
     
