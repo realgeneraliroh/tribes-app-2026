@@ -40,6 +40,7 @@ export default function CreateTribePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isAiGeneratingDesc, setIsAiGeneratingDesc] = React.useState(false);
   const [coverPreview, setCoverPreview] = React.useState<string | null>(null);
   
   const form = useForm<CreateTribeFormValues>({
@@ -84,20 +85,29 @@ export default function CreateTribePage() {
 
   async function handleGenerateDescription() {
     const moods = form.getValues("moods");
+    const name = form.getValues("name");
+
+    let hasError = false;
+    if (!name) {
+      form.setError("name", { type: "manual", message: "Please enter a tribe name first." });
+      hasError = true;
+    }
     if (!moods || moods.length === 0) {
       form.setError("moods", { type: "manual", message: "Please select moods to generate a description." });
-      return;
+      hasError = true;
     }
-    setIsLoading(true);
+    if (hasError) return;
+
+    setIsAiGeneratingDesc(true);
     try {
-      const result = await generateTribeDescription({ moods: moods.join(', ') });
+      const result = await generateTribeDescription({ name, moods: moods.join(', ') });
       form.setValue("description", result.description);
       form.clearErrors("description");
     } catch (error) {
       console.error("Failed to generate description:", error);
       form.setError("description", { type: "manual", message: "AI failed to generate description. Please try again." });
     }
-    setIsLoading(false);
+    setIsAiGeneratingDesc(false);
   }
   
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,8 +251,8 @@ export default function CreateTribePage() {
                         {...field}
                       />
                     </FormControl>
-                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isLoading || form.getValues("moods").length === 0} className="mt-2">
-                        <Sparkles className="mr-2 h-4 w-4" /> {isLoading ? "Generating..." : "Generate with AI"}
+                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isLoading || isAiGeneratingDesc} className="mt-2">
+                        <Sparkles className="mr-2 h-4 w-4" /> {isAiGeneratingDesc ? "Generating..." : "Generate with AI"}
                     </Button>
                     <FormDescription>A compelling summary to attract new members.</FormDescription>
                     <FormMessage />
@@ -308,7 +318,7 @@ export default function CreateTribePage() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
+              <Button type="submit" disabled={isLoading || isAiGeneratingDesc} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
                 {isLoading ? "Creating Tribe..." : "Create Tribe"}
               </Button>
             </CardFooter>

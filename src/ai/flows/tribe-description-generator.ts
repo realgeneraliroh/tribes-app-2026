@@ -14,6 +14,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateTribeDescriptionInputSchema = z.object({
+  name: z.string().describe('The name of the tribe.'),
   moods: z // Renamed from keywords
     .string()
     .describe('Comma separated moods describing the tribe and its purpose (e.g., Chill Vibes, Productive Focus, Creative Spark).'),
@@ -41,7 +42,7 @@ const prompt = ai.definePrompt({
   name: 'generateTribeDescriptionPrompt',
   input: {schema: GenerateTribeDescriptionInputSchema},
   output: {schema: GenerateTribeDescriptionOutputSchema},
-  prompt: `You are a marketing expert. Generate a compelling description for a tribe based on the following moods: {{{moods}}}. The description should be engaging, reflect the essence of these moods, and attract new members.`,
+  prompt: `You are a marketing expert. Generate a compelling description for a tribe named "{{{name}}}" based on the following moods: {{{moods}}}. The description should be engaging, reflect the essence of these moods, and attract new members. Weave the tribe's name into the description naturally.`,
 });
 
 const generateTribeDescriptionFlow = ai.defineFlow(
