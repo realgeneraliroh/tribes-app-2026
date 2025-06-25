@@ -22,9 +22,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
-import type { Bond } from '@/lib/types'; // Import Bond from centralized location
+import type { Bond, UserRole } from '@/lib/types'; // Import Bond and UserRole
 import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog';
 import { IntroductionDialog } from '@/components/dialogs/introduction-dialog';
+import { MOCK_USER_ROLE } from '@/lib/data';
 
 
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
@@ -51,7 +52,6 @@ const generateInitialBondsData = (): Bond[] => [
 ];
 
 
-const MAX_FAMILY_BONDS = 25;
 const DEFAULT_ITEMS_PER_PAGE = 8;
 
 const getBondTypeDisplay = (bond: Bond): string => {
@@ -207,6 +207,16 @@ export default function BondsPage() {
 
   useEffect(() => {
     setBonds(generateInitialBondsData());
+  }, []);
+
+  const MAX_FAMILY_BONDS = useMemo(() => {
+    switch (MOCK_USER_ROLE) {
+      case 'Admin': return 100;
+      case 'Creator': return 50;
+      case 'Human':
+      default:
+        return 5;
+    }
   }, []);
 
   const familyBondsCount = bonds ? bonds.filter(b => b.bondType === "family").length : 0;
@@ -447,7 +457,8 @@ export default function BondsPage() {
             <CardTitle className="tracking-normal">Family Bond Capacity</CardTitle>
           </div>
           <CardDescription>
-            You have {familyBondsCount} out of {MAX_FAMILY_BONDS} family bonds currently active. Family bonds are for user-to-user connections.
+            Your current plan allows for {MAX_FAMILY_BONDS} Family Bonds. You are currently using {familyBondsCount}.
+            {MOCK_USER_ROLE === 'Human' && ' Upgrade to an Individual Membership for more capacity.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -536,7 +547,7 @@ export default function BondsPage() {
               <TableBody>
                 {paginatedBonds.map((bond) => {
                   const timeBasedProgress = calculateTimeProgress(bond);
-                  const canUpgradeToFamily = bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
+                  const canUpgradeToFamily = MOCK_USER_ROLE !== 'Human' && bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
                   const canIntroduce = bond.targetType === 'user' && !bond.keyType?.startsWith('event_');
                   const isEventBond = bond.keyType === 'event_promo' || bond.keyType === 'event_attendee';
 
@@ -641,12 +652,26 @@ export default function BondsPage() {
                             </Tooltip>
                           </TooltipProvider>
 
-                          <DropdownMenuItem
-                              onClick={() => { if(canUpgradeToFamily) handleUpgradeToFamilyBond(bond.id);}}
-                              disabled={!canUpgradeToFamily}
-                          >
-                              <HeartHandshake className="mr-2 h-4 w-4 text-pink-500" /> Upgrade to Family
-                          </DropdownMenuItem>
+                          <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className={cn(!canUpgradeToFamily && "cursor-not-allowed")}>
+                                        <DropdownMenuItem
+                                            onClick={() => handleUpgradeToFamilyBond(bond.id)}
+                                            disabled={!canUpgradeToFamily}
+                                            className={cn(!canUpgradeToFamily && "opacity-50")}
+                                        >
+                                            <HeartHandshake className="mr-2 h-4 w-4 text-pink-500" /> Upgrade to Family
+                                        </DropdownMenuItem>
+                                    </div>
+                                </TooltipTrigger>
+                                {!canUpgradeToFamily && (
+                                     <TooltipContent>
+                                        <p>Upgrade to an Individual Membership to add more Family Bonds.</p>
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                          </TooltipProvider>
                            <DropdownMenuItem onClick={() => handleOpenBondSettings(bond)}>
                               <Settings className="mr-2 h-4 w-4" /> Bond Settings
                           </DropdownMenuItem>
@@ -720,3 +745,5 @@ export default function BondsPage() {
     </div>
   );
 }
+
+    
