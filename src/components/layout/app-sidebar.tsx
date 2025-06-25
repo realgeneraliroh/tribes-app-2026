@@ -33,8 +33,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { UserRole } from "@/lib/types";
 
-const navItems = [
-  { href: "/your-comms", icon: LayoutDashboard, label: "Intercom", tooltip: "Intercom" }, 
+const navItems: { href: string; icon: React.ElementType; label: string; tooltip: string; roles?: UserRole[] }[] = [
+  { href: "/your-comms", icon: LayoutDashboard, label: "Intercom", tooltip: "Intercom" },
   { href: "/tribes", icon: Users, label: "Tribes", tooltip: "Tribes" },
   { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
@@ -42,7 +42,7 @@ const navItems = [
   { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" },
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
   { href: "/ai-assistant", icon: Bot, label: "T-Codex Prime", tooltip: "T-Codex Prime" },
-  { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue" },
+  { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue", roles: ['Admin'] },
 ];
 
 const bottomNavItems = [
@@ -51,9 +51,11 @@ const bottomNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  // Mock user role. Change to 'Human' to test the disabled state for free users.
-  const userRole: UserRole = 'Creator';
+  // Mock user role. Change to 'Creator' or 'Human' to test role-based visibility.
+  const userRole: UserRole = 'Admin';
   const canCreate = userRole === 'Creator' || userRole === 'Admin';
+
+  const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(userRole));
 
   const CreateButtonWrapper: React.FC<{ href: string; canDoAction: boolean; tooltipText: string; children: React.ReactNode }> = ({ href, canDoAction, tooltipText, children }) => {
     if (!canDoAction) {
@@ -125,7 +127,7 @@ export function AppSidebar() {
           </CreateButtonWrapper>
 
 
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} passHref legacyBehavior>
                 <SidebarMenuButton
