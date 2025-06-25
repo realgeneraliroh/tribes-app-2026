@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Users, MessageSquareText, Smile, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2, ListChecks, UsersRound, FileWarning, RefreshCcw, Link2 } from "lucide-react";
+import { ArrowLeft, Users, MessageSquareText, Smile, SquareArrowUp, Edit3, Settings, Rss, CalendarDays, MapPin, ShieldAlert, UserCog, MoreVertical, Flag, Eye, ChevronDown, Inbox, Trash2, ListChecks, UsersRound, FileWarning, RefreshCcw, Link2, BarChart2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
@@ -664,6 +664,11 @@ export default function TribeDetailPage() {
                     <Link href={`/tribes/${tribeId}/mod-queue`} passHref className="flex-1">
                         <Button variant="outline" className="w-full">
                             <ListChecks className="mr-2 h-4 w-4"/> Moderation Queue
+                        </Button>
+                    </Link>
+                     <Link href={`/tribes/${tribeId}/analytics`} passHref className="flex-1">
+                        <Button variant="outline" className="w-full">
+                            <BarChart2 className="mr-2 h-4 w-4"/> Engagement Analytics
                         </Button>
                     </Link>
                      <Link href={`/tribes/${tribeId}/settings`} passHref className="flex-1">
