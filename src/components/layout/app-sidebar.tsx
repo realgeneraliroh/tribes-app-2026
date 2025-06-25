@@ -26,10 +26,12 @@ import {
   CalendarPlus,
   CalendarDays,
   ShieldAlert,
-  BookOpen // Added for Our Story
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { UserRole } from "@/lib/types";
 
 const navItems = [
   { href: "/your-comms", icon: LayoutDashboard, label: "Intercom", tooltip: "Intercom" }, 
@@ -37,7 +39,7 @@ const navItems = [
   { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
   { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" },
-  { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" }, // New Item
+  { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" },
   { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
   { href: "/ai-assistant", icon: Bot, label: "T-Codex Prime", tooltip: "T-Codex Prime" },
   { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue" },
@@ -49,6 +51,37 @@ const bottomNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  // Mock user role. Change to 'Human' to test the disabled state for free users.
+  const userRole: UserRole = 'Creator';
+  const canCreate = userRole === 'Creator' || userRole === 'Admin';
+
+  const CreateButtonWrapper: React.FC<{ href: string; canDoAction: boolean; tooltipText: string; children: React.ReactNode }> = ({ href, canDoAction, tooltipText, children }) => {
+    const linkTarget = canDoAction ? href : "#";
+
+    const trigger = (
+      <div className={cn(!canDoAction && "cursor-not-allowed w-full")}>
+        <Link href={linkTarget} passHref legacyBehavior>
+          {children}
+        </Link>
+      </div>
+    );
+
+    if (canDoAction) {
+      return trigger;
+    }
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipContent side="right" align="center">
+            <p>{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r">
@@ -62,19 +95,39 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="flex-1 p-2">
         <SidebarMenu className="space-y-1">
-          <Link href="/tribes/create" passHref>
-            <Button variant="default" className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90">
+          <CreateButtonWrapper 
+            href="/tribes/create" 
+            canDoAction={canCreate} 
+            tooltipText="Upgrade to an Individual Membership to create tribes."
+          >
+             <Button 
+                variant="default" 
+                className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                disabled={!canCreate}
+                aria-disabled={!canCreate}
+                as="a" // Render as an anchor tag through the Link component
+              >
                 <PlusCircle className="mr-2 h-5 w-5 group-data-[collapsible=icon]:mr-0" />
                 <span className="group-data-[collapsible=icon]:hidden">New Tribe</span>
             </Button>
-          </Link>
+          </CreateButtonWrapper>
           
-          <Link href="/events/create" passHref>
-            <Button variant="default" className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90">
+           <CreateButtonWrapper 
+            href="/events/create" 
+            canDoAction={canCreate} 
+            tooltipText="Upgrade to an Individual Membership to create events."
+          >
+            <Button 
+              variant="default" 
+              className="w-full justify-start group-data-[collapsible=icon]:justify-center my-1 bg-accent text-accent-foreground hover:bg-accent/90"
+              disabled={!canCreate}
+              aria-disabled={!canCreate}
+              as="a"
+            >
                 <CalendarPlus className="mr-2 h-5 w-5 group-data-[collapsible=icon]:mr-0" />
                 <span className="group-data-[collapsible=icon]:hidden">New Event</span>
             </Button>
-          </Link>
+          </CreateButtonWrapper>
 
 
           {navItems.map((item) => (
