@@ -19,10 +19,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShieldAlert, Inbox, Trash2, Users as UsersIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Eye } from "lucide-react";
+import { ShieldAlert, Inbox, Trash2, Users as UsersIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Eye, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUser } from '@/hooks/use-user';
 
 import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; 
 import type { ReportedPost } from '../../tribes/[tribeId]/page';
@@ -52,6 +53,7 @@ const sortOptions: SortOption[] = [
 export default function ModQueuePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { role } = useUser();
 
   const [reports, setReports] = useState<ReportedPost[]>([]);
   const [allPosts, setAllPosts] = useState<TribePost[]>([]); 
@@ -68,6 +70,12 @@ export default function ModQueuePage() {
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [currentPage, setCurrentPage] = useState(1);
   const [isClient, setIsClient] = useState(false);
+  const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    const canAccess = role === 'Admin';
+    setHasAccess(canAccess);
+  }, [role]);
 
   useEffect(() => {
     setIsClient(true);
@@ -284,6 +292,31 @@ export default function ModQueuePage() {
   
   const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const handlePreviousPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+  
+  if (hasAccess === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <Card className="max-w-xl mx-auto mt-8 shadow-lg">
+        <CardHeader className="text-center">
+            <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4"/>
+            <CardTitle className="text-2xl font-bold">Access Denied</CardTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex justify-center">
+            <Button onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+            </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   if (!reports || !allPosts || !allTribes) {
     return (
@@ -608,6 +641,3 @@ export default function ModQueuePage() {
     </div>
   );
 }
-    
-
-    

@@ -15,10 +15,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from "@/components/ui/label"; // Added missing import
-import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2 } from 'lucide-react';
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
+import { useUser } from '@/hooks/use-user';
 
 import { tribesData, type Tribe } from '@/lib/data';
 import { moodsData as allMoodsData } from '../../../moods/page';
@@ -41,9 +42,17 @@ export default function TribeSettingsPage() {
   const params = useParams();
   const tribeId = params.tribeId as string;
   const { toast } = useToast();
+  const { role } = useUser();
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    // Determine access based on role
+    const canAccess = role === 'Admin' || role === 'Creator';
+    setHasAccess(canAccess);
+  }, [role]);
 
   const form = useForm<TribeSettingsFormValues>({
     resolver: zodResolver(tribeSettingsFormSchema),
@@ -94,6 +103,31 @@ export default function TribeSettingsPage() {
     setIsLoading(false);
   }
 
+  if (hasAccess === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <Card className="max-w-xl mx-auto mt-8 shadow-lg">
+        <CardHeader className="text-center">
+            <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4"/>
+            <CardTitle className="text-2xl font-bold">Access Denied</CardTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex justify-center">
+            <Button onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+            </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
   if (!tribe) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">

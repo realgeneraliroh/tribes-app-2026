@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UsersRound, Pencil, UserCheck, UserX, Hammer, MoreVertical } from 'lucide-react';
+import { ArrowLeft, UsersRound, Pencil, UserCheck, UserX, Hammer, MoreVertical, ShieldAlert } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import React, { useEffect, useState } from 'react';
 import { tribesData, type Tribe } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
+import { useUser } from '@/hooks/use-user';
 
 export interface TribeMember {
   id: string;
@@ -48,6 +49,7 @@ export default function ManageMembersPage() {
   const params = useParams();
   const tribeId = params.tribeId as string;
   const { toast } = useToast();
+  const { role } = useUser();
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>([]);
@@ -59,6 +61,13 @@ export default function ManageMembersPage() {
   const [memberToBanDetails, setMemberToBanDetails] = useState<{ memberId: string; memberName: string; } | null>(null);
   const [banDuration, setBanDuration] = useState("permanent_from_tribe"); 
   const [banReason, setBanReason] = useState("");
+  
+  const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    const canAccess = role === 'Admin' || role === 'Creator';
+    setHasAccess(canAccess);
+  }, [role]);
 
 
   useEffect(() => {
@@ -159,6 +168,31 @@ export default function ManageMembersPage() {
     setBanReason("");
   };
 
+
+  if (hasAccess === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <Card className="max-w-xl mx-auto mt-8 shadow-lg">
+        <CardHeader className="text-center">
+            <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4"/>
+            <CardTitle className="text-2xl font-bold">Access Denied</CardTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex justify-center">
+            <Button onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+            </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   if (!tribe) {
     return (

@@ -1,13 +1,14 @@
 
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Users, MessageSquare, TrendingUp, BarChart2 as BarChartIcon } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ArrowLeft, Users, MessageSquare, TrendingUp, BarChart2 as BarChartIcon, ShieldAlert } from 'lucide-react';
 import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Area, Bar, ResponsiveContainer } from 'recharts';
 import { tribesData, type Tribe } from '@/lib/data';
+import { useUser } from '@/hooks/use-user';
 
 // Mock data for analytics
 const memberGrowthData = [
@@ -31,9 +32,41 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const params = useParams();
   const tribeId = params.tribeId as string;
+  const { role } = useUser();
+  const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
   
+  useEffect(() => {
+    const canAccess = role === 'Admin' || role === 'Creator';
+    setHasAccess(canAccess);
+  }, [role]);
+
   const tribe = useMemo(() => tribesData.find(t => t.id === tribeId), [tribeId]);
 
+  if (hasAccess === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <Card className="max-w-xl mx-auto mt-8 shadow-lg">
+        <CardHeader className="text-center">
+            <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4"/>
+            <CardTitle className="text-2xl font-bold">Access Denied</CardTitle>
+            <CardDescription>You do not have the required permissions to view this page.</CardDescription>
+        </CardHeader>
+        <CardFooter className="flex justify-center">
+            <Button onClick={() => router.back()}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+            </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
   if (!tribe) {
     // In a real app, you might show a loading state or a proper "not found" page
     return (
