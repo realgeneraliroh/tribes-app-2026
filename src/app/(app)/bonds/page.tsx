@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import type { Bond, UserRole } from '@/lib/types'; // Import Bond and UserRole
 import { BondSettingsDialog } from '@/components/dialogs/bond-settings-dialog';
 import { IntroductionDialog } from '@/components/dialogs/introduction-dialog';
-import { MOCK_USER_ROLE } from '@/lib/data';
+import { useUser } from '@/hooks/use-user';
 
 
 const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
@@ -193,6 +193,7 @@ const passkeySortOrder: Record<Bond["passkeyStatus"], number> = {
 };
 
 export default function BondsPage() {
+  const { role: userRole } = useUser();
   const [bonds, setBonds] = useState<Bond[] | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedBondForSettings, setSelectedBondForSettings] = useState<Bond | null>(null);
@@ -211,12 +212,12 @@ export default function BondsPage() {
 
   const MAX_FAMILY_BONDS = useMemo(() => {
     // Only free users are limited.
-    if (MOCK_USER_ROLE === 'Human_Free') {
+    if (userRole === 'Human_Free') {
       return 5;
     }
     // All other members (Individual, Org, Admin) have a higher limit.
     return 100;
-  }, []);
+  }, [userRole]);
 
   const familyBondsCount = bonds ? bonds.filter(b => b.bondType === "family").length : 0;
 
@@ -457,7 +458,7 @@ export default function BondsPage() {
           </div>
           <CardDescription>
             Your current plan allows for {MAX_FAMILY_BONDS} Family Bonds. You are currently using {familyBondsCount}.
-            {MOCK_USER_ROLE === 'Human_Free' && ' Upgrade to an Individual Membership for more capacity.'}
+            {userRole === 'Human_Free' && ' Upgrade to an Individual Membership for more capacity.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -546,7 +547,7 @@ export default function BondsPage() {
               <TableBody>
                 {paginatedBonds.map((bond) => {
                   const timeBasedProgress = calculateTimeProgress(bond);
-                  const canUpgradeToFamily = MOCK_USER_ROLE !== "Human_Free" && bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
+                  const canUpgradeToFamily = userRole !== "Human_Free" && bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
                   const canIntroduce = bond.targetType === 'user' && !bond.keyType?.startsWith('event_');
                   const isEventBond = bond.keyType === 'event_promo' || bond.keyType === 'event_attendee';
 
@@ -744,7 +745,3 @@ export default function BondsPage() {
     </div>
   );
 }
-
-    
-
-    
