@@ -3,11 +3,27 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Star, User, Briefcase, HeartHandshake, Building, BarChart, Rocket, ShieldCheck, Vote, Annoyed } from "lucide-react";
+import { Check, Star, User, Briefcase, HeartHandshake, Building, BarChart, Rocket, ShieldCheck, Vote, Annoyed, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const individualTier = {
-  name: "Individual Member",
+const freeTier = {
+    name: "Always Free",
+    icon: UserPlus,
+    price: "$0",
+    priceDescription: "forever",
+    description: "Basic access for community participation and secure communication.",
+    features: [
+        "Join public Tribes",
+        "Follow Mood Streams",
+        "Form up to 10 personal Bonds",
+        "Secure, end-to-end encrypted messaging",
+    ],
+    cta: "Start with a Free Account",
+};
+
+const individualCoopTier = {
+  name: "Individual Co-Op Member",
+  icon: User,
   price: "$7",
   priceDescription: "/ month",
   description: "For active creators and leaders who want to support and govern the community.",
@@ -106,37 +122,73 @@ export default function BillingPage() {
         </Card>
       </section>
 
-      {/* Individual Membership Section */}
+      {/* Individual Tiers Section */}
       <section>
         <div className="flex items-center justify-center space-x-3 mb-6">
           <User className="h-8 w-8 text-primary" />
-          <h2 className="text-3xl font-semibold tracking-normal text-foreground">Individual Membership</h2>
+          <h2 className="text-3xl font-semibold tracking-normal text-foreground">Individual Tiers</h2>
         </div>
-        <Card className="max-w-md mx-auto shadow-lg border-primary ring-2 ring-primary flex flex-col">
-           <CardHeader className="pt-6">
-              <CardTitle className="text-xl tracking-normal">{individualTier.name}</CardTitle>
-              <CardDescription>{individualTier.description}</CardDescription>
-              <div className="flex items-baseline pt-2">
-                <span className="text-3xl font-bold tracking-tighter">{individualTier.price}</span>
-                <span className="text-sm text-muted-foreground ml-1">{individualTier.priceDescription}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-3">
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                {individualTier.features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check className="h-4 w-4 text-accent mr-2 mt-0.5 shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" variant="default">
-                {individualTier.cta}
-              </Button>
-            </CardFooter>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Always Free Card */}
+            <Card className="shadow-lg flex flex-col">
+               <CardHeader className="pt-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <freeTier.icon className="h-8 w-8 text-muted-foreground" />
+                    <CardTitle className="text-xl tracking-normal">{freeTier.name}</CardTitle>
+                  </div>
+                  <CardDescription>{freeTier.description}</CardDescription>
+                  <div className="flex items-baseline pt-2">
+                    <span className="text-3xl font-bold tracking-tighter">{freeTier.price}</span>
+                    <span className="text-sm text-muted-foreground ml-1">{freeTier.priceDescription}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-3">
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {freeTier.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <Check className="h-4 w-4 text-accent mr-2 mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button className="w-full" variant="outline">
+                    {freeTier.cta}
+                  </Button>
+                </CardFooter>
+            </Card>
+
+            {/* Individual Co-op Member Card */}
+            <Card className="shadow-lg border-primary ring-2 ring-primary flex flex-col">
+               <CardHeader className="pt-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <individualCoopTier.icon className="h-8 w-8 text-primary" />
+                    <CardTitle className="text-xl tracking-normal">{individualCoopTier.name}</CardTitle>
+                  </div>
+                  <CardDescription>{individualCoopTier.description}</CardDescription>
+                  <div className="flex items-baseline pt-2">
+                    <span className="text-3xl font-bold tracking-tighter">{individualCoopTier.price}</span>
+                    <span className="text-sm text-muted-foreground ml-1">{individualCoopTier.priceDescription}</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-3">
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {individualCoopTier.features.map((feature, index) => (
+                      <li key={index} className="flex items-start">
+                        <Check className="h-4 w-4 text-accent mr-2 mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button className="w-full" variant="default">
+                    {individualCoopTier.cta}
+                  </Button>
+                </CardFooter>
+            </Card>
+        </div>
       </section>
       
       {/* Divider */}
@@ -156,7 +208,7 @@ export default function BillingPage() {
         <div className="text-center">
             <div className="flex items-center justify-center space-x-3 mb-2">
                 <Briefcase className="h-8 w-8 text-sky-600" />
-                <h2 className="text-3xl font-semibold tracking-normal text-foreground">Organizational Membership</h2>
+                <h2 className="text-3xl font-semibold tracking-normal text-foreground">Organizational Co-Op Membership</h2>
             </div>
             <p className="text-md text-muted-foreground mt-1 max-w-2xl mx-auto">
                 For businesses, brands, artists, and non-profits. All plans include full Co-Op membership with voting rights, plus professional tools for community engagement and commerce.
