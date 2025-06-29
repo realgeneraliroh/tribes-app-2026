@@ -41,7 +41,6 @@ const navItems: { href: string; icon: React.ElementType; label: string; tooltip:
   { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
   { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" },
   { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" },
-  { href: "/files", icon: FileText, label: "Files", tooltip: "Files" },
   { href: "/ai-assistant", icon: Bot, label: "T-Codex Prime", tooltip: "T-Codex Prime" },
   { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue", roles: ['Admin'] },
 ];
