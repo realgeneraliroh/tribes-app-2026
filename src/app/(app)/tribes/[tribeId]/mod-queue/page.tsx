@@ -24,13 +24,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useUser } from '@/hooks/use-user';
 
 
-import { tribesData, type Tribe } from '../../page';
-import {
-    initialSampleTribePosts,
-    type TribePost,
-    mockReportedContentData,
-    type ReportedPost
-} from '../page';
+import { type Tribe, type TribePost, type ReportedPost, initialSampleTribePosts, mockReportedContentData } from '@/lib/data';
+import { tribesData } from '../../page';
+
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15];
 const DEFAULT_ITEMS_PER_PAGE = 5;

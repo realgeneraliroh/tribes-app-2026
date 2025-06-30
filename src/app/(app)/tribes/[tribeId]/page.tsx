@@ -20,122 +20,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from '@/hooks/use-user';
 
 import { getTribeById } from '@/lib/data-access/tribes';
-import type { Tribe } from '@/lib/data';
+import type { Tribe, TribePost, ReportedPost } from '@/lib/data';
+import { initialSampleTribePosts, mockReportedContentData, MOCK_CURRENT_USER_ID, moodStreamPostIds } from '@/lib/data';
+
 import { moodsData } from '../../moods/page';
-import { allMoodStreamPosts } from '../../moods/[moodSlug]/page';
 import type { Event } from '../../events/[eventId]/page';
 import { sampleEventsData } from '../../events/[eventId]/page';
 import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 import { RepostDialog } from '@/components/dialogs/repost-dialog';
 import { CreatePostDialog, type PostFormValues } from '@/components/dialogs/create-post-dialog';
+import { reportPost } from '@/lib/services/moderation-service';
 
-export interface TribePost {
-  id: string;
-  tribeId: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  authorAvatarFallback: string;
-  timestamp: Date;
-  title?: string;
-  content: string;
-  imageUrl?: string;
-  imageAlt?: string;
-  dataAiHintAvatar?: string;
-  dataAiHintImage?: string;
-  vibes?: number;
-  comments?: number;
-  isRemoved?: boolean;
-  canBeReposted?: boolean;
-  removalReason?: string;
-  originalPostId?: string;
-}
-
-const MOCK_CURRENT_DATE_MS = new Date("2025-06-08T10:00:00.000Z").getTime();
-const MOCK_CURRENT_USER_ID = "authorAE"; // Alice Example is our test user
-
-export let initialSampleTribePosts: TribePost[] = [
-  {
-    id: "tribe_post_ai_local1", tribeId: "1", authorId: "authorXY", authorName: "AI Ethicist", authorAvatarFallback: "AE",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 2),
-    title: "Local Discussion: Ethics in AI Development",
-    content: "Starting a thread specifically for our tribe members on the ethical considerations of recent AI breakthroughs. What are your immediate thoughts?",
-    vibes: 30, comments: 5, dataAiHintAvatar: "researcher scientist",
-    isRemoved: false, 
-    canBeReposted: true,
-  },
-  {
-    id: "msp2", tribeId: "1", authorId: MOCK_CURRENT_USER_ID, authorName: "ProductivePro (You)", authorAvatarFallback: "PP",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 3),
-    title: "My Top 5 Productivity Hacks for Deep Work",
-    content: "Sharing my secrets to staying in the zone! Tip #1: Time blocking is key. This was also shared to the Focus mood stream.",
-    imageUrl: "https://placehold.co/600x400.png?text=FocusHacks", imageAlt: "Productivity hacks", dataAiHintImage: "productivity office",
-    vibes: 125, comments: 18, dataAiHintAvatar: "work professional",
-    isRemoved: true, 
-    canBeReposted: true, 
-    removalReason: "Content marked as removed by admin. Eligible for reposting.",
-  },
-  {
-    id: "tribe_post_hikers_local1", tribeId: "2", authorId: "authorTB", authorName: "Trail Blazer", authorAvatarFallback: "TB",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 86400000 * 1),
-    title: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)",
-    content: "The views from Mountain Peak trail were absolutely stunning this weekend! Sharing some extra photos just for our tribe. Highly recommend this route.",
-    imageUrl: "https://placehold.co/600x450.png", imageAlt: "Mountain landscape", dataAiHintImage: "mountain landscape",
-    vibes: 210, comments: 32, dataAiHintAvatar: "hiker adventurer",
-  },
-   {
-    id: "msp9", tribeId: "2", authorId: "authorLF", authorName: "LocalFoodie", authorAvatarFallback: "LF",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 7),
-    title: "Post-Hike Find: Amazing Farmers Market!",
-    content: "After our hike near Miller's Pond, stumbled upon this fantastic farmers market. Great fuel and cool local crafts! Shared this to Discover stream too.",
-    imageUrl: "https://placehold.co/600x420.png", imageAlt: "Farmers market produce", dataAiHintImage: "market food",
-    vibes: 85, comments: 12, dataAiHintAvatar: "foodie person",
-  },
-  {
-    id: "tribe_post_music_local1", tribeId: "7", authorId: "authorGG", authorName: "GigGoer", authorAvatarFallback: "GG",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1),
-    title: "Last Night's Show Was Epic! (Tribe Thoughts)",
-    content: "The Local Band absolutely crushed it at The Underground! What did our tribe members think of the new songs?",
-    imageUrl: "https://placehold.co/600x380.png", imageAlt: "Concert crowd", dataAiHintImage: "concert crowd",
-    vibes: 95, comments: 22, dataAiHintAvatar: "music fan",
-  },
-  {
-    id: "msp8", tribeId: "7", authorId: "authorRD", authorName: "RockstarDev", authorAvatarFallback: "RD",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 8),
-    title: "My Stage Setup for Tonight's Gig",
-    content: "Sound check done! Ready to rock the 'Music Hall' tonight. Who's coming? Also shared to Create mood stream!",
-    imageUrl: "https://placehold.co/600x380.png", imageAlt: "Stage setup with instruments", dataAiHintImage: "stage music",
-    vibes: 150, comments: 18, dataAiHintAvatar: "musician band",
-  },
-  {
-    id: "post7", tribeId: "3", authorId: "authorDQ", authorName: "DevQuest", authorAvatarFallback: "DQ",
-    timestamp: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 3),
-    title: "Seeking Beta Testers for New Puzzle Game (Tribe Only)",
-    content: "Our indie studio is looking for beta testers for our upcoming mobile puzzle game 'Color Grid'. DM me if you're interested! This is a private post for tribe members.",
-    vibes: 40, comments: 5, dataAiHintAvatar: "game developer",
-    isRemoved: true, // Test case for a removed post that cannot be reposted by default.
-    canBeReposted: false,
-    removalReason: "Content removed due to policy violation (Simulated). Reposting not allowed."
-  },
-];
-
-const moodStreamPostIds = new Set(allMoodStreamPosts.map(p => p.id));
-
-export interface ReportedPost {
-  postId: string;
-  postTitle?: string;
-  reporterName: string;
-  reportedAt: Date;
-  reason?: string;
-}
-
-export let mockReportedContentData: ReportedPost[] = [
-  { postId: "msp2", postTitle: "My Top 5 Productivity Hacks for Deep Work", reporterName: "ConcernedUser42", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "This post seems off-topic for the AI Innovators tribe." },
-  { postId: "tribe_post_hikers_local1", postTitle: "Weekend Hike Recap: Mountain Peak (Tribe Exclusive Pics)", reporterName: "SafetyFirst", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Sharing potentially dangerous trail info without proper warnings." },
-  { postId: "tribe_post_ai_local1", postTitle: "Local Discussion: Ethics in AI Development", reporterName: "RuleFollower99", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 0.5), reason: "A standard report for a non-removed item, to test queue visibility." },
-  { postId: "post7", postTitle: "Seeking Beta Testers for New Puzzle Game (Tribe Only)", reporterName: "QualityAssuranceBot", reportedAt: new Date(MOCK_CURRENT_DATE_MS - 3600000 * 1), reason: "Post content violated beta testing guidelines." }
-];
 
 export interface TribeMember {
   id: string;
@@ -554,16 +450,16 @@ export default function TribeDetailPage() {
     setIsReportDialogOpen(true);
   };
 
-  const handleConfirmReport = () => {
+  const handleConfirmReport = async () => {
     if (!postToReport) return;
 
-    mockReportedContentData.push({
-        postId: postToReport.id,
-        postTitle: postToReport.title,
-        reporterName: "You (Simulated User)",
-        reportedAt: new Date(),
-        reason: reportReason.trim() || "No reason provided.",
+    await reportPost({
+      postId: postToReport.id,
+      postTitle: postToReport.title,
+      reporterName: "You (Current User)",
+      reason: reportReason.trim() || "No reason provided.",
     });
+
     setReportsLastUpdated(Date.now());
 
     toast({

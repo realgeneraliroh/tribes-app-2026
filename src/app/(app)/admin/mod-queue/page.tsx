@@ -25,8 +25,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUser } from '@/hooks/use-user';
 
-import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; 
-import type { ReportedPost } from '../../tribes/[tribeId]/page';
+import { initialSampleTribePosts, type TribePost, mockReportedContentData, type ReportedPost } from '@/lib/data'; 
 import { getTribes } from '@/lib/data-access/tribes';
 import type { Tribe } from '@/lib/data';
 

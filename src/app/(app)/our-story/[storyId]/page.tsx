@@ -29,7 +29,9 @@ import { ReportCommentDialog } from '@/components/dialogs/report-comment-dialog'
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user'; // New Import
 import type { UserRole } from '@/lib/types';
-
+import type { DiscussionComment } from '@/lib/data';
+import { mockCommentsForStory, MOCK_CURRENT_USER_ID } from '@/lib/data';
+import { reportComment } from '@/lib/services/moderation-service';
 
 // Interfaces
 interface SourceArticle {
@@ -40,19 +42,6 @@ interface SourceArticle {
   publishedDate: Date;
   summarySnippet?: string;
   dataAiHint?: string;
-}
-
-export interface DiscussionComment {
-  id:string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  authorAvatarFallback: string;
-  content: string;
-  timestamp: Date;
-  vibes?: number;
-  replies?: DiscussionComment[];
-  dataAiHintAvatar?: string;
 }
 
 const MOCK_COMMENT_DATE_MS = new Date("2025-07-15T12:00:00.000Z").getTime();
@@ -72,17 +61,6 @@ const mockArticlesForStory: Record<string, SourceArticle[]> = {
   ]
 };
 
-const mockCommentsForStory: Record<string, DiscussionComment[]> = {
-  "story1": [
-    { id: "com1-1", authorId: "userA", authorName: "GreenThumb", authorAvatarFallback: "GT", content: "Finally, some clarity on the new schedule! Thanks for sharing.", timestamp: new Date(MOCK_COMMENT_DATE_MS - 3600000 * 2), vibes: 5, dataAiHintAvatar: "gardener person" },
-    { id: "com1-2", authorId: "userB", authorName: "CityDweller", authorAvatarFallback: "CD", content: "I'm still confused about plastics #5. Are they accepted now or not?", timestamp: new Date(MOCK_COMMENT_DATE_MS - 3600000 * 1), vibes: 2, replies: [
-      { id: "com1-2-1", authorId: "userA", authorName: "GreenThumb", authorAvatarFallback: "GT", content: "I think it depends on the specific item, best to check the city's website directly.", timestamp: new Date(MOCK_COMMENT_DATE_MS - 3600000 * 0.5), vibes: 1, dataAiHintAvatar: "gardener person"},
-    ], dataAiHintAvatar: "urban resident" },
-  ],
-  "story2": [
-     { id: "com2-1", authorId: "userC", authorName: "PolicyWonk", authorAvatarFallback: "PW", content: "The long-term fiscal implications of UBI are still the biggest question mark for me.", timestamp: new Date(MOCK_COMMENT_DATE_MS - 3600000 * 5), vibes: 10, dataAiHintAvatar: "researcher suit"},
-  ],
-};
 
 // Helper for Article Card
 const ArticleCard: React.FC<{ article: SourceArticle }> = ({ article }) => (
@@ -277,10 +255,15 @@ export default function StoryDetailPage() {
     setIsReportCommentDialogOpen(true);
   };
 
-  const handleConfirmReportComment = () => {
+  const handleConfirmReportComment = async () => {
     if (!commentToReport) return;
-    // In a real app, submit the report (commentToReport.id, reportCommentReason)
-    console.log(`Reporting comment ID: ${commentToReport.id}, Reason: ${reportCommentReason}`);
+    
+    await reportComment({
+      commentId: commentToReport.id,
+      commentAuthor: commentToReport.authorName,
+      reason: reportCommentReason,
+    });
+    
     toast({
         title: "Comment Reported",
         description: `Thank you for reporting the comment by ${commentToReport.authorName}. An admin will review it.`,
