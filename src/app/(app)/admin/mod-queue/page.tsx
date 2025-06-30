@@ -27,7 +27,8 @@ import { useUser } from '@/hooks/use-user';
 
 import { initialSampleTribePosts, type TribePost, mockReportedContentData } from '../../tribes/[tribeId]/page'; 
 import type { ReportedPost } from '../../tribes/[tribeId]/page';
-import { tribesData, type Tribe } from '@/lib/data';
+import { getTribes } from '@/lib/data-access/tribes';
+import type { Tribe } from '@/lib/data';
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15, 20];
 const DEFAULT_ITEMS_PER_PAGE = 10;
@@ -83,11 +84,12 @@ export default function ModQueuePage() {
 
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
         const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
         setReports(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
         setAllPosts(initialSampleTribePosts.map(p => ({...p}))); 
-        setAllTribes(tribesData);
+        const fetchedTribes = await getTribes();
+        setAllTribes(fetchedTribes);
     };
     loadData(); // Initial load
 
@@ -223,7 +225,7 @@ export default function ModQueuePage() {
         (tribe?.name && tribe.name.toLowerCase().includes(lowerSearchTerm))
       );
     });
-  }, [reports, searchTerm, allPosts, allTribes, getPostById, getTribeById]); 
+  }, [reports, searchTerm, allPosts, allTribes]); 
 
   const sortedAndFilteredReports = useMemo(() => {
     const sortConfig = sortOptions.find(opt => opt.value === currentSortValue);
@@ -262,7 +264,7 @@ export default function ModQueuePage() {
       }
       return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
     });
-  }, [filteredReports, currentSortValue, getPostById, getTribeById]); 
+  }, [filteredReports, currentSortValue]); 
 
   const totalPages = Math.ceil(sortedAndFilteredReports.length / itemsPerPage);
   const paginatedReports = useMemo(() => {

@@ -10,7 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
-import { type Tribe } from '@/lib/data'; // Keep type import
+import type { Tribe } from '@/lib/data'; // Keep type import
 import { getTribes } from '@/lib/data-access/tribes'; // Import the new data access function
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';

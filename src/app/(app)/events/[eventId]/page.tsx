@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CalendarDays, Users, Globe, Lock, Tag, Info, MapPin, ExternalLink, Radio } from "lucide-react";
 import { cn } from '@/lib/utils';
 import InteractiveMap from '@/components/maps/interactive-map';
-import { tribesData, type Tribe as TribeInfo } from '@/lib/data';
+import type { Tribe as TribeInfo } from '@/lib/data';
+import { findTribeByName } from '@/lib/data-access/tribes';
 
 
 // Define an interface for an Event
@@ -115,18 +116,22 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     if (eventId) {
-      setIsLoading(true);
-      // Simulate fetching event data
-      const foundEvent = sampleEventsData.find(e => e.id === eventId);
-      if (foundEvent) {
-        setEvent(foundEvent);
-        const tribe = tribesData.find(t => t.name === foundEvent.associatedTribe);
-        setOrganizingTribe(tribe || null);
-      } else {
-        setEvent(null);
-        setOrganizingTribe(null);
-      }
-      setIsLoading(false);
+      const fetchData = async () => {
+        setIsLoading(true);
+        // Simulate fetching event data from its mock source
+        const foundEvent = sampleEventsData.find(e => e.id === eventId);
+        if (foundEvent) {
+          setEvent(foundEvent);
+          // Fetch tribe data asynchronously using the data access layer
+          const tribe = await findTribeByName(foundEvent.associatedTribe);
+          setOrganizingTribe(tribe || null);
+        } else {
+          setEvent(null);
+          setOrganizingTribe(null);
+        }
+        setIsLoading(false);
+      };
+      fetchData();
     }
   }, [eventId]);
 
@@ -291,8 +296,3 @@ export default function EventDetailPage() {
     </div>
   );
 }
-    
-
-      
-
-    
