@@ -10,7 +10,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
-import { tribesData, type Tribe } from '@/lib/data';
+import { type Tribe } from '@/lib/data'; // Keep type import
+import { getTribes } from '@/lib/data-access/tribes'; // Import the new data access function
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,11 +56,14 @@ export default function TribesPage() {
 
   const baseTribeMemberships = ['1', '3', '6', '7'];
 
-  const syncData = () => {
+  const syncData = async () => {
     // Combine base memberships with any created in this session from localStorage
     const createdTribeIds: string[] = JSON.parse(localStorage.getItem('myCreatedTribeIds') || '[]');
     setMyTribeIds([...new Set([...baseTribeMemberships, ...createdTribeIds])]);
-    setAllTribes(tribesData);
+    
+    // Fetch data using the new abstraction layer
+    const fetchedTribes = await getTribes();
+    setAllTribes(fetchedTribes);
   };
   
   useEffect(() => {
@@ -94,9 +98,7 @@ export default function TribesPage() {
   const { myTribes, discoverTribes } = useMemo(() => {
     if (!isClient) {
       // Return server-side rendered state initially to avoid hydration mismatch
-      const initialMyTribes = tribesData.filter(t => baseTribeMemberships.includes(t.id));
-      const initialDiscoverTribes = tribesData.filter(t => !baseTribeMemberships.includes(t.id) && t.isPublic);
-      return { myTribes: initialMyTribes, discoverTribes: initialDiscoverTribes };
+      return { myTribes: [], discoverTribes: [] };
     }
 
     const myTribes = allTribes.filter(t => myTribeIds.includes(t.id));
