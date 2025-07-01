@@ -80,3 +80,18 @@ export async function getEventById(eventId: string): Promise<Event | null> {
         }, 250);
     });
 }
+
+/**
+ * Fetches all events associated with a specific tribe name.
+ * @param tribeName The name of the tribe to fetch events for.
+ * @returns A promise that resolves to an array of events.
+ */
+export async function getEventsForTribe(tribeName: string): Promise<Event[]> {
+  console.log(`Service: Fetching events for tribe "${tribeName}"`);
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const events = sampleEventsData.filter(e => e.associatedTribe === tribeName);
+      resolve(events);
+    }, 250);
+  });
+}

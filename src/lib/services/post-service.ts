@@ -7,6 +7,22 @@ import type { TribePost } from '@/lib/types';
 import type { PostFormValues } from '@/components/dialogs/create-post-dialog';
 
 /**
+ * Fetches all posts for a specific tribe.
+ * @param tribeId The ID of the tribe.
+ * @returns A promise that resolves to an array of posts.
+ */
+export async function getPostsForTribe(tribeId: string): Promise<TribePost[]> {
+  console.log(`Service: Fetching posts for tribe ${tribeId}`);
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const posts = initialSampleTribePosts.filter(p => p.tribeId === tribeId);
+      resolve(posts);
+    }, 250);
+  });
+}
+
+
+/**
  * Simulates creating a new post in a tribe.
  */
 export async function createTribePost(tribeId: string, payload: PostFormValues): Promise<TribePost> {

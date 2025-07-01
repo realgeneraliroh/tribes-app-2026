@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, Users, MessageSquare, TrendingUp, BarChart2 as BarChartIcon, ShieldAlert } from 'lucide-react';
 import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Area, Bar, ResponsiveContainer } from 'recharts';
-import { tribesData, type Tribe } from '@/lib/data';
+import { type Tribe } from '@/lib/data';
 import { useUser } from '@/hooks/use-user';
+import { getTribeById } from '@/lib/data-access/tribes';
 
 // Mock data for analytics
 const memberGrowthData = [
@@ -34,13 +35,22 @@ export default function AnalyticsPage() {
   const tribeId = params.tribeId as string;
   const { role } = useUser();
   const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
+  const [tribe, setTribe] = useState<Tribe | null>(null);
   
   useEffect(() => {
     const canAccess = role === 'Admin' || role === 'Creator';
     setHasAccess(canAccess);
   }, [role]);
 
-  const tribe = useMemo(() => tribesData.find(t => t.id === tribeId), [tribeId]);
+  useEffect(() => {
+    if (tribeId) {
+      const fetchTribe = async () => {
+        const foundTribe = await getTribeById(tribeId);
+        setTribe(foundTribe);
+      };
+      fetchTribe();
+    }
+  }, [tribeId]);
 
   if (hasAccess === undefined) {
     return (

@@ -25,7 +25,7 @@ import { useUser } from '@/hooks/use-user';
 
 
 import { type Tribe, type TribePost, type ReportedPost, initialSampleTribePosts, mockReportedContentData } from '@/lib/data';
-import { tribesData } from '../../page';
+import { getTribeById } from '@/lib/data-access/tribes';
 import { dismissReport, removePost } from '@/lib/services/moderation-service';
 
 
@@ -71,9 +71,9 @@ export default function TribeModQueuePage() {
   const [isTakingAction, setIsTakingAction] = useState<string | null>(null);
 
 
-  const reloadData = () => {
+  const reloadData = async () => {
     if (tribeId) {
-        const currentTribeData = tribesData.find(t => t.id === tribeId);
+        const currentTribeData = await getTribeById(tribeId);
         if (currentTribeData) {
             setTribe(currentTribeData);
             const activePostIds = new Set(

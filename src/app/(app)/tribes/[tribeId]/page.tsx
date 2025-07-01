@@ -4,7 +4,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -20,7 +20,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from '@/hooks/use-user';
 
 import { getTribeById } from '@/lib/data-access/tribes';
-import { initialSampleTribePosts, mockReportedContentData, MOCK_CURRENT_USER_ID, moodStreamPostIds, sampleEventsData, mockMembers } from '@/lib/data';
+import { getTribeMembers } from '@/lib/services/tribe-service';
+import { getEventsForTribe } from '@/lib/services/event-service';
+import { getPostsForTribe } from '@/lib/services/post-service';
+import { reportPost, promotePostToMoods, repost, createTribePost } from '@/lib/services/post-service';
+
+import { initialSampleTribePosts, mockReportedContentData, MOCK_CURRENT_USER_ID, moodStreamPostIds } from '@/lib/data';
 
 import { moodsData } from '../../moods/page';
 import type { Event, TribePost, ReportedPost, Tribe, TribeMember } from '@/lib/types';
@@ -28,8 +33,6 @@ import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 import { RepostDialog } from '@/components/dialogs/repost-dialog';
 import { CreatePostDialog, type PostFormValues } from '@/components/dialogs/create-post-dialog';
-import { reportPost } from '@/lib/services/moderation-service';
-import { createTribePost, promotePostToMoods, repost } from '@/lib/services/post-service';
 
 
 const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isMember: boolean; isTribeAdmin: boolean; isReported: boolean; isCurrentUserAuthor: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; onRepostClick: (post: TribePost) => void; }> = ({ post, isPromoted, isMember, isTribeAdmin, isReported, isCurrentUserAuthor, onPromoteClick, onReportClick, onRepostClick }) => {
@@ -240,7 +243,10 @@ export default function TribeDetailPage() {
   const { role } = useUser();
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
-  const [isLoadingTribe, setIsLoadingTribe] = useState(true);
+  const [tribeEvents, setTribeEvents] = useState<Event[]>([]);
+  const [postsInTribe, setPostsInTribe] = useState<TribePost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [postToPromote, setPostToPromote] = useState<TribePost | null>(null);
   const [locallyPromotedPostIds, setLocallyPromotedPostIds] = useState<Set<string>>(new Set());
@@ -255,7 +261,6 @@ export default function TribeDetailPage() {
   const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false);
 
   const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>([]);
-  const [dataTimestamp, setDataTimestamp] = useState(Date.now());
   const [reportsLastUpdated, setReportsLastUpdated] = useState(Date.now());
 
   const [isMember, setIsMember] = useState(false);
@@ -264,43 +269,47 @@ export default function TribeDetailPage() {
 
   const isTribeAdmin = useMemo(() => role === 'Admin' || role === 'Creator', [role]);
   
-  const syncAllData = async () => {
-    // Sync membership status
+  const syncAllData = useCallback(async () => {
+    if (!tribeId) return;
+    
+    setIsLoading(true);
+
     const createdTribeIds: string[] = JSON.parse(localStorage.getItem('myCreatedTribeIds') || '[]');
     const myTribeIds = [...new Set([...baseTribeMemberships, ...createdTribeIds])];
     setIsMember(myTribeIds.includes(tribeId));
 
-    // Sync tribe data
-    if (tribeId) {
-        setIsLoadingTribe(true);
-        const currentTribeData = await getTribeById(tribeId);
-        if (currentTribeData) {
-            setTribe(currentTribeData);
-            // This now pulls from centralized mock data
-            const membersForThisTribe = mockMembers.filter(member => member.tribeId === tribeId);
-            setCurrentTribeMembers(membersForThisTribe);
-        } else {
-            router.push('/tribes');
-        }
-        setIsLoadingTribe(false);
-    }
+    const [tribeData, membersData, postsData] = await Promise.all([
+      getTribeById(tribeId),
+      getTribeMembers(tribeId),
+      getPostsForTribe(tribeId)
+    ]);
     
-    // Sync post/report data by updating timestamp
-    setDataTimestamp(Date.now());
-    setReportsLastUpdated(Date.now());
-  };
+    if (tribeData) {
+      setTribe(tribeData);
+      setCurrentTribeMembers(membersData);
+      setPostsInTribe(postsData.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()));
+      
+      const eventsData = await getEventsForTribe(tribeData.name);
+      setTribeEvents(eventsData.sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime()));
 
-  useEffect(() => {
-    syncAllData();
+    } else {
+      router.push('/tribes');
+    }
+
+    setReportsLastUpdated(Date.now());
+    setIsLoading(false);
   }, [tribeId, router]);
 
   useEffect(() => {
-    const handleFocus = () => syncAllData();
-    window.addEventListener('focus', handleFocus);
+    syncAllData();
+  }, [tribeId, syncAllData]);
+
+  useEffect(() => {
+    window.addEventListener('focus', syncAllData);
     return () => {
-        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('focus', syncAllData);
     };
-  }, [tribeId]);
+  }, [syncAllData]);
   
   const handleJoinTribe = () => {
     if (!tribe) return;
@@ -313,46 +322,28 @@ export default function TribeDetailPage() {
             const currentMyTribeIds = JSON.parse(localStorage.getItem('myCreatedTribeIds') || '[]');
             currentMyTribeIds.push(tribe.id);
             localStorage.setItem('myCreatedTribeIds', JSON.stringify([...new Set(currentMyTribeIds)]));
-            syncAllData(); // Re-sync all data after joining
+            syncAllData(); 
             toast({ title: "Welcome!", description: `You have successfully joined ${tribe.name}.` });
         }
         setIsJoining(false);
     }, 1000);
   };
 
-
-  const tribeEvents = useMemo(() => {
-    if (!tribe) return [];
-    return sampleEventsData
-      .filter(event => event.associatedTribe === tribe.name)
-      .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime());
-  }, [tribe, dataTimestamp]);
-
-  const postsInTribe = useMemo(() => {
-    if (!tribe) return [];
-    return initialSampleTribePosts
-      .filter(post =>
-        post.tribeId === tribe.id &&
-        !(post.isRemoved === true && post.canBeReposted === false) 
-      )
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [tribe, dataTimestamp]);
-
   const activeReportedPostIds = useMemo(() => {
     const notRemovedPostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
     return new Set(mockReportedContentData.filter(report => notRemovedPostIds.has(report.postId)).map(report => report.postId));
-  }, [dataTimestamp, reportsLastUpdated]);
+  }, [reportsLastUpdated]);
 
 
   const currentTribeReportedPostsForDashboard = useMemo(() => {
     if (!tribe) return [];
     const postsInThisTribeNotRemovedIds = new Set(
-        initialSampleTribePosts
-            .filter(p => p.tribeId === tribe.id && !p.isRemoved)
+        postsInTribe
+            .filter(p => !p.isRemoved)
             .map(p => p.id)
     );
     return mockReportedContentData.filter(report => postsInThisTribeNotRemovedIds.has(report.postId));
-  }, [tribe, dataTimestamp, reportsLastUpdated]);
+  }, [tribe, postsInTribe, reportsLastUpdated]);
 
 
   const combinedFeedItems = useMemo(() => {
@@ -388,7 +379,7 @@ export default function TribeDetailPage() {
     });
 
     return allItems;
-  }, [tribe, tribeEvents, postsInTribe, isMember, locallyPromotedPostIds, activeReportedPostIds, dataTimestamp]);
+  }, [tribe, tribeEvents, postsInTribe, isMember, locallyPromotedPostIds, activeReportedPostIds]);
 
 
   const handleOpenPromoteDialog = (post: TribePost) => {
@@ -475,7 +466,7 @@ export default function TribeDetailPage() {
     setIsCreatePostDialogOpen(false);
   };
 
-  if (isLoadingTribe || !tribe) {
+  if (isLoading || !tribe) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
         <p className="text-muted-foreground">Loading tribe details...</p>
