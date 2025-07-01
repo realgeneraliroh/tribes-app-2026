@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
@@ -11,88 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Search, ArrowRight, MessageSquare, Globe, Map, Building, History } from "lucide-react";
+import { BookOpen, Search, ArrowRight, MessageSquare, Globe, Map, Building, History, Loader2 } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { getStoryTopics } from '@/lib/data-access/stories';
+import type { StoryTopic } from '@/lib/data';
 
-export interface StoryTopic {
-  id: string;
-  title: string;
-  summary: string;
-  category: 'local' | 'national' | 'global';
-  lastUpdatedAt: Date;
-  coverImage?: string;
-  dataAiHintCover?: string;
-  relatedLinks?: { title: string, url: string }[];
-  discussionCount?: number;
-  curator?: string;
-  curatorAvatar?: string;
-  curatorAvatarFallback?: string;
-  dataAiHintCuratorAvatar?: string;
-}
-
-const MOCK_STORY_DATE_MS = new Date("2025-07-15T10:00:00.000Z").getTime();
-
-export const mockStoryTopics: StoryTopic[] = [
-  {
-    id: "story1",
-    title: "Understanding the New Local Recycling Program",
-    summary: "Recent changes to our city's recycling program have many residents asking questions. This topic aims to consolidate official information, community discussions, and tips for effective participation.",
-    category: "local",
-    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 1), // 1 day ago
-    coverImage: "https://placehold.co/600x400.png",
-    dataAiHintCover: "recycling bins community",
-    relatedLinks: [
-      { title: "City Council Announcement", url: "#" },
-      { title: "Community Forum Thread", url: "#" },
-    ],
-    discussionCount: 12,
-    curator: "EcoSpeaker Alex",
-    curatorAvatar: "https://placehold.co/40x40.png?text=EA",
-    curatorAvatarFallback: "EA",
-    dataAiHintCuratorAvatar: "environment person",
-  },
-  {
-    id: "story2",
-    title: "National Debate on Universal Basic Income: Pros & Cons",
-    summary: "A comprehensive overview of the ongoing national discussion around UBI, featuring arguments from leading economists, social scientists, and policymakers. Explore the potential impacts and challenges.",
-    category: "national",
-    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 3), // 3 days ago
-    coverImage: "https://placehold.co/600x400.png",
-    dataAiHintCover: "debate discussion money",
-    discussionCount: 45,
-    curator: "PolicySpeaker Sarah",
-    curatorAvatar: "https://placehold.co/40x40.png?text=PS",
-    curatorAvatarFallback: "PS",
-    dataAiHintCuratorAvatar: "policy expert",
-  },
-  {
-    id: "story3",
-    title: "Global Water Scarcity: Innovations and Solutions",
-    summary: "Investigating the increasing challenges of water scarcity worldwide and highlighting innovative technologies and community-led initiatives aimed at sustainable water management.",
-    category: "global",
-    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 5), // 5 days ago
-    // No cover image for this one
-    discussionCount: 78,
-    curator: "GlobalVoice Leo",
-    curatorAvatar: "https://placehold.co/40x40.png?text=GV",
-    curatorAvatarFallback: "GV",
-    dataAiHintCuratorAvatar: "global activist",
-  },
-  {
-    id: "story4",
-    title: "The Future of Urban Transportation in Our City",
-    summary: "As our city grows, how will we move? Exploring proposals for public transit expansion, bike lane networks, and new mobility solutions. Share your vision and concerns.",
-    category: "local",
-    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 2), // 2 days ago
-    coverImage: "https://placehold.co/600x400.png",
-    dataAiHintCover: "city transport bus",
-    discussionCount: 28,
-    curator: "UrbanSpeaker Maria",
-    curatorAvatar: "https://placehold.co/40x40.png?text=US",
-    curatorAvatarFallback: "US",
-    dataAiHintCuratorAvatar: "urban planner",
-  },
-];
 
 const StoryTopicCard: React.FC<{ story: StoryTopic }> = ({ story }) => {
   const categoryIcon = useMemo(() => {
@@ -169,11 +92,23 @@ const StoryTopicCard: React.FC<{ story: StoryTopic }> = ({ story }) => {
 
 
 export default function OurStoryPage() {
+  const [allStoryTopics, setAllStoryTopics] = useState<StoryTopic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'local' | 'national' | 'global'>('all');
 
+  useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        const topics = await getStoryTopics();
+        setAllStoryTopics(topics);
+        setIsLoading(false);
+    };
+    fetchData();
+  }, []);
+
   const filteredStories = useMemo(() => {
-    let stories = mockStoryTopics;
+    let stories = allStoryTopics;
     if (activeTab !== 'all') {
       stories = stories.filter(story => story.category === activeTab);
     }
@@ -186,7 +121,7 @@ export default function OurStoryPage() {
       );
     }
     return stories.sort((a, b) => b.lastUpdatedAt.getTime() - a.lastUpdatedAt.getTime());
-  }, [searchTerm, activeTab]);
+  }, [searchTerm, activeTab, allStoryTopics]);
 
   const getCategoryIcon = (category: StoryTopic['category'] | 'all') => {
     switch (category) {
@@ -232,7 +167,11 @@ export default function OurStoryPage() {
         </div>
       </div>
 
-      {filteredStories.length > 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      ) : filteredStories.length > 0 ? (
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStories.map((story) => (
             <StoryTopicCard key={story.id} story={story} />
@@ -255,4 +194,3 @@ export default function OurStoryPage() {
     </div>
   );
 }
-    

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { DiscussionComment } from '@/app/(app)/our-story/[storyId]/page'; // Updated import path
+import type { DiscussionComment } from '@/lib/types';
 import { Flag } from 'lucide-react';
 
 interface ReportCommentDialogProps {

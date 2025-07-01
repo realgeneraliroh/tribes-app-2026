@@ -21,46 +21,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Lucide Icons
-import { ArrowLeft, BookOpen, Globe, Map, Building, History, Link2, MessageSquare, PlusCircle, Rss, Share2, Smile, Send, MessageSquarePlus, MoreVertical, Flag } from "lucide-react";
+import { ArrowLeft, BookOpen, Globe, Map, Building, History, Link2, MessageSquare, PlusCircle, Rss, Share2, Smile, Send, MessageSquarePlus, MoreVertical, Flag, Loader2 } from "lucide-react";
 
-// Data (mock for now)
-import { mockStoryTopics, type StoryTopic } from '../page'; // Import from the parent page
+// Data & Services
 import { ReportCommentDialog } from '@/components/dialogs/report-comment-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/hooks/use-user'; // New Import
-import type { UserRole } from '@/lib/types';
-import type { DiscussionComment } from '@/lib/data';
-import { mockCommentsForStory, MOCK_CURRENT_USER_ID } from '@/lib/data';
+import { useUser } from '@/hooks/use-user';
+import type { DiscussionComment, UserRole } from '@/lib/types';
+import type { StoryTopic, SourceArticle } from '@/lib/data';
+import { MOCK_CURRENT_USER_ID } from '@/lib/data';
+import { getStoryTopicById, getArticlesForStory, getCommentsForStory } from '@/lib/data-access/stories';
 import { reportComment } from '@/lib/services/moderation-service';
-
-// Interfaces
-interface SourceArticle {
-  id: string;
-  title: string;
-  url: string;
-  sourceName: string;
-  publishedDate: Date;
-  summarySnippet?: string;
-  dataAiHint?: string;
-}
-
-const MOCK_COMMENT_DATE_MS = new Date("2025-07-15T12:00:00.000Z").getTime();
-
-// Mock data for a specific story
-const mockArticlesForStory: Record<string, SourceArticle[]> = {
-  "story1": [
-    { id: "art1-1", title: "City Announces New Recycling Pickup Schedule", url: "#", sourceName: "City Herald", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 0.5), summarySnippet: "The city council has officially released the updated schedule for recycling pickups, effective next month...", dataAiHint: "newspaper article" },
-    { id: "art1-2", title: "Understanding Contamination in Recycling Bins", url: "#", sourceName: "EcoWatch Org", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 1), summarySnippet: "A common issue hindering recycling efforts is contamination. Learn what can and cannot be recycled.", dataAiHint: "environment infographic" },
-  ],
-  "story2": [
-    { id: "art2-1", title: "Economists Weigh In on UBI Pilot Programs", url: "#", sourceName: "National Economics Review", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 2), summarySnippet: "Several pilot programs for Universal Basic Income have yielded interesting results, sparking further debate...", dataAiHint: "graph chart" },
-  ],
-  "story4": [
-    { id: "art4-1", title: "Proposed Metro Expansion Routes Revealed", url: "#", sourceName: "Urban Transit Today", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 0.2), summarySnippet: "Details of the proposed metro line expansion, including new station locations and timelines, were shared today.", dataAiHint: "map transport" },
-    { id: "art4-2", title: "Community Feedback Session on Bike Lane Project", url: "#", sourceName: "City Planning Dept.", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 1.5), summarySnippet: "The city is seeking public input on the new interconnected bike lane project. Attend the session next Tuesday.", dataAiHint: "people meeting" },
-  ]
-};
-
 
 // Helper for Article Card
 const ArticleCard: React.FC<{ article: SourceArticle }> = ({ article }) => (
@@ -207,12 +178,19 @@ export default function StoryDetailPage() {
 
   useEffect(() => {
     if (storyId) {
-      setIsLoading(true);
-      const foundStory = mockStoryTopics.find(s => s.id === storyId);
-      setStory(foundStory || null);
-      setArticles(mockArticlesForStory[storyId] || []);
-      setComments(mockCommentsForStory[storyId] || []);
-      setIsLoading(false);
+      const fetchData = async () => {
+        setIsLoading(true);
+        const [foundStory, foundArticles, foundComments] = await Promise.all([
+          getStoryTopicById(storyId),
+          getArticlesForStory(storyId),
+          getCommentsForStory(storyId),
+        ]);
+        setStory(foundStory || null);
+        setArticles(foundArticles);
+        setComments(foundComments);
+        setIsLoading(false);
+      };
+      fetchData();
     }
   }, [storyId]);
 
@@ -231,7 +209,7 @@ export default function StoryDetailPage() {
     if (!newComment.trim() || !story) return;
     const newCommentObj: DiscussionComment = {
         id: `new-com-${Date.now()}`,
-        authorId: "currentUser", // Simulate current user
+        authorId: MOCK_CURRENT_USER_ID,
         authorName: "You (Current User)",
         authorAvatarFallback: "ME",
         content: newComment,
@@ -276,7 +254,7 @@ export default function StoryDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-        <p className="text-muted-foreground">Loading story details...</p>
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }

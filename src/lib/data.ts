@@ -233,3 +233,108 @@ export let mockPendingMembers: PendingMember[] = [
     { id: 'pending1', name: 'Frank Frankenstein', avatar: 'https://placehold.co/40x40.png?text=FF', dataAiHint: 'avatar character', requestTimestamp: new Date(), tribeId: '1' },
     { id: 'pending2', name: 'Grace Hopper', avatar: 'https://placehold.co/40x40.png?text=GH', dataAiHint: 'avatar scientist', requestTimestamp: new Date(new Date().getTime() - 86400000), tribeId: '1' },
 ];
+
+// --- OUR STORY MOCK DATA ---
+export interface StoryTopic {
+  id: string;
+  title: string;
+  summary: string;
+  category: 'local' | 'national' | 'global';
+  lastUpdatedAt: Date;
+  coverImage?: string;
+  dataAiHintCover?: string;
+  relatedLinks?: { title: string, url: string }[];
+  discussionCount?: number;
+  curator?: string;
+  curatorAvatar?: string;
+  curatorAvatarFallback?: string;
+  dataAiHintCuratorAvatar?: string;
+}
+
+export interface SourceArticle {
+  id: string;
+  title: string;
+  url: string;
+  sourceName: string;
+  publishedDate: Date;
+  summarySnippet?: string;
+  dataAiHint?: string;
+}
+
+const MOCK_STORY_DATE_MS = new Date("2025-07-15T10:00:00.000Z").getTime();
+
+export const mockStoryTopics: StoryTopic[] = [
+  {
+    id: "story1",
+    title: "Understanding the New Local Recycling Program",
+    summary: "Recent changes to our city's recycling program have many residents asking questions. This topic aims to consolidate official information, community discussions, and tips for effective participation.",
+    category: "local",
+    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 1), // 1 day ago
+    coverImage: "https://placehold.co/600x400.png",
+    dataAiHintCover: "recycling bins community",
+    relatedLinks: [
+      { title: "City Council Announcement", url: "#" },
+      { title: "Community Forum Thread", url: "#" },
+    ],
+    discussionCount: 12,
+    curator: "EcoSpeaker Alex",
+    curatorAvatar: "https://placehold.co/40x40.png?text=EA",
+    curatorAvatarFallback: "EA",
+    dataAiHintCuratorAvatar: "environment person",
+  },
+  {
+    id: "story2",
+    title: "National Debate on Universal Basic Income: Pros & Cons",
+    summary: "A comprehensive overview of the ongoing national discussion around UBI, featuring arguments from leading economists, social scientists, and policymakers. Explore the potential impacts and challenges.",
+    category: "national",
+    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 3), // 3 days ago
+    coverImage: "https://placehold.co/600x400.png",
+    dataAiHintCover: "debate discussion money",
+    discussionCount: 45,
+    curator: "PolicySpeaker Sarah",
+    curatorAvatar: "https://placehold.co/40x40.png?text=PS",
+    curatorAvatarFallback: "PS",
+    dataAiHintCuratorAvatar: "policy expert",
+  },
+  {
+    id: "story3",
+    title: "Global Water Scarcity: Innovations and Solutions",
+    summary: "Investigating the increasing challenges of water scarcity worldwide and highlighting innovative technologies and community-led initiatives aimed at sustainable water management.",
+    category: "global",
+    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 5), // 5 days ago
+    // No cover image for this one
+    discussionCount: 78,
+    curator: "GlobalVoice Leo",
+    curatorAvatar: "https://placehold.co/40x40.png?text=GV",
+    curatorAvatarFallback: "GV",
+    dataAiHintCuratorAvatar: "global activist",
+  },
+  {
+    id: "story4",
+    title: "The Future of Urban Transportation in Our City",
+    summary: "As our city grows, how will we move? Exploring proposals for public transit expansion, bike lane networks, and new mobility solutions. Share your vision and concerns.",
+    category: "local",
+    lastUpdatedAt: new Date(MOCK_STORY_DATE_MS - 86400000 * 2), // 2 days ago
+    coverImage: "https://placehold.co/600x400.png",
+    dataAiHintCover: "city transport bus",
+    discussionCount: 28,
+    curator: "UrbanSpeaker Maria",
+    curatorAvatar: "https://placehold.co/40x40.png?text=US",
+    curatorAvatarFallback: "US",
+    dataAiHintCuratorAvatar: "urban planner",
+  },
+];
+
+export const mockArticlesForStory: Record<string, SourceArticle[]> = {
+  "story1": [
+    { id: "art1-1", title: "City Announces New Recycling Pickup Schedule", url: "#", sourceName: "City Herald", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 0.5), summarySnippet: "The city council has officially released the updated schedule for recycling pickups, effective next month...", dataAiHint: "newspaper article" },
+    { id: "art1-2", title: "Understanding Contamination in Recycling Bins", url: "#", sourceName: "EcoWatch Org", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 1), summarySnippet: "A common issue hindering recycling efforts is contamination. Learn what can and cannot be recycled.", dataAiHint: "environment infographic" },
+  ],
+  "story2": [
+    { id: "art2-1", title: "Economists Weigh In on UBI Pilot Programs", url: "#", sourceName: "National Economics Review", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 2), summarySnippet: "Several pilot programs for Universal Basic Income have yielded interesting results, sparking further debate...", dataAiHint: "graph chart" },
+  ],
+  "story4": [
+    { id: "art4-1", title: "Proposed Metro Expansion Routes Revealed", url: "#", sourceName: "Urban Transit Today", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 0.2), summarySnippet: "Details of the proposed metro line expansion, including new station locations and timelines, were shared today.", dataAiHint: "map transport" },
+    { id: "art4-2", title: "Community Feedback Session on Bike Lane Project", url: "#", sourceName: "City Planning Dept.", publishedDate: new Date(MOCK_COMMENT_DATE_MS - 86400000 * 1.5), summarySnippet: "The city is seeking public input on the new interconnected bike lane project. Attend the session next Tuesday.", dataAiHint: "people meeting" },
+  ]
+};
