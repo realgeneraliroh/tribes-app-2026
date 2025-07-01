@@ -4,7 +4,7 @@
  * preparing it to be easily replaced by real API calls or Server Actions.
  */
 
-import { mockReportedContentData, type ReportedPost } from '@/lib/data';
+import { mockReportedContentData, type ReportedPost, initialSampleTribePosts } from '@/lib/data';
 
 interface ReportPostPayload {
     postId: string;
@@ -30,7 +30,11 @@ export async function reportPost(payload: ReportPostPayload): Promise<ReportedPo
   // Simulate async operation and update mock data
   return new Promise(resolve => {
     setTimeout(() => {
-      mockReportedContentData.unshift(newReport); // Add to the beginning of the array
+      // Prevent duplicate reports for the same post in the mock data
+      const existingReportIndex = mockReportedContentData.findIndex(r => r.postId === payload.postId);
+      if (existingReportIndex === -1) {
+        mockReportedContentData.unshift(newReport); // Add to the beginning of the array
+      }
       resolve(newReport);
     }, 500);
   });
@@ -59,4 +63,59 @@ export async function reportComment(payload: ReportCommentPayload): Promise<void
             resolve();
         }, 500);
     });
+}
+
+/**
+ * Simulates dismissing a report.
+ * @param postId The ID of the post whose report is being dismissed.
+ */
+export async function dismissReport(postId: string): Promise<void> {
+  console.log(`Service: Dismissing report for post ${postId}`);
+  
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const reportIndex = mockReportedContentData.findIndex(r => r.postId === postId);
+      if (reportIndex > -1) {
+        mockReportedContentData.splice(reportIndex, 1);
+      }
+      resolve();
+    }, 300);
+  });
+}
+
+interface RemovePostPayload {
+    postId: string;
+    reason: string;
+    preventRepost: boolean;
+}
+
+/**
+ * Simulates removing a post.
+ * This also implicitly dismisses the report associated with the post.
+ * @param payload The details for removing the post.
+ */
+export async function removePost(payload: RemovePostPayload): Promise<void> {
+  console.log("Service: Removing post", payload);
+
+  return new Promise(resolve => {
+    setTimeout(() => {
+      // Dismiss the report
+      const reportIndex = mockReportedContentData.findIndex(r => r.postId === payload.postId);
+      if (reportIndex > -1) {
+        mockReportedContentData.splice(reportIndex, 1);
+      }
+
+      // Mark the post as removed
+      const postIndex = initialSampleTribePosts.findIndex(p => p.id === payload.postId);
+      if (postIndex > -1) {
+        initialSampleTribePosts[postIndex] = {
+          ...initialSampleTribePosts[postIndex],
+          isRemoved: true,
+          canBeReposted: !payload.preventRepost,
+          removalReason: payload.reason,
+        };
+      }
+      resolve();
+    }, 500);
+  });
 }

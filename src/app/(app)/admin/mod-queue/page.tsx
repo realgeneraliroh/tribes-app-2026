@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShieldAlert, Inbox, Trash2, Users as UsersIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Eye, ArrowLeft } from "lucide-react";
+import { ShieldAlert, Inbox, Trash2, Users as UsersIcon, AlertCircle, CheckCircle, Hammer, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Eye, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,6 +28,8 @@ import { useUser } from '@/hooks/use-user';
 import { initialSampleTribePosts, type TribePost, mockReportedContentData, type ReportedPost } from '@/lib/data'; 
 import { getTribes } from '@/lib/data-access/tribes';
 import type { Tribe } from '@/lib/data';
+import { dismissReport, removePost } from '@/lib/services/moderation-service';
+
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15, 20];
 const DEFAULT_ITEMS_PER_PAGE = 10;
@@ -71,6 +73,16 @@ export default function ModQueuePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isClient, setIsClient] = useState(false);
   const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
+  const [isTakingAction, setIsTakingAction] = useState<string | null>(null);
+
+
+  const reloadData = async () => {
+    const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
+    setReports(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
+    setAllPosts(initialSampleTribePosts.map(p => ({...p}))); 
+    const fetchedTribes = await getTribes();
+    setAllTribes(fetchedTribes);
+  };
 
   useEffect(() => {
     const canAccess = role === 'Admin';
@@ -79,22 +91,9 @@ export default function ModQueuePage() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    reloadData(); // Initial load
 
-
-  useEffect(() => {
-    const loadData = async () => {
-        const activePostIds = new Set(initialSampleTribePosts.filter(p => !p.isRemoved).map(p => p.id));
-        setReports(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
-        setAllPosts(initialSampleTribePosts.map(p => ({...p}))); 
-        const fetchedTribes = await getTribes();
-        setAllTribes(fetchedTribes);
-    };
-    loadData(); // Initial load
-
-    const handleFocus = () => {
-        loadData(); // Reload data on window focus
-    };
+    const handleFocus = () => reloadData(); // Reload data on window focus
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
@@ -108,41 +107,29 @@ export default function ModQueuePage() {
     return allTribes.find(tribe => tribe.id === tribeId);
   };
 
-  const handleDismissReport = (postIdToDismiss: string) => {
-    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
-    if (reportIndexGlobal > -1) {
-      mockReportedContentData.splice(reportIndexGlobal, 1);
-    }
-    setReports(prev => prev.filter(report => report.postId !== postIdToDismiss));
+  const handleDismissReport = async (postIdToDismiss: string) => {
+    setIsTakingAction(postIdToDismiss);
+    await dismissReport(postIdToDismiss);
+    await reloadData();
+    setIsTakingAction(null);
     toast({
       title: "Report Dismissed",
       description: `Report for post ID ${postIdToDismiss} has been dismissed. The post remains.`,
     });
   };
 
-  const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
-    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
-    if (reportIndexGlobal > -1) {
-      mockReportedContentData.splice(reportIndexGlobal, 1);
-    }
-    const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
+  const handleRemovePostAndNotify = async (postIdToRemove: string, postTitle?: string) => {
+    setIsTakingAction(postIdToRemove);
     const shouldPreventRepost = preventRepostState[postIdToRemove] || false;
+    
+    await removePost({
+        postId: postIdToRemove,
+        reason: "Content removed by Global Admin.",
+        preventRepost: shouldPreventRepost,
+    });
 
-    if (postIndexGlobal > -1) {
-      initialSampleTribePosts[postIndexGlobal] = {
-        ...initialSampleTribePosts[postIndexGlobal],
-        isRemoved: true,
-        canBeReposted: !shouldPreventRepost, 
-        removalReason: "Content removed by Global Admin.",
-      };
-    }
-
-    setReports(prev => prev.filter(report => report.postId !== postIdToRemove));
-    setAllPosts(prevPosts => prevPosts.map(p => 
-        p.id === postIdToRemove 
-        ? { ...p, isRemoved: true, canBeReposted: !shouldPreventRepost, removalReason: "Content removed by Global Admin." } 
-        : p
-    ));
+    await reloadData();
+    setIsTakingAction(null);
     
     toast({
       title: "Post Marked as Removed",
@@ -438,9 +425,10 @@ export default function ModQueuePage() {
               {paginatedReports.map((report) => {
                 const post = getPostById(report.postId);
                 const tribe = post ? getTribeById(post.tribeId) : undefined;
+                const isThisPostBeingActioned = isTakingAction === report.postId;
 
                 return (
-                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5")}>
+                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5", isThisPostBeingActioned && "opacity-50 pointer-events-none")}>
                     <AccordionTrigger className="p-3 hover:no-underline text-left w-full">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
@@ -455,6 +443,7 @@ export default function ModQueuePage() {
                       <Badge variant="outline" className="ml-auto mr-2 whitespace-nowrap text-xs">
                         {isClient ? format(new Date(report.reportedAt), "MMM d, h:mm a") : ""}
                       </Badge>
+                      {isThisPostBeingActioned && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t bg-background">
                       {post ? (
@@ -508,7 +497,7 @@ export default function ModQueuePage() {
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button size="icon" variant="outline" onClick={() => handleDismissReport(report.postId)}>
+                                        <Button size="icon" variant="outline" onClick={() => handleDismissReport(report.postId)} disabled={isThisPostBeingActioned}>
                                             <CheckCircle className="h-4 w-4" />
                                             <span className="sr-only">Dismiss Report</span>
                                         </Button>
@@ -521,7 +510,7 @@ export default function ModQueuePage() {
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button size="icon" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
+                                            <Button size="icon" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)} disabled={isThisPostBeingActioned}>
                                                 <Trash2 className="h-4 w-4"/>
                                                 <span className="sr-only">Mark Post as Removed</span>
                                             </Button>
@@ -533,7 +522,7 @@ export default function ModQueuePage() {
                              <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button size="icon" variant="destructive" className="bg-red-700 hover:bg-red-800" onClick={() => handleOpenBanDialog(post)}>
+                                        <Button size="icon" variant="destructive" className="bg-red-700 hover:bg-red-800" onClick={() => handleOpenBanDialog(post)} disabled={isThisPostBeingActioned}>
                                             <Hammer className="h-4 w-4"/>
                                             <span className="sr-only">Ban Author</span>
                                         </Button>
@@ -546,7 +535,7 @@ export default function ModQueuePage() {
                                <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button size="icon" variant="secondary" onClick={() => handleViewTribe(post.tribeId)}>
+                                            <Button size="icon" variant="secondary" onClick={() => handleViewTribe(post.tribeId)} disabled={isThisPostBeingActioned}>
                                                 <Eye className="h-4 w-4"/>
                                                 <span className="sr-only">View Tribe</span>
                                             </Button>
@@ -558,7 +547,7 @@ export default function ModQueuePage() {
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button size="icon" variant="outline" onClick={() => handleEscalate(report.postId)}>
+                                        <Button size="icon" variant="outline" onClick={() => handleEscalate(report.postId)} disabled={isThisPostBeingActioned}>
                                             <ShieldAlert className="h-4 w-4"/>
                                             <span className="sr-only">Escalate</span>
                                         </Button>

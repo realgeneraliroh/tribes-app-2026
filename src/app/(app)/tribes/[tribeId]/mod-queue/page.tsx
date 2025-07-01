@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ListChecks, ShieldAlert, Trash2, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban } from 'lucide-react';
+import { ArrowLeft, ListChecks, ShieldAlert, Trash2, CheckCircle, Search, Filter as FilterIcon, X as XIcon, ChevronLeft, ChevronRight, Ban, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +26,7 @@ import { useUser } from '@/hooks/use-user';
 
 import { type Tribe, type TribePost, type ReportedPost, initialSampleTribePosts, mockReportedContentData } from '@/lib/data';
 import { tribesData } from '../../page';
+import { dismissReport, removePost } from '@/lib/services/moderation-service';
 
 
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 15];
@@ -67,6 +68,22 @@ export default function TribeModQueuePage() {
   const [currentSortValue, setCurrentSortValue] = useState<string>(sortOptionsTribe[0].value);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const [isTakingAction, setIsTakingAction] = useState<string | null>(null);
+
+
+  const reloadData = () => {
+    if (tribeId) {
+        const currentTribeData = tribesData.find(t => t.id === tribeId);
+        if (currentTribeData) {
+            setTribe(currentTribeData);
+            const activePostIds = new Set(
+              initialSampleTribePosts.filter(p => p.tribeId === tribeId && !p.isRemoved).map(p => p.id)
+            );
+            setAllReportsForTribe(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
+            setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p})));
+        }
+    }
+  };
 
   useEffect(() => {
     const canAccess = role === 'Admin' || role === 'Creator';
@@ -75,36 +92,11 @@ export default function TribeModQueuePage() {
 
 
   useEffect(() => {
-    if (tribeId) {
-      const currentTribeData = tribesData.find(t => t.id === tribeId);
-      setTribe(currentTribeData || null);
-
-      if (currentTribeData) {
-        const activeTribePostIds = new Set(
-          initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id && !p.isRemoved).map(p => p.id)
-        );
-        const filteredReports = mockReportedContentData.filter(report => activeTribePostIds.has(report.postId));
-        setAllReportsForTribe(filteredReports);
-
-        setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === currentTribeData.id).map(p => ({...p})));
-        setCurrentPage(1);
-      }
-    }
+    reloadData();
   }, [tribeId]);
 
    useEffect(() => {
-    const handleFocus = () => {
-        if (tribeId) {
-            const currentTribeData = tribesData.find(t => t.id === tribeId);
-            if (currentTribeData) {
-                const activePostIds = new Set(
-                  initialSampleTribePosts.filter(p => p.tribeId === tribeId && !p.isRemoved).map(p => p.id)
-                );
-                setAllReportsForTribe(mockReportedContentData.filter(report => activePostIds.has(report.postId)));
-                setPostsForThisTribe(initialSampleTribePosts.filter(p => p.tribeId === tribeId).map(p => ({...p})));
-            }
-        }
-    };
+    const handleFocus = () => reloadData();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [tribeId]);
@@ -113,41 +105,29 @@ export default function TribeModQueuePage() {
     return postsForThisTribe.find(post => post.id === postId);
   };
 
-  const handleDismissReport = (postIdToDismiss: string) => {
-    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToDismiss);
-    if (reportIndexGlobal > -1) {
-      mockReportedContentData.splice(reportIndexGlobal, 1);
-    }
-    setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToDismiss));
+  const handleDismissReport = async (postIdToDismiss: string) => {
+    setIsTakingAction(postIdToDismiss);
+    await dismissReport(postIdToDismiss);
+    reloadData();
+    setIsTakingAction(null);
     toast({
         title: "Report Dismissed",
         description: `Report for post ID ${postIdToDismiss} has been dismissed. The post remains.`,
     });
   };
 
-  const handleRemovePostAndNotify = (postIdToRemove: string, postTitle?: string) => {
-    const reportIndexGlobal = mockReportedContentData.findIndex(r => r.postId === postIdToRemove);
-    if (reportIndexGlobal > -1) {
-      mockReportedContentData.splice(reportIndexGlobal, 1);
-    }
-    const postIndexGlobal = initialSampleTribePosts.findIndex(p => p.id === postIdToRemove);
+  const handleRemovePostAndNotify = async (postIdToRemove: string, postTitle?: string) => {
+    setIsTakingAction(postIdToRemove);
     const shouldPreventRepost = preventRepostState[postIdToRemove] || false;
 
-    if (postIndexGlobal > -1) {
-      initialSampleTribePosts[postIndexGlobal] = {
-        ...initialSampleTribePosts[postIndexGlobal],
-        isRemoved: true,
-        canBeReposted: !shouldPreventRepost,
-        removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.`,
-      };
-    }
-
-    setAllReportsForTribe(prev => prev.filter(report => report.postId !== postIdToRemove));
-    setPostsForThisTribe(prev => prev.map(p =>
-        p.id === postIdToRemove
-        ? { ...p, isRemoved: true, canBeReposted: !shouldPreventRepost, removalReason: `Content removed by ${tribe?.name || 'Tribe'} Admin.` }
-        : p
-    ));
+    await removePost({
+      postId: postIdToRemove,
+      reason: `Content removed by ${tribe?.name || 'Tribe'} Admin.`,
+      preventRepost: shouldPreventRepost,
+    });
+    
+    reloadData();
+    setIsTakingAction(null);
     toast({
       title: "Post Marked as Removed",
       description: `Post "${postTitle || postIdToRemove}" has been marked as removed from this tribe. ${shouldPreventRepost ? "Reposting has been prevented." : "It can be reposted by the author."}`,
@@ -373,8 +353,10 @@ export default function TribeModQueuePage() {
             <Accordion type="multiple" className="w-full space-y-3">
               {paginatedReports.map((report) => {
                 const post = getPostById(report.postId);
+                const isThisPostBeingActioned = isTakingAction === report.postId;
+
                 return (
-                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5")}>
+                  <AccordionItem key={report.postId} value={report.postId} className={cn("border rounded-lg overflow-hidden bg-card hover:bg-muted/30 transition-colors", post?.isRemoved && "opacity-70 bg-destructive/5", isThisPostBeingActioned && "opacity-50 pointer-events-none")}>
                     <AccordionTrigger className="p-3 hover:no-underline text-left w-full">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-primary truncate">
@@ -388,6 +370,7 @@ export default function TribeModQueuePage() {
                       <Badge variant="outline" className="ml-auto mr-2 whitespace-nowrap text-xs">
                         {format(new Date(report.reportedAt), "MMM d, h:mm a")}
                       </Badge>
+                      {isThisPostBeingActioned && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
                     </AccordionTrigger>
                     <AccordionContent className="p-4 border-t bg-background">
                       {post ? (
@@ -441,7 +424,7 @@ export default function TribeModQueuePage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button size="icon" variant="outline" onClick={() => handleDismissReport(report.postId)}>
+                                  <Button size="icon" variant="outline" onClick={() => handleDismissReport(report.postId)} disabled={isThisPostBeingActioned}>
                                     <CheckCircle className="h-4 w-4" />
                                     <span className="sr-only">Dismiss Report</span>
                                   </Button>
@@ -454,7 +437,7 @@ export default function TribeModQueuePage() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button size="icon" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)}>
+                                    <Button size="icon" variant="destructive" onClick={() => handleRemovePostAndNotify(report.postId, report.postTitle || post.title)} disabled={isThisPostBeingActioned}>
                                       <Trash2 className="h-4 w-4"/>
                                       <span className="sr-only">Mark Post as Removed</span>
                                     </Button>
@@ -466,7 +449,7 @@ export default function TribeModQueuePage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button size="icon" variant="secondary" onClick={() => handleEscalateReport(report.postId)}>
+                                  <Button size="icon" variant="secondary" onClick={() => handleEscalateReport(report.postId)} disabled={isThisPostBeingActioned}>
                                     <ShieldAlert className="h-4 w-4"/>
                                     <span className="sr-only">Escalate to Global</span>
                                   </Button>
