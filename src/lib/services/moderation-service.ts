@@ -4,7 +4,7 @@
  * preparing it to be easily replaced by real API calls or Server Actions.
  */
 
-import { mockReportedContentData, type ReportedPost, initialSampleTribePosts } from '@/lib/data';
+import { mockReportedContentData, type ReportedPost, initialSampleTribePosts, mockMembers } from '@/lib/data';
 
 interface ReportPostPayload {
     postId: string;
@@ -118,4 +118,31 @@ export async function removePost(payload: RemovePostPayload): Promise<void> {
       resolve();
     }, 500);
   });
+}
+
+interface BanMemberFromTribePayload {
+    tribeId: string;
+    memberId: string;
+    reason: string;
+    duration: string;
+}
+
+/**
+ * Simulates banning a member from a specific tribe.
+ * In a real app, this would update the member's status for that tribe.
+ * @param payload The details for the tribe-specific ban.
+ */
+export async function banMemberFromTribe(payload: BanMemberFromTribePayload): Promise<void> {
+    console.log("Service: Banning member from tribe", payload);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const memberIndex = mockMembers.findIndex(m => m.id === payload.memberId && m.tribeId === payload.tribeId);
+            if (memberIndex !== -1) {
+                // In a real app, you'd add a 'bannedUntil' field or similar.
+                // For this mock, we just remove them from the tribe's member list.
+                mockMembers.splice(memberIndex, 1);
+            }
+            resolve();
+        }, 300);
+    });
 }

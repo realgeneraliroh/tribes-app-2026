@@ -1,8 +1,8 @@
 
+
 "use client";
 
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UsersRound, Pencil, UserCheck, UserX, Hammer, MoreVertical, ShieldAlert, Check, X } from 'lucide-react';
+import { ArrowLeft, UsersRound, Pencil, UserCheck, UserX, Hammer, MoreVertical, ShieldAlert, Check, X, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,41 +20,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useEffect, useState } from 'react';
-import { tribesData, type Tribe } from '@/lib/data';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
 
-export interface TribeMember {
-  id: string;
-  name: string;
-  avatar: string;
-  dataAiHint: string;
-  tribeAssignedNickname?: string;
-  role?: 'member' | 'speaker';
-}
-
-export interface PendingMember {
-  id: string;
-  name: string;
-  avatar: string;
-  dataAiHint: string;
-  requestTimestamp: Date;
-}
-
-const mockPendingMembersData: PendingMember[] = [
-    { id: 'pending1', name: 'Frank Frankenstein', avatar: 'https://placehold.co/40x40.png?text=FF', dataAiHint: 'avatar character', requestTimestamp: new Date() },
-    { id: 'pending2', name: 'Grace Hopper', avatar: 'https://placehold.co/40x40.png?text=GH', dataAiHint: 'avatar scientist', requestTimestamp: new Date(new Date().getTime() - 86400000) },
-];
-
-const initialMockMembers: Omit<TribeMember, 'tribeAssignedNickname' | 'role'>[] = [
-  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person' },
-  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character' },
-  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person' },
-  { id: 'user4', name: 'Diana Prince', avatar: 'https://placehold.co/40x40.png?text=DP', dataAiHint: 'avatar hero' },
-  { id: 'user5', name: 'Edward Elric', avatar: 'https://placehold.co/40x40.png?text=EE', dataAiHint: 'avatar anime' },
-];
+import type { Tribe, TribeMember, PendingMember } from '@/lib/types';
+import { getTribeById } from '@/lib/data-access/tribes';
+import { getTribeMembers, getPendingMembers, updateMemberNickname, updateMemberRole, approveJoinRequest, denyJoinRequest } from '@/lib/services/tribe-service';
+import { banMemberFromTribe } from '@/lib/services/moderation-service';
 
 
 export default function ManageMembersPage() {
@@ -67,6 +41,8 @@ export default function ManageMembersPage() {
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [currentTribeMembers, setCurrentTribeMembers] = useState<TribeMember[]>([]);
   const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
   const [isNicknameDialogOpen, setIsNicknameDialogOpen] = useState(false);
   const [memberToEditNickname, setMemberToEditNickname] = useState<TribeMember | null>(null);
   const [nicknameInputValue, setNicknameInputValue] = useState("");
@@ -78,33 +54,27 @@ export default function ManageMembersPage() {
   
   const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
 
+  const reloadData = useCallback(async () => {
+    if (!tribeId) return;
+    setIsDataLoading(true);
+    const [tribeData, membersData, pendingData] = await Promise.all([
+      getTribeById(tribeId),
+      getTribeMembers(tribeId),
+      getPendingMembers(tribeId)
+    ]);
+    setTribe(tribeData);
+    setCurrentTribeMembers(membersData);
+    setPendingMembers(pendingData);
+    setIsDataLoading(false);
+  }, [tribeId]);
+
   useEffect(() => {
     const canAccess = role === 'Admin' || role === 'Creator';
     setHasAccess(canAccess);
-  }, [role]);
-
-
-  useEffect(() => {
-    if (tribeId) {
-      const currentTribeData = tribesData.find(t => t.id === tribeId);
-      setTribe(currentTribeData || null);
-      if (currentTribeData) {
-        const membersForThisTribe = initialMockMembers.map(member => ({
-            ...member,
-            tribeAssignedNickname: (member.id === 'user1' && tribeId === '1') ? 'AI Lead' :
-                                   (member.id === 'user2' && tribeId === '2') ? 'Trail Master' : undefined,
-            role: (member.id === 'user1' && tribeId === '1') ? 'speaker' : 'member' as 'member' | 'speaker'
-        }));
-        setCurrentTribeMembers(membersForThisTribe);
-
-        if (currentTribeData.id === '1' && currentTribeData.joinMechanism === 'approval') {
-          setPendingMembers(mockPendingMembersData);
-        } else {
-          setPendingMembers([]);
-        }
-      }
+    if (canAccess) {
+      reloadData();
     }
-  }, [tribeId]);
+  }, [role, reloadData]);
 
   const handleOpenNicknameDialog = (member: TribeMember) => {
     setMemberToEditNickname(member);
@@ -112,16 +82,9 @@ export default function ManageMembersPage() {
     setIsNicknameDialogOpen(true);
   };
 
-  const handleSaveNickname = () => {
+  const handleSaveNickname = async () => {
     if (!memberToEditNickname) return;
-
-    setCurrentTribeMembers(prevMembers =>
-      prevMembers.map(member =>
-        member.id === memberToEditNickname.id
-          ? { ...member, tribeAssignedNickname: nicknameInputValue.trim() || undefined }
-          : member
-      )
-    );
+    await updateMemberNickname(tribeId, memberToEditNickname.id, nicknameInputValue.trim() || undefined);
     toast({
       title: "Nickname Updated",
       description: `Nickname for ${memberToEditNickname.name} has been ${nicknameInputValue.trim() ? 'set to "' + nicknameInputValue.trim() + '"' : 'cleared'}.`,
@@ -129,23 +92,17 @@ export default function ManageMembersPage() {
     setIsNicknameDialogOpen(false);
     setMemberToEditNickname(null);
     setNicknameInputValue("");
+    reloadData();
   };
 
-  const handleToggleSpeakerRole = (memberId: string) => {
-    setCurrentTribeMembers(prevMembers =>
-      prevMembers.map(member => {
-        if (member.id === memberId) {
-          const newRole = member.role === 'speaker' ? 'member' : 'speaker';
-          const targetMember = prevMembers.find(m => m.id === memberId);
-          toast({
-            title: `Role Updated for ${targetMember?.name || 'Member'}`,
-            description: `${targetMember?.name || 'The member'} is now a ${newRole}.`,
-          });
-          return { ...member, role: newRole };
-        }
-        return member;
-      })
-    );
+  const handleToggleSpeakerRole = async (member: TribeMember) => {
+    const newRole = member.role === 'speaker' ? 'member' : 'speaker';
+    await updateMemberRole(tribeId, member.id, newRole);
+    toast({
+      title: `Role Updated for ${member.name}`,
+      description: `${member.name} is now a ${newRole}.`,
+    });
+    reloadData();
   };
 
   const handleOpenBanDialog = (member: TribeMember) => {
@@ -157,16 +114,14 @@ export default function ManageMembersPage() {
     setIsBanDialogOpen(true);
   };
 
-  const handleConfirmBan = () => {
+  const handleConfirmBan = async () => {
     if (!memberToBanDetails || !tribe) return;
 
-    console.log("Banning member from tribe:", {
-        memberId: memberToBanDetails.memberId,
-        memberName: memberToBanDetails.memberName,
-        tribeId: tribe.id,
-        tribeName: tribe.name,
-        duration: banDuration,
-        reason: banReason,
+    await banMemberFromTribe({
+      tribeId: tribe.id,
+      memberId: memberToBanDetails.memberId,
+      reason: banReason,
+      duration: banDuration,
     });
 
     let durationText = "permanently from this tribe";
@@ -175,50 +130,42 @@ export default function ManageMembersPage() {
     else if (banDuration === "30_days") durationText = "for 30 days from this tribe";
     
     toast({
-      title: "Member Banned from Tribe (Simulated)",
-      description: `Member ${memberToBanDetails.memberName} has been banned ${durationText}. Their reputation may be impacted (Simulated). ${banReason ? `Reason: ${banReason}` : ''}`,
+      title: "Member Banned from Tribe",
+      description: `Member ${memberToBanDetails.memberName} has been banned ${durationText}. Their reputation may be impacted.`,
       variant: "destructive",
     });
-
-    setCurrentTribeMembers(prevMembers => prevMembers.filter(m => m.id !== memberToBanDetails.memberId));
 
     setIsBanDialogOpen(false);
     setMemberToBanDetails(null);
     setBanDuration("permanent_from_tribe");
     setBanReason("");
+    reloadData();
   };
 
-  const handleApproveRequest = (pendingMember: PendingMember) => {
-      setPendingMembers(prev => prev.filter(p => p.id !== pendingMember.id));
-      const newMember: TribeMember = {
-        id: pendingMember.id,
-        name: pendingMember.name,
-        avatar: pendingMember.avatar,
-        dataAiHint: pendingMember.dataAiHint,
-        role: 'member',
-      };
-      setCurrentTribeMembers(prev => [...prev, newMember]);
-
-      toast({
-        title: "Member Approved",
-        description: `${pendingMember.name} has been added to the tribe.`,
-      });
+  const handleApproveRequest = async (pendingMember: PendingMember) => {
+    await approveJoinRequest(tribeId, pendingMember.id);
+    toast({
+      title: "Member Approved",
+      description: `${pendingMember.name} has been added to the tribe.`,
+    });
+    reloadData();
   };
 
-  const handleDenyRequest = (pendingMemberId: string, memberName: string) => {
-      setPendingMembers(prev => prev.filter(p => p.id !== pendingMemberId));
-      toast({
-        title: "Request Denied",
-        description: `The request from ${memberName} has been denied.`,
-        variant: 'destructive'
-      });
+  const handleDenyRequest = async (pendingMemberId: string, memberName: string) => {
+    await denyJoinRequest(tribeId, pendingMemberId);
+    toast({
+      title: "Request Denied",
+      description: `The request from ${memberName} has been denied.`,
+      variant: 'destructive'
+    });
+    reloadData();
   };
 
 
   if (hasAccess === undefined) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-        <p className="text-muted-foreground">Checking permissions...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -239,11 +186,19 @@ export default function ManageMembersPage() {
       </Card>
     );
   }
-
+  
+  if (isDataLoading) {
+     return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  
   if (!tribe) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
-        <p className="text-muted-foreground">Loading tribe information...</p>
+        <p className="text-muted-foreground">Could not find tribe information.</p>
       </div>
     );
   }
@@ -336,7 +291,7 @@ export default function ManageMembersPage() {
                         <Pencil className="mr-2 h-4 w-4" />
                         {member.tribeAssignedNickname ? "Edit" : "Assign"} Nickname
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleSpeakerRole(member.id)}>
+                      <DropdownMenuItem onClick={() => handleToggleSpeakerRole(member)}>
                         {member.role === 'speaker' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
                         {member.role === 'speaker' ? 'Demote to Member' : 'Make Speaker'}
                       </DropdownMenuItem>

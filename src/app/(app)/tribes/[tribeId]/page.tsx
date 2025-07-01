@@ -20,32 +20,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from '@/hooks/use-user';
 
 import { getTribeById } from '@/lib/data-access/tribes';
-import type { Tribe, TribePost, ReportedPost } from '@/lib/data';
-import { initialSampleTribePosts, mockReportedContentData, MOCK_CURRENT_USER_ID, moodStreamPostIds, sampleEventsData } from '@/lib/data';
+import { initialSampleTribePosts, mockReportedContentData, MOCK_CURRENT_USER_ID, moodStreamPostIds, sampleEventsData, mockMembers } from '@/lib/data';
 
 import { moodsData } from '../../moods/page';
-import type { Event } from '@/lib/types';
+import type { Event, TribePost, ReportedPost, Tribe, TribeMember } from '@/lib/types';
 import { PromotePostDialog } from '@/components/dialogs/boost-post-dialog';
 import { ReportPostDialog } from '@/components/dialogs/report-post-dialog';
 import { RepostDialog } from '@/components/dialogs/repost-dialog';
 import { CreatePostDialog, type PostFormValues } from '@/components/dialogs/create-post-dialog';
 import { reportPost } from '@/lib/services/moderation-service';
 import { createTribePost, promotePostToMoods, repost } from '@/lib/services/post-service';
-
-
-export interface TribeMember {
-  id: string;
-  name: string;
-  avatar: string;
-  dataAiHint: string;
-  tribeAssignedNickname?: string;
-}
-
-export const initialMockMembers: Omit<TribeMember, 'tribeAssignedNickname'>[] = [
-  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person' },
-  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character' },
-  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person' },
-];
 
 
 const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isMember: boolean; isTribeAdmin: boolean; isReported: boolean; isCurrentUserAuthor: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; onRepostClick: (post: TribePost) => void; }> = ({ post, isPromoted, isMember, isTribeAdmin, isReported, isCurrentUserAuthor, onPromoteClick, onReportClick, onRepostClick }) => {
@@ -292,11 +276,8 @@ export default function TribeDetailPage() {
         const currentTribeData = await getTribeById(tribeId);
         if (currentTribeData) {
             setTribe(currentTribeData);
-            const membersForThisTribe = initialMockMembers.map(member => ({
-                ...member,
-                tribeAssignedNickname: (member.id === 'user1' && tribeId === '1') ? 'AI Lead' :
-                                   (member.id === 'user2' && tribeId === '2') ? 'Trail Master' : undefined
-            }));
+            // This now pulls from centralized mock data
+            const membersForThisTribe = mockMembers.filter(member => member.tribeId === tribeId);
             setCurrentTribeMembers(membersForThisTribe);
         } else {
             router.push('/tribes');

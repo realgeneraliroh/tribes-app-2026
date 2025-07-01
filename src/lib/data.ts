@@ -1,5 +1,6 @@
 
-import type { UserRole, Event, Bond, TribePost, ReportedPost, DiscussionComment } from '@/lib/types';
+
+import type { UserRole, Event, Bond, TribePost, ReportedPost, DiscussionComment, TribeMember, PendingMember } from '@/lib/types';
 import { allMoodStreamPosts } from '@/app/(app)/moods/[moodSlug]/page';
 
 export interface Tribe {
@@ -217,4 +218,18 @@ export let bondsData: Bond[] = [
   { id: "16", targetName: "Summer Fest Pass", targetType: "user", bondType: "follower", formationMethod: "virtual_request", keyType: "event_promo", eventId: "summerfest2024", accessTier: "spectator", passkeyStatus: "active", expiresAt: new Date(MOCK_BOND_DATE_MS + 86400000 * 60), lastRefreshedAt: new Date(MOCK_BOND_DATE_MS), reconnectsCount: 0, showInIntercom: true, allowChatInitiation: false },
   { id: "17", targetName: "Concert VIP Access", targetType: "user", bondType: "supporter", formationMethod: "rfid_tap", keyType: "event_attendee", eventId: "bandlive2024", accessTier: "vip", passkeyStatus: "active", expiresAt: new Date(MOCK_BOND_DATE_MS + 86400000 * 1), lastRefreshedAt: new Date(MOCK_BOND_DATE_MS), reconnectsCount: 1, showInIntercom: true, allowChatInitiation: true },
   { id: "18", targetName: "Tech Conference Day Pass", targetType: "user", bondType: "professional", formationMethod: "rfid_tap", keyType: "event_attendee", eventId: "devcon2024", accessTier: "attendee", passkeyStatus: "active", expiresAt: new Date(MOCK_BOND_DATE_MS + 86400000 * 0.5), lastRefreshedAt: new Date(MOCK_BOND_DATE_MS), reconnectsCount: 0, showInIntercom: false, allowChatInitiation: false },
+];
+
+export let mockMembers: TribeMember[] = [
+  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person', tribeId: '1', role: 'speaker', tribeAssignedNickname: 'AI Lead' },
+  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character', tribeId: '1', role: 'member' },
+  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person', tribeId: '1', role: 'member' },
+  { id: 'user4', name: 'Diana Prince', avatar: 'https://placehold.co/40x40.png?text=DP', dataAiHint: 'avatar hero', tribeId: '2', role: 'member' },
+  { id: 'user5', name: 'Edward Elric', avatar: 'https://placehold.co/40x40.png?text=EE', dataAiHint: 'avatar anime', tribeId: '2', role: 'member', tribeAssignedNickname: 'Trail Master' },
+  { id: 'user6', name: 'Fiona Glenanne', avatar: 'https://placehold.co/40x40.png?text=FG', dataAiHint: 'avatar agent', tribeId: '3', role: 'member' },
+];
+
+export let mockPendingMembers: PendingMember[] = [
+    { id: 'pending1', name: 'Frank Frankenstein', avatar: 'https://placehold.co/40x40.png?text=FF', dataAiHint: 'avatar character', requestTimestamp: new Date(), tribeId: '1' },
+    { id: 'pending2', name: 'Grace Hopper', avatar: 'https://placehold.co/40x40.png?text=GH', dataAiHint: 'avatar scientist', requestTimestamp: new Date(new Date().getTime() - 86400000), tribeId: '1' },
 ];

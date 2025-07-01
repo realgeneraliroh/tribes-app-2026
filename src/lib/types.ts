@@ -122,3 +122,22 @@ export interface DiscussionComment {
   replies?: DiscussionComment[];
   dataAiHintAvatar?: string;
 }
+
+export interface TribeMember {
+  id: string;
+  name: string;
+  avatar: string;
+  dataAiHint: string;
+  tribeAssignedNickname?: string;
+  role?: 'member' | 'speaker';
+  tribeId: string; // Which tribe they belong to
+}
+
+export interface PendingMember {
+  id: string;
+  name: string;
+  avatar: string;
+  dataAiHint: string;
+  requestTimestamp: Date;
+  tribeId: string; // Which tribe they are requesting to join
+}

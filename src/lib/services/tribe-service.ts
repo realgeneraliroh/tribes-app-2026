@@ -1,10 +1,13 @@
 
+
 /**
  * @fileoverview Service layer for tribe actions like creation and updates.
  */
 import * as z from "zod";
-import { tribesData } from '@/lib/data';
-import type { Tribe } from '@/lib/data';
+import { tribesData, mockMembers, mockPendingMembers } from '@/lib/data';
+import type { Tribe, TribeMember } from '@/lib/data';
+import type { PendingMember as PendingMemberType } from '@/lib/types';
+
 
 // From create/page.tsx
 const createTribeFormSchema = z.object({
@@ -76,4 +79,83 @@ export async function updateTribeSettings(tribeId: string, payload: UpdateTribeS
     });
 }
 
-    
+// --- Member Management Services ---
+
+export async function getTribeMembers(tribeId: string): Promise<TribeMember[]> {
+  console.log(`Service: Fetching members for tribe ${tribeId}`);
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(mockMembers.filter(m => m.tribeId === tribeId));
+    }, 250);
+  });
+}
+
+export async function getPendingMembers(tribeId: string): Promise<PendingMemberType[]> {
+  console.log(`Service: Fetching pending members for tribe ${tribeId}`);
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(mockPendingMembers.filter(p => p.tribeId === tribeId));
+    }, 250);
+  });
+}
+
+export async function updateMemberNickname(tribeId: string, memberId: string, nickname: string | undefined): Promise<void> {
+    console.log(`Service: Updating nickname for member ${memberId} in tribe ${tribeId} to "${nickname}"`);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const memberIndex = mockMembers.findIndex(m => m.id === memberId && m.tribeId === tribeId);
+            if (memberIndex !== -1) {
+                mockMembers[memberIndex].tribeAssignedNickname = nickname;
+            }
+            resolve();
+        }, 300);
+    });
+}
+
+export async function updateMemberRole(tribeId: string, memberId: string, role: 'member' | 'speaker'): Promise<void> {
+    console.log(`Service: Updating role for member ${memberId} in tribe ${tribeId} to "${role}"`);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const memberIndex = mockMembers.findIndex(m => m.id === memberId && m.tribeId === tribeId);
+            if (memberIndex !== -1) {
+                mockMembers[memberIndex].role = role;
+            }
+            resolve();
+        }, 300);
+    });
+}
+
+export async function approveJoinRequest(tribeId: string, pendingMemberId: string): Promise<void> {
+    console.log(`Service: Approving join request for ${pendingMemberId} in tribe ${tribeId}`);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const pendingIndex = mockPendingMembers.findIndex(p => p.id === pendingMemberId && p.tribeId === tribeId);
+            if (pendingIndex !== -1) {
+                const [pendingMember] = mockPendingMembers.splice(pendingIndex, 1);
+                const newMember: TribeMember = {
+                    id: pendingMember.id,
+                    name: pendingMember.name,
+                    avatar: pendingMember.avatar,
+                    dataAiHint: pendingMember.dataAiHint,
+                    role: 'member',
+                    tribeId: pendingMember.tribeId,
+                };
+                mockMembers.push(newMember);
+            }
+            resolve();
+        }, 300);
+    });
+}
+
+export async function denyJoinRequest(tribeId: string, pendingMemberId: string): Promise<void> {
+    console.log(`Service: Denying join request for ${pendingMemberId} in tribe ${tribeId}`);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const pendingIndex = mockPendingMembers.findIndex(p => p.id === pendingMemberId && p.tribeId === tribeId);
+            if (pendingIndex !== -1) {
+                mockPendingMembers.splice(pendingIndex, 1);
+            }
+            resolve();
+        }, 300);
+    });
+}
