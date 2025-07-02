@@ -25,7 +25,7 @@ import { getTribeById } from '@/lib/data-access/tribes';
 import { getTribeMembers } from '@/lib/services/tribe-service';
 import { getEventsForTribe } from '@/lib/services/event-service';
 import { getPostsForTribe, promotePostToMoods, repost, createTribePost } from '@/lib/services/post-service';
-import { getActiveReportedPostIds, reportPost, reportComment } from '@/lib/services/moderation-service';
+import { getActiveReportedPostIds, getActiveReportsForTribe, reportPost, reportComment } from '@/lib/services/moderation-service';
 import { MOCK_CURRENT_USER_ID, moodStreamPostIds } from '@/lib/data';
 
 import { moodsData } from '../../moods/page';
@@ -962,3 +962,5 @@ export default function TribeDetailPage() {
     </div>
   );
 }
+
+    
