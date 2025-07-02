@@ -4,7 +4,8 @@
  * preparing it to be easily replaced by real API calls or Server Actions.
  */
 
-import { mockReportedContentData, type ReportedPost, initialSampleTribePosts, mockMembers } from '@/lib/data';
+import { mockReportedContentData, type ReportedPost, initialSampleTribePosts, type TribePost, tribesData, type Tribe, mockMembers } from '@/lib/data';
+import { getTribeById, getTribes } from '@/lib/data-access/tribes';
 
 interface ReportPostPayload {
     postId: string;
@@ -144,5 +145,78 @@ export async function banMemberFromTribe(payload: BanMemberFromTribePayload): Pr
             }
             resolve();
         }, 300);
+    });
+}
+
+/**
+ * Fetches the IDs of all posts that have an active report.
+ * Filters out reports for posts that have already been marked as removed.
+ * @returns A promise that resolves to a Set of post IDs.
+ */
+export async function getActiveReportedPostIds(): Promise<Set<string>> {
+    console.log(`Service: Fetching all active reported post IDs`);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const activeReports = mockReportedContentData
+                .map(report => {
+                    const post = initialSampleTribePosts.find(p => p.id === report.postId);
+                    return { report, post };
+                })
+                .filter(({ post }) => post && !post.isRemoved)
+                .map(({ report }) => report.postId);
+
+            resolve(new Set(activeReports));
+        }, 150);
+    });
+}
+
+
+/**
+ * Fetches all active reports for a specific tribe.
+ * @param tribeId The ID of the tribe.
+ * @returns A promise that resolves to the tribe's info, its reports, and the related posts.
+ */
+export async function getActiveReportsForTribe(tribeId: string): Promise<{ tribe: Tribe | null, reports: ReportedPost[], posts: TribePost[] }> {
+    console.log(`Service: Fetching active reports for tribe ${tribeId}`);
+    return new Promise(async resolve => {
+        const tribe = await getTribeById(tribeId);
+        if (!tribe) {
+            resolve({ tribe: null, reports: [], posts: [] });
+            return;
+        }
+        
+        const postsInTribe = initialSampleTribePosts.filter(p => p.tribeId === tribeId);
+        const postIdsInTribe = new Set(postsInTribe.map(p => p.id));
+        
+        const reportsForTribe = mockReportedContentData.filter(report => 
+            postIdsInTribe.has(report.postId)
+        );
+
+        // Filter out reports for posts that are already removed
+        const activeReports = reportsForTribe.filter(report => {
+            const post = postsInTribe.find(p => p.id === report.postId);
+            return post && !post.isRemoved;
+        });
+
+        resolve({ tribe, reports: activeReports, posts: postsInTribe });
+    });
+}
+
+/**
+ * Fetches all active reports globally across all tribes.
+ * @returns A promise that resolves to all reports, posts, and tribes.
+ */
+export async function getActiveGlobalReports(): Promise<{ reports: ReportedPost[], posts: TribePost[], tribes: Tribe[] }> {
+    console.log(`Service: Fetching all active global reports`);
+    return new Promise(async resolve => {
+        const allTribes = await getTribes();
+        
+        // Filter out reports for posts that are already removed
+        const activeReports = mockReportedContentData.filter(report => {
+            const post = initialSampleTribePosts.find(p => p.id === report.postId);
+            return post && !post.isRemoved;
+        });
+
+        resolve({ reports: activeReports, posts: initialSampleTribePosts, tribes: allTribes });
     });
 }
