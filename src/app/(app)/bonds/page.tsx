@@ -555,7 +555,7 @@ export default function BondsPage() {
                         </span>
                         <div className="flex-grow min-w-0">
                           <span className="block">{bond.targetName}</span>
-                          <div className="sm:hidden mt-1">
+                          <div className="sm:hidden mt-1 mb-2">
                             <Badge className={cn(getBondTypeBadgeClasses(bond), "whitespace-nowrap")}>
                                 {getBondTypeDisplay(bond)}
                             </Badge>
