@@ -48,7 +48,7 @@ export default function MoodsPage() {
             </div>
             <CardHeader className="pt-4">
               <CardTitle className={`text-xl font-semibold tracking-normal ${mood.textClass}`}>{mood.name}</CardTitle>
-              <CardDescription className="text-sm h-12 overflow-hidden text-ellipsis">{mood.description}</CardDescription>
+              <CardDescription className="text-sm">{mood.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow"></CardContent>
             <div className="p-4 border-t">
