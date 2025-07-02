@@ -19,9 +19,7 @@ import { getMoodStreamPosts } from '@/lib/services/post-service';
 
 const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
-  const currentMood = moodsData.find(m => post.moodTags.includes(m.slug));
-  const VibeIcon = currentMood?.icon || (() => <Smile className="h-4 w-4" />); 
-  const emoticons = ["😊", "😍", "😂", "🤔", "🔥", "🎉"];
+  const emoticons = ["👍", "❤️", "😂", "🤔", "😢", "😠"];
 
   useEffect(() => {
     const timeSince = (date: Date): string => {
@@ -84,7 +82,7 @@ const MoodStreamPostCard: React.FC<{ post: MoodStreamPost }> = ({ post }) => {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                  <VibeIcon className="mr-1.5 h-4 w-4" /> {post.vibes}
+                  <Smile className="mr-1.5 h-4 w-4" /> {post.vibes}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-2 bg-card border shadow-xl rounded-lg">

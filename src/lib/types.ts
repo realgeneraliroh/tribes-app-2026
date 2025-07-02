@@ -174,6 +174,7 @@ export interface CommunicationItem {
   avatarSrc?: string;
   avatarFallback?: string;
   timestamp: Date;
+  vibes?: number;
   dataAiHint?: string;
   imageUrl?: string;
   imageAlt?: string;

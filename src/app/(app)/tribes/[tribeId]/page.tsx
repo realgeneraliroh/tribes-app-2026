@@ -15,6 +15,7 @@ import { ArrowLeft, Users, MessageSquareText, Smile, SquareArrowUp, Edit3, Setti
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from '@/hooks/use-user';
@@ -36,6 +37,7 @@ import { CreatePostDialog, type PostFormValues } from '@/components/dialogs/crea
 
 const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isMember: boolean; isTribeAdmin: boolean; isReported: boolean; isCurrentUserAuthor: boolean; onPromoteClick: (post: TribePost) => void; onReportClick: (post: TribePost) => void; onRepostClick: (post: TribePost) => void; }> = ({ post, isPromoted, isMember, isTribeAdmin, isReported, isCurrentUserAuthor, onPromoteClick, onReportClick, onRepostClick }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
+  const emoticons = ["👍", "❤️", "😂", "🤔", "😢", "😠"];
 
   useEffect(() => {
     const timeSince = (date: Date): string => {
@@ -52,6 +54,10 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isMember: 
     };
     setDisplayTime(timeSince(post.timestamp));
   }, [post.timestamp]);
+
+  const handleVibeSelection = (vibe: string) => {
+    console.log(`User vibed with: ${vibe} on post ${post.id}`);
+  };
 
 
   return (
@@ -168,9 +174,28 @@ const TribePostCard: React.FC<{ post: TribePost; isPromoted: boolean; isMember: 
           <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
         </CardContent>
         <CardFooter className="p-4 pt-2 flex items-center justify-between border-t bg-muted/30">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
-            <Smile className="mr-1.5 h-4 w-4" /> {post.vibes || 0}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
+                <Smile className="mr-1.5 h-4 w-4" /> {post.vibes || 0}
+            </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2 bg-card border shadow-xl rounded-lg">
+            <div className="flex space-x-1">
+                {emoticons.map((emo, index) => (
+                <Button 
+                    key={index} 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-xl p-1.5 h-auto w-auto rounded-md hover:bg-accent"
+                    onClick={() => handleVibeSelection(emo)}
+                >
+                    {emo}
+                </Button>
+                ))}
+            </div>
+            </PopoverContent>
+        </Popover>
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" disabled={post.isRemoved}>
             <MessageSquareText className="mr-1.5 h-4 w-4" /> {post.comments || 0}
           </Button>

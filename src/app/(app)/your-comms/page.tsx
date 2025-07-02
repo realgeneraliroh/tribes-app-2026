@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquareText, Users, User, HeartHandshake, Rss, Filter as FilterIcon, PlusCircle, Loader2 } from "lucide-react";
+import { MessageSquareText, Users, User, HeartHandshake, Rss, Filter as FilterIcon, PlusCircle, Loader2, Smile } from "lucide-react";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -20,6 +20,7 @@ import { getMoodStreamPosts } from '@/lib/services/post-service';
 
 const YourCommsItem: React.FC<{ item: CommunicationItem }> = ({ item }) => {
   const [displayTime, setDisplayTime] = useState<string>(' ');
+  const emoticons = ["👍", "❤️", "😂", "🤔", "😢", "😠"];
 
   useEffect(() => {
     const timeSince = (date: Date): string => {
@@ -48,6 +49,10 @@ const YourCommsItem: React.FC<{ item: CommunicationItem }> = ({ item }) => {
 
     setDisplayTime(timeSince(item.timestamp));
   }, [item.timestamp]);
+  
+  const handleVibeSelection = (vibe: string) => {
+    console.log(`User vibed with: ${vibe} on item ${item.id}`);
+  };
 
   let icon = <MessageSquareText className="h-5 w-5 text-primary" />;
   let title = "";
@@ -100,6 +105,35 @@ const YourCommsItem: React.FC<{ item: CommunicationItem }> = ({ item }) => {
         )}
         {body && <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{body}</p>}
       </CardContent>
+       <CardFooter className="p-3 sm:p-4 pt-2 sm:pt-3 flex items-center justify-start space-x-4 border-t">
+          {item.vibes !== undefined && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                  <Smile className="mr-1.5 h-4 w-4" /> {item.vibes}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2 bg-card border shadow-xl rounded-lg">
+                <div className="flex space-x-1">
+                  {emoticons.map((emo, index) => (
+                    <Button 
+                      key={index} 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-xl p-1.5 h-auto w-auto rounded-md hover:bg-accent"
+                      onClick={() => handleVibeSelection(emo)}
+                    >
+                      {emo}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+            <MessageSquareText className="mr-1.5 h-4 w-4" /> Reply
+          </Button>
+        </CardFooter>
     </Card>
   );
 };
@@ -171,6 +205,7 @@ export default function YourCommsPage() {
                     sender: b.targetName,
                     bondName: b.targetName,
                     message: getMessage(b.targetName),
+                    vibes: Math.floor(Math.random() * 50),
                     timestamp: b.lastRefreshedAt,
                     avatarFallback: getFallback(b.targetName),
                 };
@@ -189,6 +224,7 @@ export default function YourCommsPage() {
                 avatarSrc: post.authorAvatarSrc,
                 avatarFallback: post.authorAvatarFallback || post.author?.substring(0,2),
                 timestamp: post.timestamp,
+                vibes: post.vibes,
                 dataAiHint: post.dataAiHintAvatar,
                 imageUrl: post.imageUrl,
                 imageAlt: post.imageAlt,
