@@ -545,6 +545,7 @@ export default function BondsPage() {
                   const canUpgradeToFamily = userRole !== "Human_Free" && bond.bondType !== "family" && bond.targetType === "user" && familyBondsCount < MAX_FAMILY_BONDS && bond.keyType === "standard";
                   const canIntroduce = bond.targetType === 'user' && !bond.keyType?.startsWith('event_');
                   const isEventBond = bond.keyType === 'event_promo' || bond.keyType === 'event_attendee';
+                  const hasAliasInfo = bond.pseudonym || (bond.targetType === 'user' && bond.targetPseudonymForMe) || (bond.targetType === 'tribe' && bond.tribeAssignedNickname);
 
                   return (
                   <TableRow key={bond.id} className={cn("hover:bg-muted/50", isEventBond && "bg-purple-500/5 hover:bg-purple-500/10")}>
@@ -555,7 +556,7 @@ export default function BondsPage() {
                         </span>
                         <div className="flex-grow min-w-0">
                           <span className="block">{bond.targetName}</span>
-                          <div className="sm:hidden mt-1 mb-2">
+                          <div className={cn("sm:hidden mt-1", hasAliasInfo && "mb-2")}>
                             <Badge className={cn(getBondTypeBadgeClasses(bond), "whitespace-nowrap")}>
                                 {getBondTypeDisplay(bond)}
                             </Badge>
@@ -745,5 +746,7 @@ export default function BondsPage() {
     </div>
   );
 }
+
+    
 
     
