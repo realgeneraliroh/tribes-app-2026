@@ -17,6 +17,7 @@ export interface Tribe {
 
 // Changed from const to let to allow mutation for mock data simulation
 export let tribesData: Tribe[] = [
+  { id: "0", name: "Onboarding Hub", description: "Welcome to Tribes.app! This is the official starting point for all new members to learn the ropes.", members: 9999, isPublic: false, cover: "https://placehold.co/400x200.png?text=Start" , dataAiHint: "welcome start guide", moods: ["learn"], homepageUrl: "https://tribes.app/help", joinMechanism: 'instant' },
   { id: "1", name: "AI Innovators", description: "Exploring the future of artificial intelligence and machine learning. Professional networking and project discussions.", members: 128, isPublic: true, cover: "https://placehold.co/400x200.png?text=AI" , dataAiHint: "technology innovation", moods: ["focus", "learn"], homepageUrl: "https://innovate.ai", joinMechanism: 'approval', minimumReputation: 'Good' },
   { id: "2", name: "Weekend Hikers Club", description: "Sharing trails, tips, and breathtaking views from our adventures in nature.", members: 76, isPublic: true, cover: "https://placehold.co/400x200.png?text=Hiking" , dataAiHint: "nature mountain", moods: ["discover", "connect"], joinMechanism: 'instant' },
   { id: "3", name: "Indie Game Devs", description: "A community for indie game developers to collaborate, share projects, and find local playtesters.", members: 245, isPublic: false, cover: "https://placehold.co/400x200.png?text=Games" , dataAiHint: "gaming development", moods: ["showcase", "game", "learn"], homepageUrl: "https://indiegamedev.guild", joinMechanism: 'instant' },
@@ -32,7 +33,7 @@ export let tribesData: Tribe[] = [
  * A mock of the currently logged-in user's role.
  * Change this to 'Admin', 'Creator', 'Human_Member', or 'Human_Free' to test role-based UI.
  */
-export const MOCK_USER_ROLE: UserRole = 'Creator';
+export const MOCK_USER_ROLE: UserRole = 'Human_Free';
 export const MOCK_CURRENT_USER_ID = "authorAE"; // Alice Example is our test user
 
 export let mockUserProfile: UserProfile = {
@@ -43,8 +44,8 @@ export let mockUserProfile: UserProfile = {
   bio: "Lover of tech, hiking, and indie games.",
   avatar: "https://placehold.co/100x100.png",
   aliases: ["WonderlandCoder", "HikerGal", "PixelPioneer"],
-  reputationScore: 875,
-  reputationStatus: 'Good',
+  reputationScore: 50, // New users start with a low score
+  reputationStatus: 'Onboarding', // New users start in onboarding
 };
 
 

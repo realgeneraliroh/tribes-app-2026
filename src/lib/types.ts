@@ -27,7 +27,7 @@ export interface UserProfile {
   bio?: string;
   avatar?: string;
   reputationScore?: number;
-  reputationStatus?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'At Risk';
+  reputationStatus?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'At Risk' | 'Onboarding';
 }
 
 // Bond related types, centralized here

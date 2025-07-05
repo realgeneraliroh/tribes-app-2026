@@ -24,26 +24,41 @@ const reputationLevels: Record<string, number> = {
   'Good': 3,
   'Fair': 2,
   'Poor': 1,
-  'At Risk': 0
+  'At Risk': 0,
+  'Onboarding': -1, // Give onboarding a low score so it fails numerical checks
 };
 
-const checkReputation = (tribe: Tribe, user: UserProfile | null): { canJoin: boolean; requirement: string | undefined } => {
-    if (!tribe.minimumReputation) {
-      return { canJoin: true, requirement: undefined };
+const checkReputation = (tribe: Tribe, user: UserProfile | null): { canJoin: boolean; requirement: string | undefined; reason: 'reputation' | 'onboarding' } => {
+    // Users in onboarding are a special case.
+    if (user?.reputationStatus === 'Onboarding') {
+        // They can't join the onboarding hub itself.
+        if (tribe.id === '0') return { canJoin: false, requirement: undefined, reason: 'onboarding' };
+        // They can only join tribes with NO reputation requirement.
+        if (tribe.minimumReputation && tribe.minimumReputation !== 'None') {
+            return { canJoin: false, requirement: tribe.minimumReputation, reason: 'onboarding' };
+        }
+        return { canJoin: true, requirement: undefined, reason: 'onboarding' };
+    }
+
+    // Standard reputation check for all other users.
+    if (!tribe.minimumReputation || tribe.minimumReputation === 'None') {
+      return { canJoin: true, requirement: undefined, reason: 'reputation' };
     }
     if (!user?.reputationStatus) {
-      // If user has no reputation status, they cannot join tribes that require one.
-      return { canJoin: false, requirement: tribe.minimumReputation };
+      // If user has no reputation status and one is required, they cannot join.
+      return { canJoin: false, requirement: tribe.minimumReputation, reason: 'reputation' };
     }
+
     const userLevel = reputationLevels[user.reputationStatus] ?? -1;
     const requiredLevel = reputationLevels[tribe.minimumReputation] ?? -1;
-    return { canJoin: userLevel >= requiredLevel, requirement: tribe.minimumReputation };
+    
+    return { canJoin: userLevel >= requiredLevel, requirement: tribe.minimumReputation, reason: 'reputation' };
 };
 
 
 const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe: Tribe) => void; isJoining: boolean; user: UserProfile | null }> = ({ tribe, isMyTribe, onJoin, isJoining, user }) => {
 
-  const { canJoin, requirement } = checkReputation(tribe, user);
+  const { canJoin, requirement, reason } = checkReputation(tribe, user);
   const joinButtonIsDisabled = isJoining || !canJoin;
 
   const joinButton = (
@@ -85,7 +100,7 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
             <Eye className="mr-1.5 h-3.5 w-3.5" /> View
           </Button>
         </Link>
-      ) : !canJoin && requirement ? (
+      ) : !canJoin ? (
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -93,7 +108,12 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
                         <div className="inline-block">{joinButton}</div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>A '{requirement}' reputation is required to join.</p>
+                        <p>
+                          {reason === 'onboarding'
+                            ? "You must complete onboarding before joining tribes with reputation requirements."
+                            : `A '${requirement}' reputation is required to join.`
+                          }
+                        </p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
@@ -177,7 +197,7 @@ export default function TribesPage() {
     }
 
     const myTribesList = allTribes.filter(t => myTribeIds.includes(t.id));
-    const discoverTribesList = allTribes.filter(t => !myTribeIds.includes(t.id) && t.isPublic);
+    const discoverTribesList = allTribes.filter(t => !myTribeIds.includes(t.id) && t.isPublic && t.id !== '0');
     return { myTribes: myTribesList, discoverTribes: discoverTribesList };
   }, [allTribes, myTribeIds, isClient]);
 
@@ -196,7 +216,7 @@ export default function TribesPage() {
   const renderTribeCards = (tribes: Tribe[], isMyTribeList: boolean) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {tribes.map((tribe) => {
-        const { canJoin, requirement } = checkReputation(tribe, user);
+        const { canJoin, requirement, reason } = checkReputation(tribe, user);
         const joinButtonIsDisabled = !!joiningStates[tribe.id] || !canJoin;
 
         const joinButton = (
@@ -244,14 +264,19 @@ export default function TribesPage() {
                         View Tribe <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     </Link>
-                    ) : !canJoin && requirement ? (
+                    ) : !canJoin ? (
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className="w-full">{joinButton}</div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>A '{requirement}' reputation is required to join.</p>
+                                    <p>
+                                      {reason === 'onboarding'
+                                        ? "You must complete onboarding before joining tribes with reputation requirements."
+                                        : `A '${requirement}' reputation is required to join.`
+                                      }
+                                    </p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
