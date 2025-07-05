@@ -382,12 +382,12 @@ export let bondsData: Bond[] = [
 ];
 
 export let mockMembers: TribeMember[] = [
-  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person', tribeId: '1', role: 'speaker', tribeAssignedNickname: 'AI Lead' },
-  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character', tribeId: '1', role: 'member' },
-  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person', tribeId: '1', role: 'member' },
-  { id: 'user4', name: 'Diana Prince', avatar: 'https://placehold.co/40x40.png?text=DP', dataAiHint: 'avatar hero', tribeId: '2', role: 'member' },
-  { id: 'user5', name: 'Edward Elric', avatar: 'https://placehold.co/40x40.png?text=EE', dataAiHint: 'avatar anime', tribeId: '2', role: 'member', tribeAssignedNickname: 'Trail Master' },
-  { id: 'user6', name: 'Fiona Glenanne', avatar: 'https://placehold.co/40x40.png?text=FG', dataAiHint: 'avatar agent', tribeId: '3', role: 'member' },
+  { id: 'user1', name: 'Alice Wonderland', avatar: 'https://placehold.co/40x40.png?text=AW', dataAiHint: 'avatar person', tribeId: '1', role: 'speaker', tribeAssignedNickname: 'AI Lead', reputationStatus: 'Excellent' },
+  { id: 'user2', name: 'Bob The Builder', avatar: 'https://placehold.co/40x40.png?text=BB', dataAiHint: 'avatar character', tribeId: '1', role: 'member', reputationStatus: 'Good' },
+  { id: 'user3', name: 'Charlie Chaplin', avatar: 'https://placehold.co/40x40.png?text=CC', dataAiHint: 'avatar person', tribeId: '1', role: 'member', reputationStatus: 'Fair' },
+  { id: 'user4', name: 'Diana Prince', avatar: 'https://placehold.co/40x40.png?text=DP', dataAiHint: 'avatar hero', tribeId: '2', role: 'member', reputationStatus: 'Good' },
+  { id: 'user5', name: 'Edward Elric', avatar: 'https://placehold.co/40x40.png?text=EE', dataAiHint: 'avatar anime', tribeId: '2', role: 'member', tribeAssignedNickname: 'Trail Master', reputationStatus: 'Poor' },
+  { id: 'user6', name: 'Fiona Glenanne', avatar: 'https://placehold.co/40x40.png?text=FG', dataAiHint: 'avatar agent', tribeId: '3', role: 'member', reputationStatus: 'At Risk' },
 ];
 
 export let mockPendingMembers: PendingMember[] = [

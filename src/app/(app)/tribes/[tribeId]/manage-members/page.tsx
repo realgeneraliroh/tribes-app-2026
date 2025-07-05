@@ -270,13 +270,24 @@ export default function ManageMembersPage() {
                     <div className="flex-grow">
                       <p className="font-semibold text-sm">{member.name}</p>
                       {member.tribeAssignedNickname ? (
-                        <p className="text-xs text-primary">Nickname: <span className="italic">{member.tribeAssignedNickname}</span></p>
+                        <p className="text-xs text-primary mt-0.5">Nickname: <span className="italic">{member.tribeAssignedNickname}</span></p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">No tribe-specific nickname.</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">No tribe-specific nickname.</p>
                       )}
-                       <Badge variant={member.role === 'speaker' ? "default" : "outline"} className={cn("text-xs mt-1", member.role === 'speaker' ? "bg-primary text-primary-foreground" : "border-muted-foreground text-muted-foreground")}>
-                        {member.role === 'speaker' ? 'Speaker' : 'Member'}
-                      </Badge>
+                      <div className="flex items-center space-x-2 mt-1.5">
+                          <Badge variant={member.role === 'speaker' ? "default" : "outline"} className={cn("text-xs", member.role === 'speaker' ? "bg-primary text-primary-foreground" : "border-muted-foreground text-muted-foreground")}>
+                              {member.role === 'speaker' ? 'Speaker' : 'Member'}
+                          </Badge>
+                          {member.reputationStatus && (
+                              <Badge className={cn("text-xs border-transparent", {
+                                  'bg-accent text-accent-foreground': member.reputationStatus === 'Excellent' || member.reputationStatus === 'Good',
+                                  'bg-primary text-primary-foreground': member.reputationStatus === 'Fair',
+                                  'bg-destructive text-destructive-foreground': member.reputationStatus === 'Poor' || member.reputationStatus === 'At Risk'
+                              })}>
+                                  {member.reputationStatus}
+                              </Badge>
+                          )}
+                      </div>
                     </div>
                   </div>
                   <DropdownMenu>

@@ -132,6 +132,7 @@ export interface TribeMember {
   tribeAssignedNickname?: string;
   role?: 'member' | 'speaker';
   tribeId: string; // Which tribe they belong to
+  reputationStatus?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'At Risk';
 }
 
 export interface PendingMember {
