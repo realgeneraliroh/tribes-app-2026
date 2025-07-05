@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, PlusCircle, ArrowRight, Smile, MessageCircle, LayoutGrid, List, Eye, UserPlus, HeartHandshake, Loader2 } from "lucide-react";
+import { Users, Search, PlusCircle, ArrowRight, Smile, MessageCircle, LayoutGrid, List, Eye, UserPlus, HeartHandshake, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -15,35 +15,95 @@ import { getTribes } from '@/lib/data-access/tribes';
 import { useUser } from '@/hooks/use-user';
 import { useToast } from '@/hooks/use-toast';
 import { JoinTribeDialog } from '@/components/dialogs/join-tribe-dialog';
+import type { UserProfile } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe: Tribe) => void; isJoining: boolean }> = ({ tribe, isMyTribe, onJoin, isJoining }) => (
-  <div className="flex items-center justify-between p-3 hover:bg-muted/50 border-b last:border-b-0">
-    <div className="flex items-center space-x-3">
-      <Image src={tribe.cover} alt={tribe.name} width={40} height={40} className="rounded-md object-cover h-10 w-10" data-ai-hint={tribe.dataAiHint} />
-      <div>
-        <Link href={`/tribes/${tribe.id}`} passHref>
-          <h3 className="font-semibold text-sm hover:underline">{tribe.name}</h3>
-        </Link>
-        <div className="flex items-center text-xs text-muted-foreground space-x-2">
-          <span><Users className="h-3 w-3 inline mr-0.5" />{tribe.members}</span>
-          <Badge variant={tribe.isPublic ? "secondary" : "outline"} className={cn("text-xs px-1.5 py-0.5", !tribe.isPublic && "border-pink-500 text-pink-500 bg-pink-500/10")}>{tribe.isPublic ? "Public" : "Private"}</Badge>
-        </div>
-      </div>
-    </div>
-    {isMyTribe ? (
-      <Link href={`/tribes/${tribe.id}`} passHref>
-        <Button variant="outline" size="sm">
-          <Eye className="mr-1.5 h-3.5 w-3.5" /> View
-        </Button>
-      </Link>
-    ) : (
-      <Button variant="outline" size="sm" onClick={() => onJoin(tribe)} disabled={isJoining}>
+
+const reputationLevels: Record<string, number> = {
+  'Excellent': 4,
+  'Good': 3,
+  'Fair': 2,
+  'Poor': 1,
+  'At Risk': 0
+};
+
+const checkReputation = (tribe: Tribe, user: UserProfile | null): { canJoin: boolean; requirement: string | undefined } => {
+    if (!tribe.minimumReputation) {
+      return { canJoin: true, requirement: undefined };
+    }
+    if (!user?.reputationStatus) {
+      // If user has no reputation status, they cannot join tribes that require one.
+      return { canJoin: false, requirement: tribe.minimumReputation };
+    }
+    const userLevel = reputationLevels[user.reputationStatus] ?? -1;
+    const requiredLevel = reputationLevels[tribe.minimumReputation] ?? -1;
+    return { canJoin: userLevel >= requiredLevel, requirement: tribe.minimumReputation };
+};
+
+
+const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe: Tribe) => void; isJoining: boolean; user: UserProfile | null }> = ({ tribe, isMyTribe, onJoin, isJoining, user }) => {
+
+  const { canJoin, requirement } = checkReputation(tribe, user);
+  const joinButtonIsDisabled = isJoining || !canJoin;
+
+  const joinButton = (
+    <Button variant="outline" size="sm" onClick={() => onJoin(tribe)} disabled={joinButtonIsDisabled}>
         {isJoining ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/> : <UserPlus className="mr-1.5 h-3.5 w-3.5" />}
         {isJoining ? 'Joining...' : 'Join'}
-      </Button>
-    )}
-  </div>
-);
+    </Button>
+  );
+
+  return (
+    <div className="flex items-center justify-between p-3 hover:bg-muted/50 border-b last:border-b-0">
+      <div className="flex items-center space-x-3">
+        <Image src={tribe.cover} alt={tribe.name} width={40} height={40} className="rounded-md object-cover h-10 w-10" data-ai-hint={tribe.dataAiHint} />
+        <div>
+          <Link href={`/tribes/${tribe.id}`} passHref>
+            <h3 className="font-semibold text-sm hover:underline">{tribe.name}</h3>
+          </Link>
+          <div className="flex items-center text-xs text-muted-foreground space-x-2">
+            <span><Users className="h-3 w-3 inline mr-0.5" />{tribe.members}</span>
+            <Badge variant={tribe.isPublic ? "secondary" : "outline"} className={cn("text-xs px-1.5 py-0.5", !tribe.isPublic && "border-pink-500 text-pink-500 bg-pink-500/10")}>{tribe.isPublic ? "Public" : "Private"}</Badge>
+            {tribe.minimumReputation && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <span className="flex items-center"><ShieldCheck className="h-3 w-3 inline mr-0.5 text-blue-500" />{tribe.minimumReputation}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Minimum reputation to join: {tribe.minimumReputation}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+          </div>
+        </div>
+      </div>
+      {isMyTribe ? (
+        <Link href={`/tribes/${tribe.id}`} passHref>
+          <Button variant="outline" size="sm">
+            <Eye className="mr-1.5 h-3.5 w-3.5" /> View
+          </Button>
+        </Link>
+      ) : !canJoin && requirement ? (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        {/* The disabled button needs a div wrapper for TooltipTrigger to work */}
+                        <div className="inline-block">{joinButton}</div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>A '{requirement}' reputation is required to join.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        ) : (
+            joinButton
+        )
+      }
+    </div>
+  );
+};
 
 export default function TribesPage() {
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -51,9 +111,9 @@ export default function TribesPage() {
   const [myTribeIds, setMyTribeIds] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [joiningStates, setJoiningStates] = useState<Record<string, boolean>>({});
-  const { role } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
-  const canCreate = role !== 'Human_Free';
+  const canCreate = user.role !== 'Human_Free';
 
   // New state for the join dialog
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
@@ -125,7 +185,7 @@ export default function TribesPage() {
     <Card className="shadow-lg">
       <CardContent className="p-0">
         {tribes.length > 0 ? (
-          tribes.map(tribe => <TribeListItem key={tribe.id} tribe={tribe} isMyTribe={isMyTribeList} onJoin={handleOpenJoinDialog} isJoining={!!joiningStates[tribe.id]} />)
+          tribes.map(tribe => <TribeListItem key={tribe.id} tribe={tribe} isMyTribe={isMyTribeList} onJoin={handleOpenJoinDialog} isJoining={!!joiningStates[tribe.id]} user={user} />)
         ) : (
           <p className="p-4 text-center text-muted-foreground">No tribes in this category.</p>
         )}
@@ -135,43 +195,73 @@ export default function TribesPage() {
 
   const renderTribeCards = (tribes: Tribe[], isMyTribeList: boolean) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {tribes.map((tribe) => (
-        <Card key={tribe.id} className="shadow-lg hover:shadow-xl transition-shadow flex flex-col overflow-hidden">
-          <Link href={`/tribes/${tribe.id}`} passHref className="contents">
-            <div className="relative h-40 w-full">
-              <Image src={tribe.cover} alt={tribe.name} layout="fill" objectFit="cover" data-ai-hint={tribe.dataAiHint} />
-              <Badge variant={tribe.isPublic ? "secondary" : "outline"} className={cn("absolute top-2 right-2", !tribe.isPublic && "border-pink-500 text-pink-500 bg-pink-500/10")}>
-                {tribe.isPublic ? "Public" : "Private"}
-              </Badge>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-semibold truncate tracking-normal">{tribe.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow pb-2">
-              <CardDescription className="text-sm h-16 overflow-hidden text-ellipsis leading-relaxed">{tribe.description}</CardDescription>
-              <div className="flex items-center text-xs text-muted-foreground mt-2 space-x-3">
-                <div className="flex items-center"><Users className="h-3.5 w-3.5 mr-1"/> {tribe.members} members</div>
-                <div className="flex items-center"><Smile className="h-3.5 w-3.5 mr-1"/> {Math.floor(Math.random()*500 + 50)} Vibes</div>
-                <div className="flex items-center"><MessageCircle className="h-3.5 w-3.5 mr-1"/> {Math.floor(Math.random()*100 + 20)} Posts</div>
-              </div>
-            </CardContent>
-          </Link>
-          <CardFooter>
-            {isMyTribeList ? (
-              <Link href={`/tribes/${tribe.id}`} passHref className="w-full">
-                <Button variant="default" className="w-full bg-primary hover:bg-primary/90">
-                  View Tribe <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            ) : (
-              <Button variant="outline" className="w-full" onClick={() => handleOpenJoinDialog(tribe)} disabled={joiningStates[tribe.id]}>
+      {tribes.map((tribe) => {
+        const { canJoin, requirement } = checkReputation(tribe, user);
+        const joinButtonIsDisabled = !!joiningStates[tribe.id] || !canJoin;
+
+        const joinButton = (
+             <Button variant="outline" className="w-full" onClick={() => handleOpenJoinDialog(tribe)} disabled={joinButtonIsDisabled}>
                 {joiningStates[tribe.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UserPlus className="mr-2 h-4 w-4" />}
                 {joiningStates[tribe.id] ? 'Joining...' : 'Join Tribe'}
               </Button>
-            )}
-          </CardFooter>
-        </Card>
-      ))}
+        );
+        
+        return (
+            <Card key={tribe.id} className="shadow-lg hover:shadow-xl transition-shadow flex flex-col overflow-hidden">
+                <Link href={`/tribes/${tribe.id}`} passHref className="contents">
+                    <div className="relative h-40 w-full">
+                    <Image src={tribe.cover} alt={tribe.name} layout="fill" objectFit="cover" data-ai-hint={tribe.dataAiHint} />
+                    <Badge variant={tribe.isPublic ? "secondary" : "outline"} className={cn("absolute top-2 right-2", !tribe.isPublic && "border-pink-500 text-pink-500 bg-pink-500/10")}>
+                        {tribe.isPublic ? "Public" : "Private"}
+                    </Badge>
+                    </div>
+                    <CardHeader className="pb-2">
+                    <CardTitle className="text-xl font-semibold truncate tracking-normal">{tribe.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow pb-2">
+                    <CardDescription className="text-sm h-16 overflow-hidden text-ellipsis leading-relaxed">{tribe.description}</CardDescription>
+                    <div className="flex items-center text-xs text-muted-foreground mt-2 space-x-3">
+                        <div className="flex items-center"><Users className="h-3.5 w-3.5 mr-1"/> {tribe.members} members</div>
+                        {tribe.minimumReputation && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <div className="flex items-center"><ShieldCheck className="h-3.5 w-3.5 mr-1 text-blue-500"/>{tribe.minimumReputation}</div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Minimum reputation to join: {tribe.minimumReputation}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                    </CardContent>
+                </Link>
+                <CardFooter>
+                    {isMyTribeList ? (
+                    <Link href={`/tribes/${tribe.id}`} passHref className="w-full">
+                        <Button variant="default" className="w-full bg-primary hover:bg-primary/90">
+                        View Tribe <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
+                    ) : !canJoin && requirement ? (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="w-full">{joinButton}</div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>A '{requirement}' reputation is required to join.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : (
+                        joinButton
+                    )}
+                </CardFooter>
+            </Card>
+        );
+      })}
     </div>
   );
 

@@ -1,13 +1,12 @@
 
 "use client";
 
-import { MOCK_USER_ROLE } from '@/lib/data';
-import type { UserRole } from '@/lib/types';
+import { mockUserProfile } from '@/lib/data';
+import type { UserProfile, UserRole } from '@/lib/types';
 
 interface UseUserOutput {
   role: UserRole;
-  // In the future, we can add more user properties here
-  // e.g., name: string; email: string; etc.
+  user: UserProfile;
 }
 
 /**
@@ -20,11 +19,12 @@ interface UseUserOutput {
 export function useUser(): UseUserOutput {
   // In a real app, this would be replaced with a call to a real
   // authentication context provider (e.g., from Firebase Auth, Clerk, etc.)
-  // const { user } = useAuth();
-  // return { role: user.role };
+  // const { user: authUser } = useAuth();
+  // return { role: authUser.role, user: authUser };
 
-  // For our prototype, we'll return the mock role.
+  // For our prototype, we'll return the mock user profile.
   return {
-    role: MOCK_USER_ROLE,
+    role: mockUserProfile.role,
+    user: mockUserProfile,
   };
 }
