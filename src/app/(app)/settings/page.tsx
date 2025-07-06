@@ -1,6 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,16 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Bell, UserCircle, ShieldCheck, Palette, LogOut, Trash2, CreditCard, Loader2, PlusCircle, AtSign, X } from "lucide-react";
+import { Bell, UserCircle, ShieldCheck, Palette, LogOut, Trash2, CreditCard, Loader2, PlusCircle, AtSign, X, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from '@/lib/types';
 import { getUserProfile, updateUserProfile } from '@/lib/services/user-service';
 import { MOCK_CURRENT_USER_ID } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useUser } from '@/hooks/use-user';
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { role } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,6 +31,8 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("");
   const [aliases, setAliases] = useState<string[]>([]);
   const [newAlias, setNewAlias] = useState("");
+  const [reservedAliasInput, setReservedAliasInput] = useState('');
+  const [isSavingAlias, setIsSavingAlias] = useState(false);
 
 
   useEffect(() => {
@@ -38,6 +44,7 @@ export default function SettingsPage() {
         setGivenName(userProfile.name);
         setBio(userProfile.bio || "");
         setAliases(userProfile.aliases || []);
+        setReservedAliasInput(userProfile.reservedAlias || "");
       }
       setIsLoading(false);
     };
@@ -80,6 +87,50 @@ export default function SettingsPage() {
     }
   };
   
+  const handleReserveAlias = async () => {
+    if (!profile) return;
+
+    if (!reservedAliasInput.startsWith('@')) {
+        toast({
+            variant: "destructive",
+            title: "Invalid Alias",
+            description: "Your reserved alias must start with an '@' symbol."
+        });
+        return;
+    }
+    if (reservedAliasInput.length < 4) {
+        toast({
+            variant: "destructive",
+            title: "Alias Too Short",
+            description: "Your reserved alias must be at least 3 characters long, plus the '@'."
+        });
+        return;
+    }
+
+    setIsSavingAlias(true);
+    
+    try {
+      await updateUserProfile(profile.id, {
+        reservedAlias: reservedAliasInput,
+      });
+
+      setProfile(prev => prev ? { ...prev, reservedAlias: reservedAliasInput } : null);
+
+      toast({
+        title: "Alias Reserved!",
+        description: `Your new global alias is now ${reservedAliasInput}.`,
+      });
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Reservation Failed",
+        description: "There was an error reserving your alias. It might already be taken."
+      });
+    } finally {
+      setIsSavingAlias(false);
+    }
+  };
+
   if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-2rem)]">
@@ -177,6 +228,56 @@ export default function SettingsPage() {
         </CardFooter>
       </Card>
 
+      <Separator />
+
+      {/* Reserved Alias Card */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <Star className="h-7 w-7 text-primary" />
+            <CardTitle className="text-xl">Reserved Alias</CardTitle>
+          </div>
+          <CardDescription>Claim your unique, global alias. This is your primary identifier across the platform.</CardDescription>
+        </CardHeader>
+        {role === 'Human_Free' ? (
+          <>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">This is a premium feature. Upgrade your plan to reserve a unique global alias and stand out in the community.</p>
+            </CardContent>
+            <CardFooter>
+              <Link href="/billing" passHref>
+                <Button>
+                  <CreditCard className="mr-2 h-4 w-4" /> View Plans
+                </Button>
+              </Link>
+            </CardFooter>
+          </>
+        ) : (
+          <>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="reservedAlias">Your Global Alias</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="reservedAlias"
+                    value={reservedAliasInput}
+                    onChange={(e) => setReservedAliasInput(e.target.value)}
+                    placeholder="@your-unique-name"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">Must be unique and start with '@'.</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleReserveAlias} disabled={isSavingAlias || reservedAliasInput === (profile?.reservedAlias || '')}>
+                {isSavingAlias ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {isSavingAlias ? "Saving..." : "Save Reserved Alias"}
+              </Button>
+            </CardFooter>
+          </>
+        )}
+      </Card>
+      
       <Separator />
 
       {/* Reputation & Trust */}

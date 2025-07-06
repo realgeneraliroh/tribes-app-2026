@@ -24,6 +24,7 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   aliases: string[];
+  reservedAlias?: string;
   bio?: string;
   avatar?: string;
   reputationScore?: number;

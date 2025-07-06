@@ -34,7 +34,7 @@ export let tribesData: Tribe[] = [
  * A mock of the currently logged-in user's role.
  * Change this to 'Admin', 'Creator', 'Human_Member', or 'Human_Free' to test role-based UI.
  */
-export const MOCK_USER_ROLE: UserRole = 'Human_Free';
+export const MOCK_USER_ROLE: UserRole = 'Creator';
 export const MOCK_CURRENT_USER_ID = "authorAE"; // Alice Example is our test user
 
 export let mockUserProfile: UserProfile = {
@@ -45,6 +45,7 @@ export let mockUserProfile: UserProfile = {
   bio: "Lover of tech, hiking, and indie games.",
   avatar: "https://placehold.co/100x100.png",
   aliases: ["WonderlandCoder", "HikerGal", "PixelPioneer"],
+  reservedAlias: "@alice_example",
   reputationScore: 50, // New users start with a low score
   reputationStatus: 'Onboarding', // New users start in onboarding
   accountCreatedAt: new Date(), // Simulate a brand new account
