@@ -28,6 +28,7 @@ export interface UserProfile {
   avatar?: string;
   reputationScore?: number;
   reputationStatus?: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'At Risk' | 'Onboarding';
+  accountCreatedAt?: Date;
 }
 
 // Bond related types, centralized here

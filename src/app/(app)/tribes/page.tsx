@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, PlusCircle, ArrowRight, Smile, MessageCircle, LayoutGrid, List, Eye, UserPlus, HeartHandshake, Loader2, ShieldCheck } from "lucide-react";
+import { Users, Search, PlusCircle, ArrowRight, Smile, MessageCircle, LayoutGrid, List, Eye, UserPlus, HeartHandshake, Loader2, ShieldCheck, History } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -28,37 +28,45 @@ const reputationLevels: Record<string, number> = {
   'Onboarding': -1, // Give onboarding a low score so it fails numerical checks
 };
 
-const checkReputation = (tribe: Tribe, user: UserProfile | null): { canJoin: boolean; requirement: string | undefined; reason: 'reputation' | 'onboarding' } => {
-    // Users in onboarding are a special case.
-    if (user?.reputationStatus === 'Onboarding') {
-        // They can't join the onboarding hub itself.
+const checkJoinRequirements = (tribe: Tribe, user: UserProfile | null): { canJoin: boolean; requirement?: string; reason?: 'reputation' | 'onboarding' | 'age' } => {
+    if (!user) return { canJoin: false, requirement: 'Unknown', reason: 'reputation' };
+
+    // Onboarding users can only join tribes with NO requirements.
+    if (user.reputationStatus === 'Onboarding') {
         if (tribe.id === '0') return { canJoin: false, requirement: undefined, reason: 'onboarding' };
-        // They can only join tribes with NO reputation requirement.
         if (tribe.minimumReputation && tribe.minimumReputation !== 'None') {
             return { canJoin: false, requirement: tribe.minimumReputation, reason: 'onboarding' };
         }
+        if (tribe.minimumAccountAgeDays && tribe.minimumAccountAgeDays > 0) {
+            return { canJoin: false, requirement: `${tribe.minimumAccountAgeDays} days`, reason: 'onboarding' };
+        }
         return { canJoin: true, requirement: undefined, reason: 'onboarding' };
     }
-
-    // Standard reputation check for all other users.
-    if (!tribe.minimumReputation || tribe.minimumReputation === 'None') {
-      return { canJoin: true, requirement: undefined, reason: 'reputation' };
-    }
-    if (!user?.reputationStatus) {
-      // If user has no reputation status and one is required, they cannot join.
-      return { canJoin: false, requirement: tribe.minimumReputation, reason: 'reputation' };
-    }
-
-    const userLevel = reputationLevels[user.reputationStatus] ?? -1;
-    const requiredLevel = reputationLevels[tribe.minimumReputation] ?? -1;
     
-    return { canJoin: userLevel >= requiredLevel, requirement: tribe.minimumReputation, reason: 'reputation' };
+    // Check reputation requirement
+    if (tribe.minimumReputation && tribe.minimumReputation !== 'None') {
+        const userLevel = reputationLevels[user.reputationStatus || ''] ?? -1;
+        const requiredLevel = reputationLevels[tribe.minimumReputation] ?? -1;
+        if (userLevel < requiredLevel) {
+            return { canJoin: false, requirement: tribe.minimumReputation, reason: 'reputation' };
+        }
+    }
+
+    // Check account age requirement
+    if (tribe.minimumAccountAgeDays && user.accountCreatedAt) {
+        const accountAgeInDays = (new Date().getTime() - new Date(user.accountCreatedAt).getTime()) / (1000 * 60 * 60 * 24);
+        if (accountAgeInDays < tribe.minimumAccountAgeDays) {
+            return { canJoin: false, requirement: `${tribe.minimumAccountAgeDays} days`, reason: 'age' };
+        }
+    }
+
+    return { canJoin: true };
 };
 
 
 const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe: Tribe) => void; isJoining: boolean; user: UserProfile | null }> = ({ tribe, isMyTribe, onJoin, isJoining, user }) => {
 
-  const { canJoin, requirement, reason } = checkReputation(tribe, user);
+  const { canJoin, requirement, reason } = checkJoinRequirements(tribe, user);
   const joinButtonIsDisabled = isJoining || !canJoin;
 
   const joinButton = (
@@ -67,6 +75,19 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
         {isJoining ? 'Joining...' : 'Join'}
     </Button>
   );
+
+  const getTooltipContent = () => {
+    switch (reason) {
+      case 'onboarding':
+        return `You must complete onboarding to join tribes with requirements.`;
+      case 'reputation':
+        return `A '${requirement}' reputation is required to join.`;
+      case 'age':
+        return `Your account must be at least ${requirement} old to join.`;
+      default:
+        return 'You do not meet the requirements to join this tribe.';
+    }
+  };
 
   return (
     <div className="flex items-center justify-between p-3 hover:bg-muted/50 border-b last:border-b-0">
@@ -91,6 +112,18 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
                     </Tooltip>
                 </TooltipProvider>
             )}
+            {tribe.minimumAccountAgeDays && (
+                 <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <span className="flex items-center"><History className="h-3 w-3 inline mr-0.5 text-blue-500" />{tribe.minimumAccountAgeDays}d</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Minimum account age to join: {tribe.minimumAccountAgeDays} days</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
           </div>
         </div>
       </div>
@@ -108,12 +141,7 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
                         <div className="inline-block">{joinButton}</div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>
-                          {reason === 'onboarding'
-                            ? "You must complete onboarding before joining tribes with reputation requirements."
-                            : `A '${requirement}' reputation is required to join.`
-                          }
-                        </p>
+                        <p>{getTooltipContent()}</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
@@ -216,8 +244,21 @@ export default function TribesPage() {
   const renderTribeCards = (tribes: Tribe[], isMyTribeList: boolean) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {tribes.map((tribe) => {
-        const { canJoin, requirement, reason } = checkReputation(tribe, user);
+        const { canJoin, requirement, reason } = checkJoinRequirements(tribe, user);
         const joinButtonIsDisabled = !!joiningStates[tribe.id] || !canJoin;
+
+        const getTooltipContent = () => {
+            switch (reason) {
+            case 'onboarding':
+                return `You must complete onboarding to join tribes with requirements.`;
+            case 'reputation':
+                return `A '${requirement}' reputation is required to join.`;
+            case 'age':
+                return `Your account must be at least ${requirement} old to join.`;
+            default:
+                return 'You do not meet the requirements to join this tribe.';
+            }
+        };
 
         const joinButton = (
              <Button variant="outline" className="w-full" onClick={() => handleOpenJoinDialog(tribe)} disabled={joinButtonIsDisabled}>
@@ -254,6 +295,18 @@ export default function TribesPage() {
                                 </Tooltip>
                             </TooltipProvider>
                         )}
+                        {tribe.minimumAccountAgeDays && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <div className="flex items-center"><History className="h-3.5 w-3.5 mr-1 text-blue-500"/>{tribe.minimumAccountAgeDays}d</div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Minimum account age to join: {tribe.minimumAccountAgeDays} days</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                     </div>
                     </CardContent>
                 </Link>
@@ -271,12 +324,7 @@ export default function TribesPage() {
                                     <div className="w-full">{joinButton}</div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>
-                                      {reason === 'onboarding'
-                                        ? "You must complete onboarding before joining tribes with reputation requirements."
-                                        : `A '${requirement}' reputation is required to join.`
-                                      }
-                                    </p>
+                                    <p>{getTooltipContent()}</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>

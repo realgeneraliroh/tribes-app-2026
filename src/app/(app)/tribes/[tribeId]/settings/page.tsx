@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon, History } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
@@ -44,6 +44,7 @@ const tribeSettingsFormSchema = z.object({
     .default([]),
   joinMechanism: z.enum(['instant', 'approval']).default('instant'),
   minimumReputation: z.string().optional(),
+  minimumAccountAgeDays: z.string().optional(),
 });
 
 type TribeSettingsFormValues = z.infer<typeof tribeSettingsFormSchema>;
@@ -77,6 +78,7 @@ export default function TribeSettingsPage() {
       moods: [],
       joinMechanism: 'instant',
       minimumReputation: "None",
+      minimumAccountAgeDays: "0",
     },
   });
 
@@ -95,6 +97,7 @@ export default function TribeSettingsPage() {
             homepageUrl: currentTribeData.homepageUrl || "",
             joinMechanism: currentTribeData.joinMechanism || 'instant',
             minimumReputation: currentTribeData.minimumReputation || "None",
+            minimumAccountAgeDays: String(currentTribeData.minimumAccountAgeDays || 0),
           });
         } else {
           router.push('/tribes');
@@ -107,12 +110,15 @@ export default function TribeSettingsPage() {
 
   async function onSubmit(values: TribeSettingsFormValues) {
     setIsLoading(true);
+    
+    const ageDaysValue = values.minimumAccountAgeDays ? parseInt(values.minimumAccountAgeDays, 10) : 0;
 
     const payload = {
         ...values,
         minimumReputation: values.minimumReputation && reputationLevels.includes(values.minimumReputation as any)
             ? values.minimumReputation as UserProfile['reputationStatus']
             : undefined,
+        minimumAccountAgeDays: !isNaN(ageDaysValue) && ageDaysValue > 0 ? ageDaysValue : undefined,
     };
     
     try {
@@ -381,9 +387,9 @@ export default function TribeSettingsPage() {
                     render={({ field }) => (
                         <FormItem className="rounded-lg border p-4 shadow-sm">
                             <FormLabel className="text-base font-semibold flex items-center">
-                                <ReputationIcon className="mr-2 h-4 w-4 text-blue-500" /> Minimum Reputation to Join
+                                <ReputationIcon className="mr-2 h-4 w-4 text-blue-500" /> Minimum Reputation
                             </FormLabel>
-                            <FormDescription className="pb-2">Set a minimum reputation level for new members. This applies to public tribes with instant join.</FormDescription>
+                            <FormDescription className="pb-2">Set a minimum reputation level for new members.</FormDescription>
                             <Select onValueChange={field.onChange} value={field.value || "None"}>
                                 <FormControl>
                                     <SelectTrigger>
@@ -396,6 +402,34 @@ export default function TribeSettingsPage() {
                                     {reputationLevels.map(level => (
                                         <SelectItem key={level} value={level}>{level}</SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                 <FormField
+                    control={form.control}
+                    name="minimumAccountAgeDays"
+                    render={({ field }) => (
+                        <FormItem className="rounded-lg border p-4 shadow-sm">
+                            <FormLabel className="text-base font-semibold flex items-center">
+                                <History className="mr-2 h-4 w-4 text-blue-500" /> Minimum Account Age
+                            </FormLabel>
+                            <FormDescription className="pb-2">Set a minimum account age for new members to reduce spam.</FormDescription>
+                            <Select onValueChange={field.onChange} value={field.value || "0"}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an age requirement..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="0">None</SelectItem>
+                                    <Separator className="my-1" />
+                                    <SelectItem value="7">7 Days</SelectItem>
+                                    <SelectItem value="30">30 Days</SelectItem>
+                                    <SelectItem value="90">90 Days</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />

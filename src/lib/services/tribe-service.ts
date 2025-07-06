@@ -57,6 +57,7 @@ const tribeSettingsFormSchema = z.object({
   moods: z.array(z.string()).max(3).optional().default([]),
   joinMechanism: z.enum(['instant', 'approval']),
   minimumReputation: z.enum(['Excellent', 'Good', 'Fair', 'Poor', 'At Risk']).optional(),
+  minimumAccountAgeDays: z.number().int().positive().optional(),
 });
 type UpdateTribeSettingsPayload = z.infer<typeof tribeSettingsFormSchema>;
 

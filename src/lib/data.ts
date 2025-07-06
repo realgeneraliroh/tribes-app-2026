@@ -13,19 +13,20 @@ export interface Tribe {
   homepageUrl?: string;
   joinMechanism?: 'instant' | 'approval';
   minimumReputation?: UserProfile['reputationStatus'];
+  minimumAccountAgeDays?: number;
 }
 
 // Changed from const to let to allow mutation for mock data simulation
 export let tribesData: Tribe[] = [
   { id: "0", name: "The Trials", description: "Welcome to Tribes.app! Complete the trials in this hub to build your starting reputation and unlock the full platform experience.", members: 9999, isPublic: true, cover: "https://placehold.co/400x200.png?text=Trials" , dataAiHint: "start trial guide", moods: ["learn"], homepageUrl: "https://tribes.app/help", joinMechanism: 'instant' },
-  { id: "1", name: "AI Innovators", description: "Exploring the future of artificial intelligence and machine learning. Professional networking and project discussions.", members: 128, isPublic: true, cover: "https://placehold.co/400x200.png?text=AI" , dataAiHint: "technology innovation", moods: ["focus", "learn"], homepageUrl: "https://innovate.ai", joinMechanism: 'approval', minimumReputation: 'Good' },
+  { id: "1", name: "AI Innovators", description: "Exploring the future of artificial intelligence and machine learning. Professional networking and project discussions.", members: 128, isPublic: true, cover: "https://placehold.co/400x200.png?text=AI" , dataAiHint: "technology innovation", moods: ["focus", "learn"], homepageUrl: "https://innovate.ai", joinMechanism: 'approval', minimumReputation: 'Good', minimumAccountAgeDays: 30 },
   { id: "2", name: "Weekend Hikers Club", description: "Sharing trails, tips, and breathtaking views from our adventures in nature.", members: 76, isPublic: true, cover: "https://placehold.co/400x200.png?text=Hiking" , dataAiHint: "nature mountain", moods: ["discover", "connect"], joinMechanism: 'instant' },
   { id: "3", name: "Indie Game Devs", description: "A community for indie game developers to collaborate, share projects, and find local playtesters.", members: 245, isPublic: false, cover: "https://placehold.co/400x200.png?text=Games" , dataAiHint: "gaming development", moods: ["showcase", "game", "learn"], homepageUrl: "https://indiegamedev.guild", joinMechanism: 'instant' },
   { id: "4", name: "Local Bookworms", description: "Discussing our favorite reads and discovering new authors together. Regular meetups.", members: 55, isPublic: true, cover: "https://placehold.co/400x200.png?text=Books" , dataAiHint: "reading library", moods: ["learn", "chill", "connect"], joinMechanism: 'approval' },
   { id: "5", name: "Sustainable Living Hub", description: "Tips and discussions on eco-friendly practices and sustainability projects.", members: 92, isPublic: true, cover: "https://placehold.co/400x200.png?text=Eco" , dataAiHint: "nature environment", moods: ["learn", "discover"], joinMechanism: 'instant' },
   { id: "6", name: "Family Hub", description: "A private space for our family to connect, share updates, and plan events.", members: 15, isPublic: false, cover: "https://placehold.co/400x200.png?text=Family", dataAiHint: "family home", moods: ["connect"], joinMechanism: 'approval' },
   { id: "7", name: "The Local Gig Circuit", description: "Discover and discuss live music, local bands, and upcoming shows in our city. Connect with fellow music lovers.", members: 88, isPublic: true, cover: "https://placehold.co/400x200.png?text=MusicShows", dataAiHint: "live music concert", moods: ["discover", "connect", "showcase"], joinMechanism: 'instant' },
-  { id: "8", name: "Artisan Alley Collective", description: "A space for creators, makers, and artists to share their work, find pop-up opportunities, and support each other.", members: 150, isPublic: true, cover: "https://placehold.co/400x200.png?text=Artisans", dataAiHint: "crafts art market", moods: ["showcase", "shop", "connect"], joinMechanism: 'approval', minimumReputation: 'Fair' },
+  { id: "8", name: "Artisan Alley Collective", description: "A space for creators, makers, and artists to share their work, find pop-up opportunities, and support each other.", members: 150, isPublic: true, cover: "https://placehold.co/400x200.png?text=Artisans", dataAiHint: "crafts art market", moods: ["showcase", "shop", "connect"], joinMechanism: 'approval', minimumReputation: 'Fair', minimumAccountAgeDays: 7 },
   { id: "9", name: "Open Mic Night Crew", description: "For performers (comedy, poetry, music) and fans of open mic nights. Share your material, find venues, and connect.", members: 62, isPublic: true, cover: "https://placehold.co/400x200.png?text=OpenMic", dataAiHint: "performance comedy poetry", moods: ["showcase", "discover", "connect"], joinMechanism: 'instant' },
 ];
 
@@ -46,6 +47,7 @@ export let mockUserProfile: UserProfile = {
   aliases: ["WonderlandCoder", "HikerGal", "PixelPioneer"],
   reputationScore: 50, // New users start with a low score
   reputationStatus: 'Onboarding', // New users start in onboarding
+  accountCreatedAt: new Date(), // Simulate a brand new account
 };
 
 
