@@ -138,7 +138,7 @@ const CommentCard: React.FC<{
               postId={postId}
               level={level + 1}
               onReportComment={onReportComment}
-              onOpenReplyDialog={onOpenCommentDialog}
+              onOpenReplyDialog={onOpenReplyDialog}
               isLoggedIn={isLoggedIn}
             />
           ))}
