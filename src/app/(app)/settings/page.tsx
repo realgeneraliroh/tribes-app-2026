@@ -163,7 +163,7 @@ export default function SettingsPage() {
             <UserCircle className="h-7 w-7 text-primary" />
             <CardTitle className="text-xl">Identity &amp; Profile</CardTitle>
           </div>
-          <CardDescription>Update your personal details, profile picture, and manage your aliases.</CardDescription>
+          <CardDescription>Update your personal details and manage how you appear on the platform.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4">
@@ -186,11 +186,53 @@ export default function SettingsPage() {
             <Label htmlFor="bio">Bio</Label>
             <Input id="bio" placeholder="Tell us a little about yourself" value={bio} onChange={(e) => setBio(e.target.value)} />
           </div>
+          
+          <Separator />
+          
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Star className="h-6 w-6 text-primary" />
+              <div>
+                <h3 className="text-base font-semibold">Reserved Alias</h3>
+                <p className="text-sm text-muted-foreground">Your unique, global handle across Tribes.app.</p>
+              </div>
+            </div>
+             {role === 'Human_Free' ? (
+                <div className="p-4 rounded-lg bg-muted/50 border border-dashed">
+                    <h4 className="font-semibold text-foreground">Claim Your Global Alias</h4>
+                    <p className="text-sm text-muted-foreground mt-1 mb-3">Upgrade to an Individual Co-op Membership to reserve your unique @handle and unlock more features.</p>
+                    <Link href="/billing" passHref>
+                        <Button variant="default">
+                            <CreditCard className="mr-2 h-4 w-4" /> View Plans
+                        </Button>
+                    </Link>
+                </div>
+            ) : (
+                 <div className="space-y-1.5 pl-9">
+                    <Label htmlFor="reservedAlias">Your Global Alias</Label>
+                    <div className="flex items-center space-x-2">
+                    <Input
+                        id="reservedAlias"
+                        value={reservedAliasInput}
+                        onChange={(e) => setReservedAliasInput(e.target.value)}
+                        placeholder="@your-unique-name"
+                    />
+                     <Button onClick={handleReserveAlias} disabled={isSavingAlias || reservedAliasInput === (profile?.reservedAlias || '')}>
+                        {isSavingAlias ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Save
+                    </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Must be unique and start with '@'.</p>
+                </div>
+            )}
+          </div>
+
            <Separator />
+
             <div className="space-y-4">
                 <div>
                     <h3 className="text-base font-semibold">Your Aliases</h3>
-                    <p className="text-sm text-muted-foreground">Manage alternate names you can use within tribes.</p>
+                    <p className="text-sm text-muted-foreground">Manage alternate names you can use within specific tribes.</p>
                 </div>
                 {aliases.length > 0 && (
                     <div className="space-y-2">
@@ -228,56 +270,6 @@ export default function SettingsPage() {
         </CardFooter>
       </Card>
 
-      <Separator />
-
-      {/* Reserved Alias Card */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center space-x-3">
-            <Star className="h-7 w-7 text-primary" />
-            <CardTitle className="text-xl">Reserved Alias</CardTitle>
-          </div>
-          <CardDescription>Claim your unique, global alias. This is your primary identifier across the platform.</CardDescription>
-        </CardHeader>
-        {role === 'Human_Free' ? (
-          <>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">This is a premium feature. Upgrade your plan to reserve a unique global alias and stand out in the community.</p>
-            </CardContent>
-            <CardFooter>
-              <Link href="/billing" passHref>
-                <Button>
-                  <CreditCard className="mr-2 h-4 w-4" /> View Plans
-                </Button>
-              </Link>
-            </CardFooter>
-          </>
-        ) : (
-          <>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="reservedAlias">Your Global Alias</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="reservedAlias"
-                    value={reservedAliasInput}
-                    onChange={(e) => setReservedAliasInput(e.target.value)}
-                    placeholder="@your-unique-name"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">Must be unique and start with '@'.</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleReserveAlias} disabled={isSavingAlias || reservedAliasInput === (profile?.reservedAlias || '')}>
-                {isSavingAlias ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {isSavingAlias ? "Saving..." : "Save Reserved Alias"}
-              </Button>
-            </CardFooter>
-          </>
-        )}
-      </Card>
-      
       <Separator />
 
       {/* Reputation & Trust */}
