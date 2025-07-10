@@ -95,6 +95,7 @@ export default function DashboardPage() {
     fetchData();
   }, []);
   
+  // This function is kept for demonstration purposes, but the button is now disabled.
   const handleCompleteOnboarding = async () => {
       await graduateUserFromOnboarding(user.id);
       toast({
@@ -125,16 +126,19 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                     Our community is built on trust. Your first step is to visit 'The Trials' tribe, engage with the pinned "Getting Started" posts by replying and leaving a vibe. This proves you're ready to be a constructive member of the community.
+                </p>
+                <p className="text-xs text-foreground bg-primary/10 p-2 rounded-md">
+                    Your reputation will update automatically after you've engaged with the posts. The button below will become active once you've completed the required steps.
                 </p>
             </CardContent>
             <CardFooter className="flex-col sm:flex-row items-start sm:items-center gap-4">
                 <Link href="/tribes/0" passHref>
                     <Button variant="outline">Go to The Trials <ArrowRight className="ml-2 h-4 w-4" /></Button>
                 </Link>
-                <Button onClick={handleCompleteOnboarding}>I Have Completed The Trials</Button>
+                <Button onClick={handleCompleteOnboarding} disabled>I Have Completed The Trials</Button>
             </CardFooter>
         </Card>
       )}

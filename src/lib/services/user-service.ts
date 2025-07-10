@@ -44,6 +44,9 @@ export async function updateUserProfile(userId: string, updates: Partial<Omit<Us
 
 /**
  * Simulates graduating a user from the 'Onboarding' status.
+ * This function is kept for demonstration and testing.
+ * In a real implementation, this would be triggered by a backend service
+ * that verifies the user has completed the required actions (e.g., replied to a post, received a vibe).
  * @param userId The ID of the user to graduate.
  */
 export async function graduateUserFromOnboarding(userId: string): Promise<UserProfile | null> {
