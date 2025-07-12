@@ -49,10 +49,10 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-           <Link href="/dashboard" passHref>
+           <Link href="/my-wall" passHref>
             <DropdownMenuItem>
               <LayoutDashboard className="mr-2 h-4 w-4" />
-              <span>Dashboard</span>
+              <span>My Wall</span>
               <DropdownMenuShortcut>⇧⌘D</DropdownMenuShortcut>
             </DropdownMenuItem>
           </Link>
