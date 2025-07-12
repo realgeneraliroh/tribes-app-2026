@@ -38,14 +38,12 @@ interface CreatePostDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onPostCreated: (newPostData: PostFormValues) => void;
-  tribeName: string;
 }
 
 export function CreatePostDialog({
   isOpen,
   onOpenChange,
   onPostCreated,
-  tribeName
 }: CreatePostDialogProps) {
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -113,14 +111,16 @@ export function CreatePostDialog({
   const commonContent = (
     <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
-            <DialogHeaderComponent className="p-4 sm:p-6 border-b">
-              <DialogTitleComponent className="flex items-center">
-                <Edit3 className="mr-2 h-5 w-5 text-primary" /> Create Post
-              </DialogTitleComponent>
-              <DialogDescriptionComponent>
-                Create a new post for your wall. You can share it with tribes below.
-              </DialogDescriptionComponent>
-            </DialogHeaderComponent>
+            <div className="p-4 sm:p-6 border-b">
+                <DialogHeaderComponent>
+                  <DialogTitleComponent className="flex items-center">
+                    <Edit3 className="mr-2 h-5 w-5 text-primary" /> Create Post
+                  </DialogTitleComponent>
+                  <DialogDescriptionComponent>
+                    Create a new post for your wall. You can share it with tribes below.
+                  </DialogDescriptionComponent>
+                </DialogHeaderComponent>
+            </div>
 
             <div className="flex-1 overflow-y-auto">
                 <ScrollArea className="h-full">
@@ -190,7 +190,7 @@ export function CreatePostDialog({
                                 <FormLabel className="text-md flex items-center">
                                   <UsersIcon className="mr-2 h-4 w-4 text-muted-foreground"/> Share with Tribes (Optional)
                                 </FormLabel>
-                                <FormDescription>Select tribes to share this post with.</FormDescription>
+                                <FormDescription>Select tribes to share this post with. If none are selected, it remains private to your wall.</FormDescription>
                               </div>
                               <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-3">
                                 {myTribes.length > 0 ? (
@@ -207,13 +207,13 @@ export function CreatePostDialog({
                                           >
                                             <FormControl>
                                               <Checkbox
-                                                checked={field.value?.includes(item.id)}
+                                                checked={field.value?.includes(item.name)}
                                                 onCheckedChange={(checked) => {
                                                   return checked
-                                                    ? field.onChange([...(field.value || []), item.id])
+                                                    ? field.onChange([...(field.value || []), item.name])
                                                     : field.onChange(
                                                         field.value?.filter(
-                                                          (value) => value !== item.id
+                                                          (value) => value !== item.name
                                                         )
                                                       )
                                                 }}
@@ -238,13 +238,15 @@ export function CreatePostDialog({
                     </div>
                 </ScrollArea>
             </div>
-
-            <DialogFooterComponent className="p-4 sm:p-6 border-t">
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                {form.formState.isSubmitting ? "Posting..." : "Create Post"}
-              </Button>
-            </DialogFooterComponent>
+            
+            <div className="p-4 sm:p-6 border-t">
+                <DialogFooterComponent>
+                  <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>Cancel</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    {form.formState.isSubmitting ? "Posting..." : "Create Post"}
+                  </Button>
+                </DialogFooterComponent>
+            </div>
         </form>
     </Form>
   );
