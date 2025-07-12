@@ -63,6 +63,12 @@ export default function MyWallPage() {
         } else {
             setPrivatePosts(prev => [newPost, ...prev]);
         }
+        
+        // Log selected tribes for now. In the next step, we'll actually create the posts.
+        if (newPostData.tribes && newPostData.tribes.length > 0) {
+            console.log(`Post created. Would share with tribes: ${newPostData.tribes.join(', ')}`);
+        }
+        
         setIsCreatePostDialogOpen(false);
     };
 
@@ -131,7 +137,7 @@ export default function MyWallPage() {
             isOpen={isCreatePostDialogOpen}
             onOpenChange={setIsCreatePostDialogOpen}
             onPostCreated={handlePostCreated}
-            tribeName="your Wall" // Generic wording since it's not tribe-specific
+            tribeName="your Wall"
         />
     </>
   );
