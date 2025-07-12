@@ -9,7 +9,7 @@ import {
   Sheet, SheetContent as ShadSheetContent, SheetHeader as ShadSheetHeader, SheetTitle as ShadSheetTitle, SheetDescription as ShadSheetDescription, SheetFooter as ShadSheetFooter
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormItem, FormLabel, FormDescription } from "@/components/ui/form";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Share2, Users as UsersIcon } from 'lucide-react';
