@@ -101,24 +101,22 @@ export default function MyWallPage() {
                 </div>
             </header>
         
-            <Card>
-                <CardHeader>
-                <CardTitle>My Content</CardTitle>
-                <CardDescription>All your posts, shared and private, live here. Use the share button to manage visibility.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wallPosts.length > 0 ? (
-                        wallPosts.map((post) => (
-                            <WallItemCard key={post.id} post={post} onShare={handleShareClick} />
-                        ))
-                     ) : (
-                        <div className="col-span-full text-center py-12">
-                            <p className="text-muted-foreground">Your wall is empty.</p>
-                            <Button variant="link" className="mt-2" onClick={() => setIsCreatePostDialogOpen(true)}>Create your first post</Button>
-                        </div>
-                     )}
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {wallPosts.length > 0 ? (
+                    wallPosts.map((post) => (
+                        <WallItemCard key={post.id} post={post} onShare={handleShareClick} />
+                    ))
+                 ) : (
+                    <div className="col-span-full text-center py-12">
+                        <Card className="inline-block p-8 shadow-md">
+                            <CardContent className="flex flex-col items-center justify-center">
+                                <p className="text-muted-foreground">Your wall is empty.</p>
+                                <Button variant="link" className="mt-2" onClick={() => setIsCreatePostDialogOpen(true)}>Create your first post</Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                 )}
+            </div>
         </div>
         <CreatePostDialog
             isOpen={isCreatePostDialogOpen}
