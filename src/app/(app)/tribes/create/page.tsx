@@ -143,7 +143,7 @@ export default function CreateTribePage() {
         <CardHeader>
           <div className="flex items-center space-x-3 mb-2">
             <Users className="h-8 w-8 text-primary" />
-            <CardTitle className="text-3xl font-bold font-mono">Create New Tribe</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl font-bold font-mono">Create New Tribe</CardTitle>
           </div>
           <CardDescription>
             Establish your community. Define its purpose and invite others to join.
@@ -277,15 +277,15 @@ export default function CreateTribePage() {
                   <FormItem>
                     <FormLabel className="text-lg">Cover Image (Optional)</FormLabel>
                     <FormControl>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         {coverPreview ? (
-                          <Image src={coverPreview} alt="Cover preview" width={128} height={72} className="rounded-md object-cover h-20 w-32" data-ai-hint="banner group" />
+                          <Image src={coverPreview} alt="Cover preview" width={128} height={72} className="rounded-md object-cover h-20 w-32 shrink-0" data-ai-hint="banner group" />
                         ) : (
-                          <div className="h-20 w-32 rounded-md bg-muted flex items-center justify-center">
+                          <div className="h-20 w-32 rounded-md bg-muted flex items-center justify-center shrink-0">
                             <ImageIcon className="h-10 w-10 text-muted-foreground" />
                           </div>
                         )}
-                        <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs"/>
+                        <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-full sm:max-w-xs"/>
                       </div>
                     </FormControl>
                     <FormDescription>Upload a cover image for your tribe (max 5MB).</FormDescription>

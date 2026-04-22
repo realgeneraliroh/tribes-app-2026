@@ -223,7 +223,7 @@ export default function MyWallPage() {
         <div className="space-y-8 max-w-7xl mx-auto">
             <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                <h1 className="text-4xl font-bold tracking-normal text-foreground font-mono">My Wall</h1>
+                <h1 className="text-2xl sm:text-4xl font-bold tracking-normal text-foreground font-mono">My Wall</h1>
                 <p className="text-lg text-muted-foreground mt-1">
                     Your personal space to create and share content with your communities.
                 </p>

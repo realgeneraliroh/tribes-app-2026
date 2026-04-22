@@ -138,7 +138,7 @@ export default function OurStoryPage() {
         <div className="inline-block p-3 bg-primary/10 rounded-full mb-4">
           <BookOpen className="h-12 w-12 text-primary" />
         </div>
-        <h1 className="text-4xl font-bold tracking-normal text-foreground font-mono">Our Story</h1>
+        <h1 className="text-2xl sm:text-4xl font-bold tracking-normal text-foreground font-mono">Our Story</h1>
         <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">
           Understand the world together. Explore curated topics, share insights, and engage in constructive discussions.
         </p>

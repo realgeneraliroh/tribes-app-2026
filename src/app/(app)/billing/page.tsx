@@ -176,7 +176,7 @@ export default function BillingPage() {
     return (
       <div className="space-y-10 max-w-4xl mx-auto">
         <header className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground font-mono">Your Membership</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground font-mono">Your Membership</h1>
           <p className="text-lg text-muted-foreground mt-2">
             Manage your Co-Op membership, share invite codes, and explore upgrade options.
           </p>
@@ -391,7 +391,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-12 max-w-6xl mx-auto">
       <header className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground font-mono">Join the First Social Media Co-Op</h1>
+        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground font-mono">Join the First Social Media Co-Op</h1>
         <p className="text-lg text-muted-foreground mt-2 max-w-3xl mx-auto">
           We're building a platform owned and governed by its members, not advertisers. Your contribution powers an ad-free, privacy-focused community where you have a real stake.
         </p>

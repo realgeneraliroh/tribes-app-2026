@@ -246,10 +246,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto w-full overflow-hidden">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-normal text-foreground font-mono">Settings</h1>
-        <p className="text-lg text-muted-foreground mt-1">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-normal text-foreground font-mono">Settings</h1>
+        <p className="text-base sm:text-lg text-muted-foreground mt-1">
           Manage your account, identity, preferences, and privacy.
         </p>
       </header>
@@ -316,8 +316,8 @@ export default function SettingsPage() {
           <CardDescription>Update your personal details and manage how you appear on the platform.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Avatar className="h-20 w-20 shrink-0">
               <AvatarImage src={profile.avatar} alt={profile.name} data-ai-hint="profile person" />
               <AvatarFallback>{profile.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
             </Avatar>
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                   if (!file || !profile) return;
                   setIsUploadingAvatar(true);
                   try {
-                    const url = await uploadFile(file, 'avatars');
+                    const url = await uploadFile(file, 'avatars', 'avatar');
                     await updateUserProfile(profile.id, { avatar: url });
                     setProfile({ ...profile, avatar: url });
                     toast({ title: 'Avatar updated', description: 'Your profile picture has been changed.' });
@@ -383,21 +383,22 @@ export default function SettingsPage() {
                     </Link>
                 </div>
             ) : (
-                 <div className="space-y-1.5 pl-9">
+                 <div className="space-y-1.5 pl-0 sm:pl-9">
                     <Label htmlFor="reservedAlias">Your Global Alias</Label>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                     <Input
                         id="reservedAlias"
                         value={reservedAliasInput}
                         onChange={(e) => setReservedAliasInput(e.target.value)}
                         placeholder="@your-unique-name"
+                        className="flex-1"
                     />
-                     <Button onClick={handleReserveAlias} disabled={isSavingAlias || reservedAliasInput === (profile?.reservedAlias || '')}>
+                     <Button onClick={handleReserveAlias} disabled={isSavingAlias || reservedAliasInput === (profile?.reservedAlias || '')} className="shrink-0">
                         {isSavingAlias ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         Save
                     </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Must be unique and start with '@'.</p>
+                    <p className="text-xs text-muted-foreground">Must be unique and start with &apos;@&apos;.</p>
                 </div>
             )}
           </div>
@@ -423,15 +424,16 @@ export default function SettingsPage() {
                         ))}
                     </div>
                 )}
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                     <Input 
                         id="new-alias" 
                         placeholder="Add a new alias..." 
                         value={newAlias}
                         onChange={(e) => setNewAlias(e.target.value)}
                         onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddAlias(); } }}
+                        className="flex-1"
                     />
-                    <Button type="button" onClick={handleAddAlias} disabled={!newAlias.trim()}>
+                    <Button type="button" onClick={handleAddAlias} disabled={!newAlias.trim()} className="shrink-0">
                         <PlusCircle className="h-4 w-4 mr-2"/> Add
                     </Button>
                 </div>
