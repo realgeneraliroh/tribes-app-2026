@@ -149,7 +149,7 @@ export default function SignupPage() {
                     <Input
                       id="inviteCode"
                       type="text"
-                      placeholder="FOUNDING-XXXX"
+                      placeholder="TRIBE-XXXX-XXXX"
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                       disabled={isValidatingCode}
