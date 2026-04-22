@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=invalid_state', request.url));
   }
 
+  // Retrieve invite code from cookie (set during OAuth initiation)
+  const inviteCode = cookieStore.get('oauth_invite_code')?.value;
+  cookieStore.set('oauth_invite_code', '', { expires: new Date(0), path: '/' });
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:9002/api/auth/google/callback';
@@ -104,6 +108,20 @@ export async function GET(request: NextRequest) {
       if (existingUser) {
         userId = existingUser.id;
       } else {
+        // Enforce invite code for new users
+        const inviteOnly = process.env.NEXT_PUBLIC_INVITE_ONLY === 'true';
+        if (inviteOnly) {
+          if (!inviteCode) {
+            return NextResponse.redirect(new URL('/signup?error=invite_required', request.url));
+          }
+          try {
+            const { validateInviteCode } = await import('@/lib/services/invite-service');
+            await validateInviteCode(inviteCode);
+          } catch {
+            return NextResponse.redirect(new URL('/signup?error=invalid_invite', request.url));
+          }
+        }
+
         // Create a new user
         userId = crypto.randomUUID();
         await db.insert(users).values({
@@ -112,10 +130,20 @@ export async function GET(request: NextRequest) {
           email,
           role: 'Human_Free',
           avatar: picture || null,
-          reputationStatus: 'Onboarding',
+          reputationStatus: 'Newcomer',
           reputationScore: 0,
           createdAt: new Date(),
         });
+
+        // Auto-redeem invite code
+        if (inviteCode) {
+          try {
+            const { redeemInviteCode } = await import('@/lib/services/invite-service');
+            await redeemInviteCode(userId, inviteCode);
+          } catch (e) {
+            console.warn('[Google OAuth] Invite redemption failed:', e);
+          }
+        }
       }
 
       // Link the Google account to this user

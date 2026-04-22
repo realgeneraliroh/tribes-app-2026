@@ -85,16 +85,16 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
-      // 1. Get registration options from server
-      const { options, userId } = await registerUserAction(name, email);
+      // 1. Get registration options from server (with invite code validation)
+      const { options, userId, inviteCode: validatedCode } = await registerUserAction(name, email, inviteCode || undefined);
       
       // 2. Start biometric registration in browser
       const regResponse = await startRegistration({
         optionsJSON: options,
       });
 
-      // 3. Finish registration on server
-      await finishRegistrationAction(userId, regResponse);
+      // 3. Finish registration on server (auto-redeems invite code)
+      await finishRegistrationAction(userId, regResponse, validatedCode);
 
       toast({
         title: "Account Created!",
@@ -238,7 +238,11 @@ export default function SignupPage() {
                 variant="outline" 
                 className="w-full h-11 border-primary/20 hover:bg-primary/5"
                 disabled={isLoading}
-                onClick={() => window.location.href = '/api/auth/google'}
+                onClick={() => {
+                  const url = new URL('/api/auth/google', window.location.origin);
+                  if (inviteCode) url.searchParams.set('invite', inviteCode);
+                  window.location.href = url.toString();
+                }}
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Continue with Google

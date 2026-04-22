@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { cookies } from 'next/headers';
 
@@ -11,9 +11,10 @@ import { cookies } from 'next/headers';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:9002/api/auth/google/callback';
+  const inviteCode = request.nextUrl.searchParams.get('invite');
 
   // Guard: if credentials are not configured, return a helpful error
   if (!clientId || clientId === 'your-google-client-id') {
@@ -32,10 +33,21 @@ export async function GET() {
   cookieStore.set('oauth_state', state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 10, // 10 minutes
+    maxAge: 60 * 10,
     sameSite: 'lax',
     path: '/',
   });
+
+  // Store invite code for the callback to pick up
+  if (inviteCode) {
+    cookieStore.set('oauth_invite_code', inviteCode.trim().toUpperCase(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 10,
+      sameSite: 'lax',
+      path: '/',
+    });
+  }
 
   const params = new URLSearchParams({
     client_id: clientId,

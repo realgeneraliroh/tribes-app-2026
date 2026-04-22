@@ -15,11 +15,22 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { loginLimiter, signupLimiter, getClientIp } from '@/lib/auth/rate-limit';
 
-export async function registerUserAction(name: string, email: string) {
+export async function registerUserAction(name: string, email: string, inviteCode?: string) {
   // Rate limit signup by IP
   const headersList = await headers();
   const ip = getClientIp(headersList);
   await signupLimiter.check(ip);
+
+  // Server-side invite code enforcement
+  const inviteOnly = process.env.NEXT_PUBLIC_INVITE_ONLY === 'true';
+  if (inviteOnly) {
+    if (!inviteCode?.trim()) {
+      throw new Error('An invite code is required to join Tribes.');
+    }
+    // Validate the code (throws if invalid/expired/used up)
+    const { validateInviteCode } = await import('@/lib/services/invite-service');
+    await validateInviteCode(inviteCode);
+  }
 
   // Check if user exists
   const existingUser = await db.query.users.findFirst({
@@ -43,12 +54,27 @@ export async function registerUserAction(name: string, email: string) {
 
   // Generate WebAuthn options
   const options = await startRegistration(userId);
-  return { options, userId };
+  return { options, userId, inviteCode: inviteCode?.trim().toUpperCase() };
 }
 
-export async function finishRegistrationAction(userId: string, response: RegistrationResponseJSON) {
+export async function finishRegistrationAction(
+  userId: string,
+  response: RegistrationResponseJSON,
+  inviteCode?: string,
+) {
   const result = await finishRegistration(userId, response);
   revalidatePath('/');
+
+  // Auto-redeem invite code if provided
+  if (inviteCode?.trim()) {
+    try {
+      const { redeemInviteCode } = await import('@/lib/services/invite-service');
+      await redeemInviteCode(userId, inviteCode);
+    } catch (e) {
+      // Don't fail registration if redemption fails (user already created)
+      console.warn('[auth] Invite code redemption failed:', e);
+    }
+  }
 
   // Fire-and-forget: Send welcome + verification emails
   firePostRegistrationEmails(userId).catch(() => {});

@@ -1,14 +1,37 @@
 /**
- * @fileoverview Invite code redemption service.
- * Phase 3: Founding Member & earned membership pathways.
+ * @fileoverview Invite code service.
  *
- * Invite codes grant plan access without Stripe payment.
- * Supports: founding member codes, earned-contribution upgrades.
+ * Invite codes gate platform access (not membership tier).
+ * - Admin/founding codes: segmented by purpose (family, public, partner)
+ * - User referral codes: grant `free` plan access, max 3 active per user
+ * - When redeemed at signup, the code is auto-consumed and the inviter
+ *   earns 25 referral reputation points.
+ *
+ * Uses the shared `db` from @/db (local-first sync architecture).
  */
 
 import { db } from '@/db';
 import { inviteCodes, inviteRedemptions, subscriptions, plans, users } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+
+// ============================================================
+// CODE GENERATION
+// ============================================================
+
+/**
+ * Generates a cryptographically random invite code.
+ * Format: TRIBE-XXXX-XXXX (8 random alphanumeric uppercase chars)
+ */
+function generateRandomCode(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // No I/L/O/0/1 to avoid confusion
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const code = Array.from(bytes, b => chars[b % chars.length]).join('');
+  return `TRIBE-${code.slice(0, 4)}-${code.slice(4, 8)}`;
+}
+
+// ============================================================
+// VALIDATION
+// ============================================================
 
 /**
  * Validates an invite code without redeeming it.
@@ -54,9 +77,14 @@ export async function validateInviteCode(code: string): Promise<{
   };
 }
 
+// ============================================================
+// REDEMPTION
+// ============================================================
+
 /**
  * Redeems an invite code for a user.
- * Creates a subscription with source='founding' and upgrades user role.
+ * For founding codes: creates a subscription + upgrades role.
+ * For free codes: just records the redemption (user stays on free plan).
  */
 export async function redeemInviteCode(
   userId: string,
@@ -79,15 +107,6 @@ export async function redeemInviteCode(
     throw new Error('You have already redeemed this invite code');
   }
 
-  // Check if user already has an active subscription at this level or higher
-  const [existingSub] = await db.select().from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, 'active')))
-    .limit(1);
-
-  if (existingSub) {
-    throw new Error('You already have an active subscription');
-  }
-
   // Get the plan to determine the target role
   const [plan] = await db.select().from(plans)
     .where(eq(plans.id, validated.grantsPlanId))
@@ -96,45 +115,55 @@ export async function redeemInviteCode(
   if (!plan) throw new Error('Plan not found');
 
   // Determine source based on code prefix
-  const source = normalizedCode.startsWith('FOUNDING') ? 'founding' : 'earned';
+  const source = normalizedCode.startsWith('TRIBE-') ? 'referral' : 'founding';
   const subId = `sub-${userId}-${Date.now()}`;
   const redemptionId = `redemption-${userId}-${Date.now()}`;
-  const now = Math.floor(Date.now() / 1000);
 
-  // Use batch to execute all writes atomically
-  const { createClient } = await import('@libsql/client');
-  const client = createClient({ url: `file:${process.cwd()}/tribes.db` });
+  // Only create a subscription if the plan isn't 'free'
+  if (validated.grantsPlanId !== 'free') {
+    // Check if user already has an active subscription
+    const [existingSub] = await db.select().from(subscriptions)
+      .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, 'active')))
+      .limit(1);
 
-  await client.batch([
-    // Create subscription
-    {
-      sql: `INSERT INTO subscriptions (id, user_id, plan_id, status, source, cancel_at_period_end, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, 0, ?, ?)`,
-      args: [subId, userId, validated.grantsPlanId, source, now, now],
-    },
-    // Record redemption
-    {
-      sql: `INSERT INTO invite_redemptions (id, invite_code_id, user_id) VALUES (?, ?, ?)`,
-      args: [redemptionId, normalizedCode, userId],
-    },
-    // Increment used count
-    {
-      sql: `UPDATE invite_codes SET used_count = used_count + 1 WHERE id = ?`,
-      args: [normalizedCode],
-    },
-    // Upgrade user role
-    {
-      sql: `UPDATE users SET role = ? WHERE id = ?`,
-      args: [plan.targetRole, userId],
-    },
-  ], 'write');
+    if (!existingSub) {
+      // Create subscription
+      await db.insert(subscriptions).values({
+        id: subId,
+        userId,
+        planId: validated.grantsPlanId,
+        status: 'active',
+        source,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-  // Referral tracking: if the code was created by a user, award them 25 pts
+      // Upgrade user role
+      await db.update(users)
+        .set({ role: plan.targetRole })
+        .where(eq(users.id, userId));
+    }
+  }
+
+  // Record redemption
+  await db.insert(inviteRedemptions).values({
+    id: redemptionId,
+    inviteCodeId: normalizedCode,
+    userId,
+  });
+
+  // Increment used count
+  const [currentCode] = await db.select({ usedCount: inviteCodes.usedCount })
+    .from(inviteCodes).where(eq(inviteCodes.id, normalizedCode)).limit(1);
+  await db.update(inviteCodes)
+    .set({ usedCount: (currentCode?.usedCount ?? 0) + 1 })
+    .where(eq(inviteCodes.id, normalizedCode));
+
+  // Referral tracking: award inviter 25 reputation points
   try {
-    const codeResult = await client.execute({
-      sql: `SELECT created_by FROM invite_codes WHERE id = ?`,
-      args: [normalizedCode],
-    });
-    const createdBy = codeResult.rows[0]?.created_by as string | null;
+    const [codeRecord] = await db.select({ createdBy: inviteCodes.createdBy })
+      .from(inviteCodes).where(eq(inviteCodes.id, normalizedCode)).limit(1);
+    const createdBy = codeRecord?.createdBy;
     if (createdBy && createdBy !== userId) {
       const { recordContribution } = await import('@/lib/services/contribution-service');
       await recordContribution(createdBy, 'referral', userId, `Referred user via invite code ${normalizedCode}`);
@@ -144,26 +173,87 @@ export async function redeemInviteCode(
   return { planName: plan.name, source };
 }
 
+// ============================================================
+// USER CODE GENERATION
+// ============================================================
+
+const MAX_ACTIVE_CODES_PER_USER = 3;
+
 /**
- * Generates an invite code for a paid member to share.
- * When someone redeems it, the creator earns 25 referral points.
+ * Generates a referral invite code for a user.
+ * - Grants `free` plan access (platform entry, not paid membership)
+ * - Max 3 active codes per user
+ * - When someone redeems it, the creator earns 25 referral points
  */
 export async function generateInviteCode(
   userId: string,
   maxUses: number = 5,
 ): Promise<{ code: string; maxUses: number }> {
-  // Generate a unique code: INVITE-{shortUserId}-{random}
-  const shortId = userId.slice(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const random = Array.from(crypto.getRandomValues(new Uint8Array(3)), b => b.toString(36).toUpperCase()).join('').slice(0, 4);
-  const code = `INVITE-${shortId}-${random}`;
+  // Check active code count
+  const activeCodes = await db.select({ id: inviteCodes.id, usedCount: inviteCodes.usedCount, maxUses: inviteCodes.maxUses })
+    .from(inviteCodes)
+    .where(eq(inviteCodes.createdBy, userId));
 
-  db.insert(inviteCodes).values({
+  const activeCount = activeCodes.filter(c => (c.usedCount ?? 0) < (c.maxUses ?? 1)).length;
+  if (activeCount >= MAX_ACTIVE_CODES_PER_USER) {
+    throw new Error(`You can have at most ${MAX_ACTIVE_CODES_PER_USER} active invite codes. Wait for existing codes to be used or expire.`);
+  }
+
+  const code = generateRandomCode();
+
+  await db.insert(inviteCodes).values({
     id: code,
     createdBy: userId,
-    grantsPlanId: 'individual_coop',
-    maxUses,
+    grantsPlanId: 'free',
+    maxUses: Math.min(maxUses, 10), // Cap at 10 uses per code
     usedCount: 0,
-  }).run();
+  });
 
-  return { code, maxUses };
+  return { code, maxUses: Math.min(maxUses, 10) };
+}
+
+/**
+ * Gets all invite codes created by a user (for the settings UI).
+ */
+export async function getUserInviteCodes(userId: string) {
+  return db.select({
+    id: inviteCodes.id,
+    maxUses: inviteCodes.maxUses,
+    usedCount: inviteCodes.usedCount,
+    createdAt: inviteCodes.createdAt,
+    expiresAt: inviteCodes.expiresAt,
+  }).from(inviteCodes)
+    .where(eq(inviteCodes.createdBy, userId))
+    .orderBy(inviteCodes.createdAt);
+}
+
+// ============================================================
+// ADMIN: FOUNDING CODE GENERATION
+// ============================================================
+
+/**
+ * Admin: creates a batch of founding invite codes for a specific purpose.
+ * These grant `individual_coop` (or specified plan) access.
+ */
+export async function createFoundingCodes(
+  label: string,
+  count: number,
+  planId: string = 'individual_coop',
+  maxUsesEach: number = 10,
+): Promise<string[]> {
+  const codes: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const code = generateRandomCode();
+    await db.insert(inviteCodes).values({
+      id: code,
+      grantsPlanId: planId,
+      maxUses: maxUsesEach,
+      usedCount: 0,
+    });
+    codes.push(code);
+  }
+
+  console.log(`[invite] Created ${count} founding codes for "${label}": ${codes.join(', ')}`);
+  return codes;
 }
