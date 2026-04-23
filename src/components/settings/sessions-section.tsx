@@ -58,16 +58,16 @@ export function SessionsSection({ sessions, isLoading, isRevokingSession, onRevo
           sessions.map(session => {
             const { device, icon } = parseUserAgent(session.userAgent);
             return (
-              <div key={session.id} className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+              <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-md border hover:bg-muted/50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
                     {icon}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{device}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium truncate">{device}</p>
                       {session.isCurrent && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">This device</Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">This device</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">

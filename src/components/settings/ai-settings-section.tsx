@@ -267,7 +267,7 @@ export function AiSettingsSection() {
             )}
           </div>
         </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-between items-center">
+        <CardFooter className="border-t pt-4 flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-center">
           <div className="flex items-center gap-2">
             {configIsDirty && (
               <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
@@ -316,7 +316,7 @@ export function AiSettingsSection() {
       {/* ---- Model Discovery & Selection ---- */}
       <Card className="shadow-lg">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center space-x-2">
               <RefreshCw className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-xl tracking-normal">Model Discovery</CardTitle>
@@ -443,7 +443,7 @@ export function AiSettingsSection() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-between items-center">
+        <CardFooter className="border-t pt-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-between sm:items-center">
           <Button
             variant="ghost"
             onClick={handleResetAll}

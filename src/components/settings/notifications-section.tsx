@@ -30,12 +30,12 @@ function NotifToggle({ id, label, description, checked, onChange, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between p-3 rounded-md border hover:bg-muted/50 ${disabled ? 'opacity-50' : ''}`}>
-      <div>
+    <div className={`flex items-center justify-between gap-3 p-3 rounded-md border hover:bg-muted/50 ${disabled ? 'opacity-50' : ''}`}>
+      <div className="min-w-0 flex-1">
         <Label htmlFor={id} className="cursor-pointer">{label}</Label>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} />
+      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} className="shrink-0" />
     </div>
   );
 }

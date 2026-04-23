@@ -36,9 +36,9 @@ export function AppearanceSection() {
         <CardDescription>Customize the look and feel of Tribes.app.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50">
-          <Label htmlFor="darkMode" className="flex-grow cursor-pointer">Dark Mode</Label>
-          <Switch id="darkMode" />
+        <div className="flex items-center justify-between gap-3 p-3 rounded-md border hover:bg-muted/50">
+          <Label htmlFor="darkMode" className="flex-1 cursor-pointer">Dark Mode</Label>
+          <Switch id="darkMode" className="shrink-0" />
         </div>
       </CardContent>
     </Card>
@@ -61,8 +61,10 @@ export function BillingSection({ roleName }: BillingSectionProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground">Current Plan: <span className="font-semibold text-foreground">{roleName.replace(/_/g, ' ')}</span></p>
-        <Button variant="default" className="bg-accent text-accent-foreground hover:bg-accent/90">Upgrade to Pro</Button>
-        <Button variant="outline" className="w-full md:w-auto">Manage Payment Methods</Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="default" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">Upgrade to Pro</Button>
+          <Button variant="outline" className="w-full sm:w-auto">Manage Payment Methods</Button>
+        </div>
       </CardContent>
     </Card>
   );

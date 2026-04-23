@@ -16,16 +16,18 @@ export function SecuritySection() {
         <CardDescription>Manage your password, two-factor authentication, and privacy settings.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button variant="outline" className="w-full md:w-auto">Change Password</Button>
-        <Button variant="outline" className="w-full md:w-auto">Setup Two-Factor Authentication</Button>
-        <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50">
-          <div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" className="w-full sm:w-auto">Change Password</Button>
+          <Button variant="outline" className="w-full sm:w-auto">Setup Two-Factor Authentication</Button>
+        </div>
+        <div className="flex items-center justify-between gap-3 p-3 rounded-md border hover:bg-muted/50">
+          <div className="min-w-0 flex-1">
             <Label htmlFor="dataSharing" className="font-medium">Allow AI Assistant Access to My Data</Label>
             <p className="text-xs text-muted-foreground mt-1">
               Let the AI assistant use your public tribe information to provide more personalized help. Private data is never used.
             </p>
           </div>
-          <Switch id="dataSharing" />
+          <Switch id="dataSharing" className="shrink-0" />
         </div>
       </CardContent>
     </Card>
