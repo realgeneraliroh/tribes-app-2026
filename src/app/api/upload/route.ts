@@ -2,21 +2,23 @@
  * POST /api/upload — File upload endpoint.
  * Accepts FormData with 'file', optional 'folder', and optional 'context' fields.
  * Auth-guarded via session check + CSRF validation.
- * Returns { url: string } — the public S3 URL.
  *
- * Context values (controls CSAM scanning tier):
- *   public-tribe-post  — default, scanned
- *   public-mood-board  — scanned
- *   avatar             — scanned
- *   bond-attachment    — NOT scanned (E2E private)
- *   private-mood-board — NOT scanned at save (scanned at publish)
+ * Returns:
+ *   - Public uploads: { url: string, fileId: string }
+ *   - Private uploads: { fileId: string } (resolve via getMediaUrl action)
+ *
+ * Context values (controls CSAM scanning tier + bucket routing):
+ *   public-tribe-post  — public bucket, scanned
+ *   public-mood-board  — public bucket, scanned
+ *   avatar             — public bucket, scanned
+ *   bond-attachment    — private bucket, NOT scanned (E2E)
+ *   private-mood-board — private bucket, NOT scanned at save
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/lib/auth/session';
 import { validateCsrfToken } from '@/lib/auth/csrf';
 import { uploadLimiter, getClientIp } from '@/lib/auth/rate-limit';
-import { uploadImage, type UploadContext } from '@/lib/services/s3-service';
-import { reportToNCMEC } from '@/lib/services/csam-service';
+import { uploadImage, recordMediaFile, type UploadContext } from '@/lib/services/s3-service';
 import { s3Logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -77,25 +79,44 @@ export async function POST(request: NextRequest) {
     const clientIp = getClientIp(request.headers);
 
     try {
-      const url = await uploadImage(file, folder, context);
+      // Upload to S3 (routes to public or private bucket based on context)
+      const result = await uploadImage(file, folder, context, userId);
+
+      // Record in the media file registry
+      const fileId = await recordMediaFile({
+        userId,
+        bucket: result.bucket,
+        s3Key: result.s3Key,
+        context,
+        fileName: file.name || 'upload.bin',
+        contentType: file.type || 'application/octet-stream',
+        sizeBytes: result.sizeBytes,
+        publicUrl: result.url,
+      });
+
       s3Logger.info(
         {
           userId,
+          fileId,
           filename: file.name,
           type: file.type,
           sizeKb: Math.round(file.size / 1024),
           context,
-          url,
+          bucket: result.bucket,
+          url: result.url,
         },
         'Upload complete'
       );
-      return NextResponse.json({ url });
+
+      // Public: return URL + fileId. Private: return fileId only.
+      if (result.url) {
+        return NextResponse.json({ url: result.url, fileId });
+      } else {
+        return NextResponse.json({ fileId });
+      }
     } catch (uploadErr: unknown) {
-      // If CSAM was detected, enrich the report with userId + IP then re-throw
+      // If CSAM was detected, log the full context
       if (uploadErr instanceof Error && uploadErr.message.includes('content policy violation')) {
-        // The scan already ran — re-fire report with full context
-        // Note: scanResult is not directly accessible here; the csam-service
-        // already logged the FATAL event. This adds the user context.
         s3Logger.fatal(
           { userId, clientIp, filename: file.name, context },
           'CSAM upload blocked — report filed by csam-service'

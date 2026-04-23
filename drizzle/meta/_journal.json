@@ -22,6 +22,13 @@
       "when": 1775262002546,
       "tag": "0002_quiet_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776902236888,
+      "tag": "0003_powerful_spectrum",
+      "breakpoints": true
     }
   ]
 }

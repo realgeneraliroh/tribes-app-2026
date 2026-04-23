@@ -486,3 +486,30 @@ export const userBans = sqliteTable('user_bans', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
+// ============================================================
+// MEDIA FILES (Storage Registry)
+// ============================================================
+//
+// Tracks every uploaded file for:
+//   1. User ownership & access control
+//   2. Bucket routing (public CDN vs private signed URLs)
+//   3. Client-side encryption metadata (E2E bonds)
+//   4. Storage quota enforcement
+//   5. GDPR purge & soft-delete lifecycle
+//
+
+export const mediaFiles = sqliteTable('media_files', {
+  id: text('id').primaryKey(),                // UUID
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  bucket: text('bucket').notNull(),           // 'public' | 'private'
+  s3Key: text('s3_key').notNull(),            // Full S3 object key
+  context: text('context').notNull(),         // UploadContext enum value
+  fileName: text('file_name').notNull(),      // Original filename
+  contentType: text('content_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  encrypted: integer('encrypted', { mode: 'boolean' }).default(false),
+  encryptionMeta: text('encryption_meta'),    // JSON: { algo, iv, salt } for E2E
+  publicUrl: text('public_url'),              // CDN URL (public bucket only)
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }), // Soft delete
+});
