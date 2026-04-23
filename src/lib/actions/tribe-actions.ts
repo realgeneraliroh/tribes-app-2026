@@ -7,18 +7,21 @@ import type { TribeAccessLevel } from '@/lib/services/tribe-auth';
 
 // ======== TRIBE DATA ACCESS ========
 export async function getTribes(): Promise<Tribe[]> {
+  const userId = await getCurrentUserId();
   const { getTribes: fn } = await import('@/lib/data-access/tribes');
-  return fn();
+  return fn(userId);
 }
 
 export async function getTribeById(tribeId: string): Promise<Tribe | null> {
+  const userId = await getCurrentUserId();
   const { getTribeById: fn } = await import('@/lib/data-access/tribes');
-  return fn(tribeId);
+  return fn(tribeId, userId);
 }
 
 export async function findTribeByName(name: string): Promise<Tribe | null> {
+  const userId = await getCurrentUserId();
   const { findTribeByName: fn } = await import('@/lib/data-access/tribes');
-  return fn(name);
+  return fn(name, userId);
 }
 
 export async function getMyTribeIds(): Promise<string[]> {

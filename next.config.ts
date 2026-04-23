@@ -44,19 +44,19 @@ function buildRemotePatterns() {
 
 function buildSecurityHeaders() {
   const s3Public = process.env.S3_PUBLIC_ENDPOINT || '';
-  const s3Endpoint = process.env.S3_ENDPOINT || '';
+  // NOTE: S3_ENDPOINT is intentionally NOT included here — it contains an
+  // internal Docker hostname (seaweedfs-filer:8333) that must not be exposed
+  // to browsers via CSP headers (information disclosure).
   const wsRelay = process.env.NEXT_PUBLIC_WS_RELAY_URL || '';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
 
-  // Build img-src from known image sources
+  // Build img-src from known PUBLIC image sources only
   const imgSources = ["'self'", 'data:', 'blob:'];
   if (s3Public) imgSources.push(s3Public);
-  if (s3Endpoint) imgSources.push(s3Endpoint);
 
-  // Build connect-src for API/WS targets
+  // Build connect-src for API/WS targets (public endpoints only)
   const connectSources = ["'self'"];
   if (wsRelay) connectSources.push(wsRelay);
-  if (s3Endpoint) connectSources.push(s3Endpoint);
   if (appUrl) connectSources.push(appUrl);
 
   const csp = [
@@ -89,6 +89,14 @@ const nextConfig: NextConfig = {
   output: 'standalone',   // Required for Docker multi-stage build (.next/standalone/)
   images: {
     remotePatterns: buildRemotePatterns(),
+  },
+  experimental: {
+    serverActions: {
+      // Safety net: cover images are uploaded via /api/upload (not the action body),
+      // so this should never be hit. But if something slips through, fail with a
+      // clear 413 rather than a cryptic "Body exceeded 1 MB" trace.
+      bodySizeLimit: '4mb',
+    },
   },
   async headers() {
     return [

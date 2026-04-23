@@ -36,6 +36,15 @@ export async function getCommentsForStory(storyId: string): Promise<DiscussionCo
 // ======== POST SERVICE ========
 export async function getPostsForTribe(tribeId: string): Promise<TribePost[]> {
   const userId = await getCurrentUserId();
+
+  // SECURITY: Gate private tribe content to members only
+  const { getTribeById: fetchTribe } = await import('@/lib/data-access/tribes');
+  const tribe = await fetchTribe(tribeId, userId); // respects visibility
+  if (!tribe) {
+    // Either doesn't exist or the viewer has no access to this private tribe
+    throw new Error('Tribe not found or access denied.');
+  }
+
   const { getPostsForTribe: fn } = await import('@/lib/services/post-service');
   return fn(tribeId, userId ?? undefined);
 }
@@ -90,6 +99,19 @@ export async function createComment(postId: string, content: string, parentComme
 }
 
 export async function getCommentsForPost(postId: string) {
+  const userId = await getCurrentUserId();
+
+  // SECURITY: Resolve the parent post's tribe and gate on private tribe membership
+  const { db } = await import('@/db');
+  const { posts } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const [post] = await db.select({ tribeId: posts.tribeId }).from(posts).where(eq(posts.id, postId)).limit(1);
+  if (post) {
+    const { getTribeById: fetchTribe } = await import('@/lib/data-access/tribes');
+    const tribe = await fetchTribe(post.tribeId, userId);
+    if (!tribe) throw new Error('Tribe not found or access denied.');
+  }
+
   const { getCommentsForPost: fn } = await import('@/lib/services/post-service');
   return fn(postId);
 }
