@@ -1,6 +1,6 @@
 'use server';
 
-import { requireAuth, getCurrentUserId, trackContribution } from './shared';
+import { requireAuth, requireVerifiedEmail, getCurrentUserId, trackContribution } from './shared';
 import type { Event } from '@/lib/types';
 import { rsvpLimiter } from '@/lib/auth/rate-limit';
 
@@ -29,7 +29,12 @@ export async function getEventsForTribe(tribeName: string): Promise<Event[]> {
 }
 
 export async function createEvent(payload: Parameters<typeof import('@/lib/services/event-service').createEvent>[0]): Promise<Event> {
-  const userId = await requireAuth();
+  const userId = await requireVerifiedEmail();
+  // Subscription guard: hosting events is a paid feature
+  const { hasFeature } = await import('@/lib/services/subscription-guard');
+  if (!(await hasFeature(userId, 'host_events'))) {
+    throw new Error('Upgrade to a paid membership to host events for your tribes.');
+  }
   const { createEvent: fn } = await import('@/lib/services/event-service');
   const result = await fn({ ...payload, creatorId: userId });
   trackContribution(userId, 'event_hosted', result.id, `Hosted event: ${result.name}`);

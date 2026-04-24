@@ -237,11 +237,39 @@ export const uploadLimiter = new RateLimiter({
 
 /**
  * Get client IP from headers. Works with proxied requests.
+ * When behind Cloudflare, CF-Connecting-IP is the most reliable header.
  */
 export function getClientIp(headersList: Headers): string {
   return (
+    headersList.get('cf-connecting-ip') ??          // Cloudflare (most accurate)
     headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
     headersList.get('x-real-ip') ??
     '127.0.0.1'
   );
 }
+
+/**
+ * Extract the /24 subnet from an IPv4 address.
+ * Used for subnet-level swarm detection.
+ * e.g. "203.0.113.45" → "203.0.113.0/24"
+ * Falls back to the full IP for IPv6.
+ */
+export function getSubnet(ip: string): string {
+  const parts = ip.split('.');
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+  }
+  return ip; // IPv6: treat full address as key
+}
+
+/**
+ * Subnet-level signup limiter: 8 registrations per /24 per 24 hours.
+ * Catches residential proxy swarms that rotate IPs within the same block.
+ * Much harder to bypass than per-IP limiting — requires the attacker to
+ * distribute across more expensive, unrelated IP blocks.
+ */
+export const signupSubnetLimiter = new RateLimiter({
+  prefix: 'signup_subnet',
+  windowMs: 24 * 60 * 60 * 1000,  // 24 hours
+  maxRequests: 8,
+});

@@ -13,19 +13,31 @@ import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { loginLimiter, signupLimiter, getClientIp } from '@/lib/auth/rate-limit';
+import { loginLimiter, signupLimiter, signupSubnetLimiter, getClientIp, getSubnet } from '@/lib/auth/rate-limit';
 
-export async function registerUserAction(name: string, email: string, inviteCode?: string) {
+export async function registerUserAction(name: string, email: string, inviteCode?: string, turnstileToken?: string): Promise<
+  { options: Awaited<ReturnType<typeof startRegistration>>; userId: string; inviteCode?: string } |
+  { error: string }
+> {
+  try {
   // Rate limit signup by IP
   const headersList = await headers();
   const ip = getClientIp(headersList);
   await signupLimiter.check(ip);
 
+  // Subnet-level swarm detection: catches residential proxy bots rotating IPs in the same block
+  const subnet = getSubnet(ip);
+  await signupSubnetLimiter.check(subnet);
+
+  // Cloudflare Turnstile bot challenge
+  const { validateTurnstileToken } = await import('@/lib/services/turnstile-service');
+  await validateTurnstileToken(turnstileToken, ip);
+
   // Server-side invite code enforcement
   const inviteOnly = process.env.NEXT_PUBLIC_INVITE_ONLY === 'true';
   if (inviteOnly) {
     if (!inviteCode?.trim()) {
-      throw new Error('An invite code is required to join Tribes.');
+      return { error: 'An invite code is required to join Tribes.' };
     }
     // Validate the code (throws if invalid/expired/used up)
     const { validateInviteCode } = await import('@/lib/services/invite-service');
@@ -40,6 +52,15 @@ export async function registerUserAction(name: string, email: string, inviteCode
   let userId: string;
 
   if (existingUser) {
+    // User already has an account — check if they have a passkey or just a pending registration
+    const { credentials: credTable } = await import('@/db/schema');
+    const existingCred = await db.query.credentials.findFirst({
+      where: eq(credTable.userId, existingUser.id),
+    });
+    if (existingCred) {
+      return { error: 'An account with this email already exists. Try logging in instead.' };
+    }
+    // Pending account (no passkey yet) — allow re-registration attempt
     userId = existingUser.id;
   } else {
     userId = uuidv4();
@@ -55,6 +76,10 @@ export async function registerUserAction(name: string, email: string, inviteCode
   // Generate WebAuthn options
   const options = await startRegistration(userId);
   return { options, userId, inviteCode: inviteCode?.trim().toUpperCase() };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'An unexpected error occurred. Please try again.';
+    return { error: message };
+  }
 }
 
 export async function finishRegistrationAction(

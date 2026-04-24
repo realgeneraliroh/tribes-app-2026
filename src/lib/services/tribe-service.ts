@@ -46,7 +46,7 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
     await db.insert(tribeMoodTags).values({ tribeId: id, moodSlug: mood });
   }
 
-  // Auto-add creator as speaker member
+  // Auto-add creator as founder member + bond to the tribe
   const creatorId = payload.createdBy;
   if (creatorId) {
     await db.insert(tribeMembers).values({
@@ -56,6 +56,10 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
       role: 'founder',
       joinedAt: new Date(),
     });
+
+    // Create the founder's bond to the tribe (same pattern as join/approve flows)
+    const { createFollowerBond } = await import('@/lib/services/bond-service');
+    await createFollowerBond(creatorId, id, 'tribe', payload.name);
   }
 
   return {
@@ -82,6 +86,8 @@ const tribeSettingsFormSchema = z.object({
   joinMechanism: z.enum(['instant', 'approval']),
   minimumReputation: z.enum(['Newcomer', 'Active', 'Trusted', 'Veteran', 'Elder']).optional(),
   minimumAccountAgeDays: z.number().int().positive().optional(),
+  brandColor: z.string().optional(),
+  brandLogo: z.string().optional(),
 });
 type UpdateTribeSettingsPayload = z.infer<typeof tribeSettingsFormSchema>;
 
@@ -98,6 +104,8 @@ export async function updateTribeSettings(tribeId: string, payload: UpdateTribeS
     joinMechanism: payload.joinMechanism,
     minimumReputation: payload.minimumReputation ?? null,
     minimumAccountAgeDays: payload.minimumAccountAgeDays ?? null,
+    brandColor: payload.brandColor ?? existing.brandColor,
+    brandLogo: payload.brandLogo ?? existing.brandLogo,
   }).where(eq(tribes.id, tribeId));
 
   // Update mood tags: delete old, insert new
@@ -169,6 +177,13 @@ export async function approveJoinRequest(tribeId: string, pendingMemberId: strin
 
   if (!pending) return;
 
+  // GATE: Tribe member cap
+  const { canAddTribeMember } = await import('@/lib/services/subscription-guard');
+  const memberCheck = await canAddTribeMember(tribeId);
+  if (!memberCheck.allowed) {
+    throw new Error(`This tribe has reached its member limit (${memberCheck.limit}). The tribe owner needs to upgrade their plan.`);
+  }
+
   // Remove from pending
   await db.delete(pendingMembers).where(eq(pendingMembers.id, pendingMemberId));
 
@@ -220,6 +235,47 @@ export async function leaveTribe(userId: string, tribeId: string): Promise<void>
   for (const bond of tribeBonds) {
     await db.delete(bondsTable).where(eq(bondsTable.id, bond.id));
   }
+}
+
+/**
+ * Permanently deletes a tribe and all associated data.
+ * Only the founder (createdBy) can delete a tribe.
+ * Cascades: members, pending members, mood tags, posts, bonds.
+ */
+export async function deleteTribe(userId: string, tribeId: string): Promise<void> {
+  const { bonds: bondsTable, posts, postMoodTags, comments, vibes } = await import('@/db/schema');
+
+  // Verify tribe exists and user is the founder
+  const [tribe] = await db.select().from(tribes).where(eq(tribes.id, tribeId)).limit(1);
+  if (!tribe) throw new Error('Tribe not found');
+  if (tribe.createdBy !== userId) throw new Error('Only the tribe founder can delete a tribe');
+
+  // 1. Delete all bonds targeting this tribe (all members' tribe bonds)
+  const tribeBonds = await db.select().from(bondsTable)
+    .where(eq(bondsTable.targetId, tribeId));
+  for (const bond of tribeBonds) {
+    await db.delete(bondsTable).where(eq(bondsTable.id, bond.id));
+  }
+
+  // 2. Delete posts and their related data (comments, vibes, mood tags)
+  const tribePosts = await db.select({ id: posts.id }).from(posts)
+    .where(eq(posts.tribeId, tribeId));
+  for (const post of tribePosts) {
+    await db.delete(vibes).where(eq(vibes.targetId, post.id));
+    await db.delete(comments).where(eq(comments.postId, post.id));
+    await db.delete(postMoodTags).where(eq(postMoodTags.postId, post.id));
+  }
+  await db.delete(posts).where(eq(posts.tribeId, tribeId));
+
+  // 3. Delete members and pending members
+  await db.delete(tribeMembers).where(eq(tribeMembers.tribeId, tribeId));
+  await db.delete(pendingMembers).where(eq(pendingMembers.tribeId, tribeId));
+
+  // 4. Delete mood tags
+  await db.delete(tribeMoodTags).where(eq(tribeMoodTags.tribeId, tribeId));
+
+  // 5. Delete the tribe itself
+  await db.delete(tribes).where(eq(tribes.id, tribeId));
 }
 
 // ============================================================
@@ -278,7 +334,14 @@ export async function requestToJoinTribe(userId: string, tribeId: string): Promi
     }
   }
 
-  // 6. GATE: Join mechanism
+  // 6. GATE: Tribe member cap
+  const { canAddTribeMember } = await import('@/lib/services/subscription-guard');
+  const memberCheck = await canAddTribeMember(tribeId);
+  if (!memberCheck.allowed) {
+    throw new Error(`This tribe has reached its member limit (${memberCheck.limit}). The tribe owner needs to upgrade their plan.`);
+  }
+
+  // 7. GATE: Join mechanism
   if (tribe.joinMechanism === 'approval') {
     // Add to pending queue
     await db.insert(pendingMembers).values({
@@ -460,5 +523,90 @@ export async function getTribeAnalytics(tribeId: string): Promise<TribeAnalytics
       avgVibesPerPost: avgVibes,
       vibesDelta,
     },
+  };
+}
+
+// ============================================================
+// ADVANCED TRIBE ANALYTICS (Phase 4C — Org Pro+)
+// ============================================================
+
+export interface AdvancedTribeAnalytics {
+  /** Posts per day-of-week (0=Sun..6=Sat), for activity heatmap */
+  activityByDayOfWeek: Array<{ day: string; posts: number; vibes: number }>;
+  /** Posts per hour-of-day (0..23), for time-of-day chart */
+  activityByHour: Array<{ hour: number; posts: number }>;
+  /** Top 10 contributors by post count */
+  topContributors: Array<{ name: string; userId: string; posts: number; vibes: number }>;
+  /** Retention: members active in last 30d vs total members */
+  retention: { activeMembers: number; totalMembers: number; retentionRate: string };
+  /** Content mix: posts with images vs text-only */
+  contentMix: { withImage: number; textOnly: number };
+}
+
+export async function getAdvancedTribeAnalytics(tribeId: string): Promise<AdvancedTribeAnalytics> {
+  const { posts, users: usersTable } = await import('@/db/schema');
+
+  // All posts for this tribe
+  const allPosts = await db.select({
+    authorId: posts.authorId,
+    vibeCount: posts.vibeCount,
+    createdAt: posts.createdAt,
+    imageUrl: posts.imageUrl,
+  }).from(posts).where(eq(posts.tribeId, tribeId));
+
+  // Activity by day of week
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayStats = dayNames.map(d => ({ day: d, posts: 0, vibes: 0 }));
+  const hourStats = Array.from({ length: 24 }, (_, h) => ({ hour: h, posts: 0 }));
+
+  for (const p of allPosts) {
+    if (p.createdAt) {
+      const d = new Date(p.createdAt);
+      dayStats[d.getDay()]!.posts++;
+      dayStats[d.getDay()]!.vibes += (p.vibeCount ?? 0);
+      hourStats[d.getHours()]!.posts++;
+    }
+  }
+
+  // Top contributors
+  const authorCounts: Record<string, { posts: number; vibes: number }> = {};
+  for (const p of allPosts) {
+    if (!authorCounts[p.authorId]) authorCounts[p.authorId] = { posts: 0, vibes: 0 };
+    authorCounts[p.authorId]!.posts++;
+    authorCounts[p.authorId]!.vibes += (p.vibeCount ?? 0);
+  }
+  const topAuthorIds = Object.entries(authorCounts)
+    .sort((a, b) => b[1].posts - a[1].posts)
+    .slice(0, 10);
+
+  const topContributors = await Promise.all(
+    topAuthorIds.map(async ([userId, stats]) => {
+      const [u] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      return { name: u?.name ?? 'Unknown', userId, posts: stats.posts, vibes: stats.vibes };
+    })
+  );
+
+  // Retention: members who posted in last 30d
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const activeAuthors = new Set(
+    allPosts.filter(p => p.createdAt && new Date(p.createdAt) >= thirtyDaysAgo).map(p => p.authorId)
+  );
+
+  const tribeRow = await db.select().from(tribes).where(eq(tribes.id, tribeId)).limit(1);
+  const totalMembers = tribeRow[0]?.memberCount ?? 0;
+  const activeMembers = activeAuthors.size;
+  const retentionRate = totalMembers > 0 ? ((activeMembers / totalMembers) * 100).toFixed(1) : '0.0';
+
+  // Content mix
+  const withImage = allPosts.filter(p => !!p.imageUrl).length;
+  const textOnly = allPosts.length - withImage;
+
+  return {
+    activityByDayOfWeek: dayStats,
+    activityByHour: hourStats,
+    topContributors,
+    retention: { activeMembers, totalMembers, retentionRate: `${retentionRate}%` },
+    contentMix: { withImage, textOnly },
   };
 }

@@ -96,17 +96,18 @@ export async function createBillingPortalSession(
   userId: string,
   returnUrl: string = '/settings',
 ): Promise<{ url: string }> {
-  const stripe = getStripe();
-
-  // Find the user's Stripe customer ID
+  // Check for a Stripe customer ID BEFORE initializing the Stripe client.
+  // Founding/earned members won't have one, and STRIPE_SECRET_KEY may not
+  // be configured — we should redirect gracefully rather than throw.
   const [sub] = await db.select().from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1);
 
   if (!sub?.stripeCustomerId) {
-    throw new Error('No active subscription found');
+    return { url: '/billing' };
   }
 
+  const stripe = getStripe();
   const origin = process.env.WEBAUTHN_ORIGIN || 'http://localhost:9002';
   const session = await stripe.billingPortal.sessions.create({
     customer: sub.stripeCustomerId,

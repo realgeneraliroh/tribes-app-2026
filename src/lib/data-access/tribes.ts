@@ -25,6 +25,8 @@ function rowToTribe(row: typeof tribes.$inferSelect, moods: string[]): Tribe {
     joinMechanism: (row.joinMechanism ?? undefined) as Tribe['joinMechanism'],
     minimumReputation: (row.minimumReputation ?? undefined) as Tribe['minimumReputation'],
     minimumAccountAgeDays: row.minimumAccountAgeDays ?? undefined,
+    brandColor: row.brandColor ?? undefined,
+    brandLogo: row.brandLogo ?? undefined,
   };
 }
 

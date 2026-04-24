@@ -159,7 +159,7 @@ export async function redeemInviteCode(
     .set({ usedCount: (currentCode?.usedCount ?? 0) + 1 })
     .where(eq(inviteCodes.id, normalizedCode));
 
-  // Referral tracking: award inviter 25 reputation points
+  // Referral tracking: award inviter 25 reputation points and auto-send a bond request
   try {
     const [codeRecord] = await db.select({ createdBy: inviteCodes.createdBy })
       .from(inviteCodes).where(eq(inviteCodes.id, normalizedCode)).limit(1);
@@ -167,6 +167,20 @@ export async function redeemInviteCode(
     if (createdBy && createdBy !== userId) {
       const { recordContribution } = await import('@/lib/services/contribution-service');
       await recordContribution(createdBy, 'referral', userId, `Referred user via invite code ${normalizedCode}`);
+
+      // Auto-create a bond request from the new user to the inviter
+      try {
+        const { createBondRequest } = await import('@/lib/services/bond-service');
+        await createBondRequest(
+          userId,         // fromUserId (invitee)
+          createdBy,      // toUserId (inviter)
+          'friend',       // bondType
+          'digital_introduction', // formationMethod
+          'I just joined using your invite code!'
+        );
+      } catch (bondErr) {
+        console.warn('[invite-service] auto bond request failed:', bondErr);
+      }
     }
   } catch (e) { console.warn('[invite-service] referral tracking failed:', e); }
 

@@ -35,6 +35,7 @@ export interface UserProfile {
   emailVerified?: boolean;
   totpEnabled?: boolean;
   aiDataSharingEnabled?: boolean;
+  isVerified?: boolean;
   accountCreatedAt?: Date;
 }
 
@@ -214,6 +215,8 @@ export interface Tribe {
   joinMechanism?: 'instant' | 'approval';
   minimumReputation?: UserProfile['reputationStatus'];
   minimumAccountAgeDays?: number;
+  brandColor?: string;
+  brandLogo?: string;
 }
 
 // Story related types

@@ -327,6 +327,11 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Billing & Subscription — first section for membership visibility */}
+      <BillingSection roleName={profile.role} hasActiveSubscription={profile.role !== 'Human_Free'} />
+
+      <Separator />
+
       {/* Identity & Profile Settings — stays inline due to tight state coupling */}
       <Card className="shadow-lg">
         <CardHeader>
@@ -499,25 +504,37 @@ export default function SettingsPage() {
       <Separator />
       <AppearanceSection />
 
+      {/* ── Admin-Only Section ── */}
       {profile.role === 'Admin' && (
         <>
           <Separator />
-          <div className="space-y-6">
-            <header>
-              <h2 className="text-2xl font-bold tracking-normal font-mono text-foreground flex items-center gap-2">
-                <Cpu className="h-6 w-6 text-primary" /> AI Inference Engine
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
+          <div className="space-y-6 p-6 rounded-lg border-2 border-dashed border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/10">
+            <header className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-amber-500/10">
+                <Cpu className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-normal font-mono text-foreground">
+                  Platform Administration
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Admin-only controls. These settings affect all users on the platform.
+                </p>
+              </div>
+            </header>
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-primary" /> AI Inference Engine
+              </h3>
+              <p className="text-sm text-muted-foreground">
                 Configure the LLM backend for T-Codex Prime and automated workflows.
               </p>
-            </header>
-            <AiSettingsSection />
+              <AiSettingsSection />
+            </div>
           </div>
         </>
       )}
-
-      <Separator />
-      <BillingSection roleName={profile.role} hasActiveSubscription={profile.role !== 'Human_Free'} />
 
       <Separator />
       <AccountActionsSection />

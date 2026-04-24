@@ -103,6 +103,38 @@ export async function canReserveAlias(userId: string): Promise<{
 }
 
 /**
+ * Checks if a tribe can accept another member (under the owner's plan limit).
+ * The member cap is enforced on the tribe *owner's* plan, not the joining user's plan.
+ */
+export async function canAddTribeMember(tribeId: string): Promise<{
+  allowed: boolean;
+  current: number;
+  limit: number | null;
+  planName: string;
+}> {
+  // Find the tribe owner
+  const [tribe] = await db.select({ createdBy: tribes.createdBy, memberCount: tribes.memberCount })
+    .from(tribes).where(eq(tribes.id, tribeId)).limit(1);
+  if (!tribe || !tribe.createdBy) {
+    return { allowed: true, current: 0, limit: null, planName: 'Unknown' };
+  }
+
+  const plan = await getUserPlan(tribe.createdBy);
+  const currentCount = tribe.memberCount ?? 0;
+
+  if (plan.maxMembers === null || plan.maxMembers === undefined) {
+    return { allowed: true, current: currentCount, limit: null, planName: plan.name };
+  }
+
+  return {
+    allowed: currentCount < plan.maxMembers,
+    current: currentCount,
+    limit: plan.maxMembers,
+    planName: plan.name,
+  };
+}
+
+/**
  * Checks if a feature flag is enabled for a user's plan.
  */
 export async function hasFeature(userId: string, feature: string): Promise<boolean> {

@@ -19,6 +19,7 @@ export const users = sqliteTable('users', {
   totpSecret: text('totp_secret'),
   totpEnabled: integer('totp_enabled', { mode: 'boolean' }).default(false),
   aiDataSharingEnabled: integer('ai_data_sharing_enabled', { mode: 'boolean' }).default(true),
+  isVerified: integer('is_verified', { mode: 'boolean' }).default(false), // Org verified badge
   deletionRequestedAt: integer('deletion_requested_at', { mode: 'timestamp' }), // null = active, set = pending deletion
   createdAt: integer('created_at', { mode: 'timestamp' }),
 });
@@ -69,13 +70,14 @@ export const vaultBackups = sqliteTable('vault_backups', {
 // ============================================================
 
 export const plans = sqliteTable('plans', {
-  id: text('id').primaryKey(),              // 'free', 'individual_coop', 'org_base', 'org_pro', 'org_enterprise'
+  id: text('id').primaryKey(),              // 'free', 'individual_coop', 'creator', 'org_base', 'org_pro', 'org_enterprise'
   name: text('name').notNull(),
   description: text('description'),
   priceMonthly: integer('price_monthly'),   // cents (null = free)
   priceYearly: integer('price_yearly'),     // cents (null = free)
   maxBonds: integer('max_bonds'),           // null = unlimited
   maxTribesOwned: integer('max_tribes_owned'),
+  maxMembers: integer('max_members'),       // null = unlimited; tribe member cap for org tiers
   stripePriceIdMonthly: text('stripe_price_id_monthly'),
   stripePriceIdYearly: text('stripe_price_id_yearly'),
   targetRole: text('target_role').notNull(), // UserRole this plan grants
@@ -201,6 +203,8 @@ export const tribes = sqliteTable('tribes', {
   minimumReputation: text('minimum_reputation'),
   minimumAccountAgeDays: integer('minimum_account_age_days'),
   createdBy: text('created_by').references(() => users.id),
+  brandColor: text('brand_color'),                // Hex color for org branding (e.g. '#4F46E5')
+  brandLogo: text('brand_logo'),                  // URL to org logo image
   createdAt: integer('created_at', { mode: 'timestamp' }),
 });
 
@@ -531,3 +535,71 @@ export const mentions = sqliteTable('mentions', {
   read: integer('read', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
+
+// ============================================================
+// CO-OP VOTING (Phase 4A)
+// ============================================================
+
+export const proposals = sqliteTable('proposals', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('active'), // 'active' | 'closed' | 'canceled'
+  tribeId: text('tribe_id').references(() => tribes.id, { onDelete: 'cascade' }), // null = platform-wide
+  deadline: integer('deadline', { mode: 'timestamp' }).notNull(),
+  voteCount: integer('vote_count').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+});
+
+export const proposalOptions = sqliteTable('proposal_options', {
+  id: text('id').primaryKey(),
+  proposalId: text('proposal_id').notNull().references(() => proposals.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  voteCount: integer('vote_count').default(0),
+  sortOrder: integer('sort_order').default(0),
+});
+
+export const votes = sqliteTable('votes', {
+  id: text('id').primaryKey(),
+  proposalId: text('proposal_id').notNull().references(() => proposals.id, { onDelete: 'cascade' }),
+  optionId: text('option_id').notNull().references(() => proposalOptions.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+});
+
+// ============================================================
+// COMMERCE — STRIPE CONNECT (Phase 4B)
+// ============================================================
+
+/** Stripe Connect account linked to a tribe for receiving payments */
+export const connectedAccounts = sqliteTable('connected_accounts', {
+  id: text('id').primaryKey(),
+  tribeId: text('tribe_id').notNull().references(() => tribes.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // Owner who connected
+  stripeAccountId: text('stripe_account_id').notNull(),
+  status: text('status').notNull().default('pending'), // 'pending' | 'active' | 'restricted' | 'disabled'
+  chargesEnabled: integer('charges_enabled', { mode: 'boolean' }).default(false),
+  payoutsEnabled: integer('payouts_enabled', { mode: 'boolean' }).default(false),
+  platformFeePercent: integer('platform_fee_percent').default(5), // Default 5% for Base
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+});
+
+/** Records every payment transaction through the platform */
+export const transactions = sqliteTable('transactions', {
+  id: text('id').primaryKey(),
+  tribeId: text('tribe_id').notNull().references(() => tribes.id, { onDelete: 'cascade' }),
+  buyerId: text('buyer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sellerId: text('seller_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // Tribe owner
+  amountCents: integer('amount_cents').notNull(),
+  platformFeeCents: integer('platform_fee_cents').notNull(),
+  sellerAmountCents: integer('seller_amount_cents').notNull(),
+  currency: text('currency').notNull().default('usd'),
+  description: text('description'),
+  stripePaymentIntentId: text('stripe_payment_intent_id'),
+  stripeTransferId: text('stripe_transfer_id'),
+  status: text('status').notNull().default('pending'), // 'pending' | 'completed' | 'failed' | 'refunded'
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+});
+
+

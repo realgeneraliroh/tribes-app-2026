@@ -38,6 +38,7 @@ interface TribeDetailState {
   isMember: boolean;
   isLoading: boolean;
   isJoining: boolean;
+  isOwnerVerified: boolean;
   reportReason: string;
 
   promoteDialog: DialogState<TribePost | null>;
@@ -54,7 +55,7 @@ type Action =
   | { type: 'SET_TRIBE_DATA'; payload: {
       tribe: Tribe; members: TribeMember[]; posts: TribePost[];
       reportedPostIds: Set<string>; reportedPosts: ReportedPost[];
-      events: Event[]; isMember: boolean;
+      events: Event[]; isMember: boolean; isOwnerVerified: boolean;
     }}
   | { type: 'SET_POSTS'; payload: TribePost[] }
   | { type: 'ADD_PROMOTED_POST'; payload: string }
@@ -77,7 +78,7 @@ type Action =
 const initialState: TribeDetailState = {
   tribe: null, posts: [], events: [], members: [],
   reportedPostIds: new Set(), reportedPosts: [], promotedPostIds: new Set(),
-  isMember: false, isLoading: true, isJoining: false, reportReason: '',
+  isMember: false, isLoading: true, isJoining: false, isOwnerVerified: false, reportReason: '',
   promoteDialog: { open: false, target: null },
   reportPostDialog: { open: false, target: null },
   reportCommentDialog: { open: false, target: null },
@@ -198,8 +199,24 @@ export function TribeDetailProvider({ children }: { children: React.ReactNode })
           reportedPosts: tribeReports.reports,
           events: eventsData.sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime()),
           isMember: memberOfTribe,
+          isOwnerVerified: false, // Resolved below
         },
       });
+
+      // Resolve owner verified status asynchronously (non-blocking)
+      if (tribeData.id) {
+        import('@/lib/actions/tribe-actions').then(({ getTribeOwnerVerified }) =>
+          getTribeOwnerVerified(tribeData.id).then(v => {
+            if (v) dispatch({ type: 'SET_TRIBE_DATA', payload: {
+              tribe: tribeData, members: membersData,
+              posts: postsData.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+              reportedPostIds: reportedIds, reportedPosts: tribeReports.reports,
+              events: eventsData.sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime()),
+              isMember: memberOfTribe, isOwnerVerified: v,
+            }});
+          }).catch(() => {})
+        );
+      }
     } else {
       router.push('/tribes');
     }

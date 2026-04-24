@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,9 @@ import { Fingerprint, Loader2, Mail, Ticket, CheckCircle2 } from "lucide-react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { registerUserAction, finishRegistrationAction } from "@/lib/auth-actions";
 import { validateInviteCode } from '@/lib/actions/profile-actions';
-import { getCaptchaChallenge } from '@/lib/actions/auth-actions';
 import { useToast } from "@/hooks/use-toast";
-import { CaptchaChallenge, HoneypotField } from "@/components/ui/captcha-challenge";
+import { HoneypotField } from "@/components/ui/captcha-challenge";
+import { TurnstileWidget, type TurnstileWidgetRef } from "@/components/turnstile-widget";
 
 const INVITE_ONLY = process.env.NEXT_PUBLIC_INVITE_ONLY === 'true';
 
@@ -26,20 +26,17 @@ export default function SignupPage() {
   const [invitePlanName, setInvitePlanName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
-  const [captchaChallenge, setCaptchaChallenge] = useState<{ challenge: string; difficulty: number } | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetRef | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
-  // Fetch PoW challenge on mount
-  useEffect(() => {
-    getCaptchaChallenge()
-      .then(setCaptchaChallenge)
-      .catch(err => console.error('[captcha] Failed to load challenge:', err));
+  const handleTurnstileVerified = useCallback((token: string) => {
+    setTurnstileToken(token);
   }, []);
 
-  const handleCaptchaVerify = useCallback((token: string) => {
-    setCaptchaToken(token);
+  const handleTurnstileExpired = useCallback(() => {
+    setTurnstileToken(null);
   }, []);
 
   async function handleValidateInvite() {
@@ -77,17 +74,29 @@ export default function SignupPage() {
       return;
     }
 
-    // CAPTCHA check
-    if (!captchaToken) {
-      toast({ variant: 'destructive', title: 'Please wait', description: 'Human verification is still in progress.' });
-      return;
+    // Turnstile bot challenge — pass token if available, server validates server-side
+    // (widget may not fire in all environments; server gracefully skips if no key configured)
+    if (turnstileToken === null) {
+      // Token not yet received — still attempt registration (server will validate)
+      console.debug('[turnstile] No token yet, proceeding without client challenge');
     }
 
     setIsLoading(true);
     try {
       // 1. Get registration options from server (with invite code validation)
-      const { options, userId, inviteCode: validatedCode } = await registerUserAction(name, email, inviteCode || undefined);
-      
+      const result = await registerUserAction(name, email, inviteCode || undefined, turnstileToken ?? undefined);
+
+      // Surface any server-side errors (rate limit, duplicate email, bot check, etc.)
+      if ('error' in result) {
+        toast({ variant: 'destructive', title: 'Registration Failed', description: result.error });
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const { options, userId, inviteCode: validatedCode } = result;
+
       // 2. Start biometric registration in browser
       const regResponse = await startRegistration({
         optionsJSON: options,
@@ -120,6 +129,9 @@ export default function SignupPage() {
         title: "Registration Failed",
         description: ((error instanceof Error) ? error.message : 'An error occurred') || "There was an error creating your account.",
       });
+      // Reset Turnstile so the user gets a fresh token on retry
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -202,20 +214,19 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* CAPTCHA + Honeypot */}
+            {/* Honeypot + Turnstile bot protection */}
             <HoneypotField />
-            {captchaChallenge && (
-              <CaptchaChallenge
-                challenge={captchaChallenge.challenge}
-                difficulty={captchaChallenge.difficulty}
-                onVerify={handleCaptchaVerify}
-              />
-            )}
+            <TurnstileWidget
+              ref={turnstileRef}
+              onVerified={handleTurnstileVerified}
+              onExpired={handleTurnstileExpired}
+              className="mt-1"
+            />
             
             <div className="pt-4 space-y-3">
               <Button 
                 type="submit" 
-                disabled={isLoading || !name || !email || !captchaToken}
+                disabled={isLoading || !name || !email || (INVITE_ONLY && !isInviteValidated)}
                 className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg"
               >
                 {isLoading ? (

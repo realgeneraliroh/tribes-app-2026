@@ -61,11 +61,12 @@ function buildSecurityHeaders() {
 
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",  // Next.js hydration + PoW worker
-    "worker-src 'self' blob:",                                  // PoW captcha Web Worker
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://challenges.cloudflare.com",
+    "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSources.join(' ')}`,
-    `connect-src ${connectSources.join(' ')}`,
+    `connect-src ${connectSources.join(' ')} https://challenges.cloudflare.com`,
+    "frame-src https://challenges.cloudflare.com",  // Turnstile renders inside an iframe
     "font-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -78,6 +79,8 @@ function buildSecurityHeaders() {
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'X-DNS-Prefetch-Control', value: 'on' },
     { key: 'Content-Security-Policy', value: csp },
+    // Allow Turnstile iframe to access the features it needs for bot detection
+    { key: 'Permissions-Policy', value: 'xr-spatial-tracking=()' },
   ];
 }
 

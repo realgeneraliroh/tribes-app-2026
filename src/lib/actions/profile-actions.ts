@@ -26,6 +26,11 @@ export async function graduateUserFromOnboarding(): Promise<UserProfile | null> 
 // ======== VAULT BACKUP ========
 export async function saveVaultBackup(encryptedVaultBase64: string, salt: string): Promise<void> {
   const userId = await requireAuth();
+  // Subscription guard: vault backup is a paid feature
+  const { hasFeature } = await import('@/lib/services/subscription-guard');
+  if (!(await hasFeature(userId, 'vault_backup'))) {
+    throw new Error('Vault backup requires a paid membership. Upgrade to unlock this feature.');
+  }
   const binaryStr = atob(encryptedVaultBase64);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
@@ -128,6 +133,83 @@ export async function getContributionSummary() {
   const userId = await requireAuth();
   const { getContributionSummary: fn } = await import('@/lib/services/contribution-service');
   return fn(userId);
+}
+
+/**
+ * Aggregated creator analytics — personal dashboard data.
+ * Gated behind 'creator_analytics' feature flag in the UI.
+ */
+export async function getCreatorAnalytics() {
+  const userId = await requireAuth();
+  const { db } = await import('@/db');
+  const { posts, tribes, bonds, tribeMembers, events, contributions } = await import('@/db/schema');
+  const { eq, and, gte, count, sql } = await import('drizzle-orm');
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Parallel queries for speed
+  const [
+    [postCount], [recentPostCount], [tribeCount], [bondCount],
+    [eventCount], [vibeTotal], topPosts, contributionRows,
+  ] = await Promise.all([
+    db.select({ count: count() }).from(posts).where(eq(posts.authorId, userId)),
+    db.select({ count: count() }).from(posts).where(and(eq(posts.authorId, userId), gte(posts.createdAt, thirtyDaysAgo))),
+    db.select({ count: count() }).from(tribes).where(eq(tribes.createdBy, userId)),
+    db.select({ count: count() }).from(bonds).where(eq(bonds.userId, userId)),
+    db.select({ count: count() }).from(events).where(eq(events.creatorId, userId)),
+    db.select({ total: sql<number>`COALESCE(SUM(${posts.vibeCount}), 0)` }).from(posts).where(eq(posts.authorId, userId)),
+    db.select({
+      title: posts.title,
+      vibeCount: posts.vibeCount,
+      commentCount: posts.commentCount,
+      tribeId: posts.tribeId,
+      createdAt: posts.createdAt,
+    }).from(posts).where(eq(posts.authorId, userId))
+      .orderBy(sql`${posts.vibeCount} + ${posts.commentCount} DESC`)
+      .limit(5),
+    db.select({
+      type: contributions.type,
+      points: contributions.points,
+      createdAt: contributions.createdAt,
+    }).from(contributions).where(eq(contributions.userId, userId))
+      .orderBy(sql`${contributions.createdAt} DESC`)
+      .limit(20),
+  ]);
+
+  // Tribe memberships for "reach" metric
+  const [membershipCount] = await db.select({ count: count() }).from(tribeMembers).where(eq(tribeMembers.userId, userId));
+
+  return {
+    totalPosts: postCount?.count ?? 0,
+    recentPosts: recentPostCount?.count ?? 0,
+    tribesOwned: tribeCount?.count ?? 0,
+    tribesMember: membershipCount?.count ?? 0,
+    totalBonds: bondCount?.count ?? 0,
+    totalEvents: eventCount?.count ?? 0,
+    totalVibes: Number(vibeTotal?.total ?? 0),
+    topPosts: topPosts.map(p => ({
+      title: p.title || 'Untitled',
+      vibes: p.vibeCount ?? 0,
+      comments: p.commentCount ?? 0,
+      tribeId: p.tribeId,
+    })),
+    recentContributions: contributionRows.map(c => ({
+      type: c.type,
+      points: c.points,
+      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : null,
+    })),
+  };
+}
+
+/**
+ * Server action to check if the current user has access to creator analytics.
+ */
+export async function checkCreatorAnalyticsAccess(): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const { hasFeature } = await import('@/lib/services/subscription-guard');
+  return hasFeature(userId, 'creator_analytics');
 }
 
 // ======== SUBSCRIPTION STATUS ========

@@ -14,6 +14,7 @@ import {
 import { ArrowLeft, Users, Link2, UserPlus, Settings, MoreVertical, LogOut } from "lucide-react";
 import { moodsData } from '@/lib/moods-data';
 import { useTribeDetail } from './tribe-detail-context';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 
 export function TribeHeroBanner() {
   const router = useRouter();
@@ -70,7 +71,10 @@ export function TribeHeroBanner() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
       </div>
       <CardHeader className="relative -mt-16 z-10 p-4 md:p-6 bg-transparent">
-        <CardTitle className="text-3xl md:text-4xl font-bold text-white font-mono tracking-tight drop-shadow-lg">{tribe.name}</CardTitle>
+        <CardTitle className="text-3xl md:text-4xl font-bold text-white font-mono tracking-tight drop-shadow-lg flex items-center gap-2">
+          {tribe.name}
+          {state.isOwnerVerified && <VerifiedBadge size="lg" className="text-blue-400 drop-shadow-lg" />}
+        </CardTitle>
         <div className="flex items-center space-x-3 pt-1">
           <Badge variant={tribe.isPublic ? "secondary" : "destructive"} className="text-xs py-1 px-2 backdrop-blur-sm bg-black/30 text-white border-white/50">
             {tribe.isPublic ? "Public Tribe" : "Private Tribe"}

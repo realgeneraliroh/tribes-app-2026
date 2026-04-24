@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon, History } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon, History, Palette, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
@@ -24,7 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { getTribeById, updateTribeSettings, checkTribeAccess } from '@/lib/actions/tribe-actions';
+import { getTribeById, updateTribeSettings, checkTribeAccess, deleteTribe } from '@/lib/actions/tribe-actions';
 import type { Tribe } from '@/lib/types';
 import { moodsData as allMoodsData } from '@/lib/moods-data';
 import { REPUTATION_GATE_OPTIONS, type ReputationStatus } from '@/lib/constants';
@@ -44,6 +44,8 @@ const tribeSettingsFormSchema = z.object({
   joinMechanism: z.enum(['instant', 'approval']).default('instant'),
   minimumReputation: z.string().optional(),
   minimumAccountAgeDays: z.string().optional(),
+  brandColor: z.string().optional(),
+  brandLogo: z.string().optional(),
 });
 
 type TribeSettingsFormValues = z.infer<typeof tribeSettingsFormSchema>;
@@ -60,6 +62,9 @@ export default function TribeSettingsPage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     // Determine access via server-side tribe authorization (not global role)
@@ -83,6 +88,8 @@ export default function TribeSettingsPage() {
       joinMechanism: 'instant',
       minimumReputation: "None",
       minimumAccountAgeDays: "0",
+      brandColor: "",
+      brandLogo: "",
     },
   });
 
@@ -102,6 +109,8 @@ export default function TribeSettingsPage() {
             joinMechanism: currentTribeData.joinMechanism || 'instant',
             minimumReputation: currentTribeData.minimumReputation || "None",
             minimumAccountAgeDays: String(currentTribeData.minimumAccountAgeDays || 0),
+            brandColor: currentTribeData.brandColor || "",
+            brandLogo: currentTribeData.brandLogo || "",
           });
         } else {
           router.push('/tribes');
@@ -455,6 +464,51 @@ export default function TribeSettingsPage() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Org Branding — gated behind org_branding feature */}
+                {(role === 'Org_Base' || role === 'Org_Pro' || role === 'Org_Enterprise' || role === 'Admin') && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-foreground flex items-center">
+                        <Palette className="mr-2 h-5 w-5 text-primary" /> Organization Branding
+                      </h3>
+                      <p className="text-sm text-muted-foreground">Customize your tribe's appearance with your organization's brand identity.</p>
+                      <div className="rounded-lg border p-4 shadow-sm space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="brandColor" className="text-sm font-medium">Brand Color</Label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="color"
+                              id="brandColor"
+                              value={form.watch('brandColor') || '#4F46E5'}
+                              onChange={(e) => form.setValue('brandColor', e.target.value)}
+                              className="h-10 w-14 rounded border cursor-pointer"
+                            />
+                            <Input
+                              value={form.watch('brandColor') || ''}
+                              onChange={(e) => form.setValue('brandColor', e.target.value)}
+                              placeholder="#4F46E5"
+                              className="font-mono text-sm max-w-[140px]"
+                            />
+                            <span className="text-xs text-muted-foreground">Accent color for your tribe's pages</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="brandLogo" className="text-sm font-medium">Brand Logo URL</Label>
+                          <Input
+                            id="brandLogo"
+                            value={form.watch('brandLogo') || ''}
+                            onChange={(e) => form.setValue('brandLogo', e.target.value)}
+                            placeholder="https://your-org.com/logo.png"
+                            className="text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">URL to your organization's logo (displayed in tribe header)</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
             </CardContent>
@@ -465,6 +519,84 @@ export default function TribeSettingsPage() {
             </CardFooter>
           </form>
         </Form>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="shadow-xl border-destructive/50">
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <Trash2 className="h-6 w-6 text-destructive" />
+            <div>
+              <CardTitle className="text-xl font-semibold text-destructive tracking-normal">Danger Zone</CardTitle>
+              <CardDescription>Irreversible actions for this tribe.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border border-destructive/30 p-4 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-medium text-sm">Delete this tribe</p>
+                <p className="text-xs text-muted-foreground">Permanently remove this tribe, all posts, members, and bonds. This cannot be undone.</p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Tribe
+              </Button>
+            </div>
+
+            {showDeleteConfirm && (
+              <div className="mt-3 p-4 border border-destructive rounded-md bg-destructive/5 space-y-3">
+                <p className="text-sm font-medium text-destructive">Are you absolutely sure?</p>
+                <p className="text-xs text-muted-foreground">
+                  Type <strong className="text-foreground">{tribe.name}</strong> below to confirm deletion.
+                </p>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={`Type "${tribe.name}" to confirm`}
+                  className="text-sm"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteConfirmText !== tribe.name || isDeleting}
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        await deleteTribe(tribeId);
+                        toast({ title: "Tribe Deleted", description: `"${tribe.name}" has been permanently deleted.` });
+                        router.push('/tribes');
+                      } catch (err) {
+                        toast({ variant: "destructive", title: "Delete Failed", description: (err as Error).message });
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                  >
+                    {isDeleting ? "Deleting..." : "I understand, delete this tribe"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

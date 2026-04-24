@@ -5,11 +5,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Users, MessageSquare, TrendingUp, BarChart2 as BarChartIcon, ShieldAlert, Loader2 } from 'lucide-react';
-import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Area, Bar, ResponsiveContainer } from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Users, MessageSquare, TrendingUp, BarChart2 as BarChartIcon, ShieldAlert, Loader2, Sparkles, Activity, Image as ImageIcon, FileText } from 'lucide-react';
+import { AreaChart, BarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend, Area, Bar, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { type Tribe } from '@/lib/types';
-import { getTribeById, getTribeAnalytics } from '@/lib/actions/tribe-actions';
-import type { TribeAnalytics } from '@/lib/services/tribe-service';
+import { getTribeById, getTribeAnalytics, getAdvancedTribeAnalytics } from '@/lib/actions/tribe-actions';
+import type { TribeAnalytics, AdvancedTribeAnalytics } from '@/lib/services/tribe-service';
+
+const PIE_COLORS = ['hsl(var(--primary))', 'hsl(var(--muted-foreground))'];
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -17,6 +20,7 @@ export default function AnalyticsPage() {
   const tribeId = params.tribeId as string;
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [analytics, setAnalytics] = useState<TribeAnalytics | null>(null);
+  const [advanced, setAdvanced] = useState<AdvancedTribeAnalytics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,6 +35,10 @@ export default function AnalyticsPage() {
         ]);
         setTribe(tribeData);
         setAnalytics(analyticsData);
+
+        // Load advanced analytics (returns null if feature not available)
+        const advData = await getAdvancedTribeAnalytics(tribeId);
+        setAdvanced(advData);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Failed to load analytics';
         setError(msg);
@@ -205,6 +213,146 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </section>
+
+      {/* ═══════════════ ADVANCED ANALYTICS (Org Pro+) ═══════════════ */}
+      {advanced ? (
+        <>
+          <div className="flex items-center gap-2 pt-4">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold">Advanced Insights</h2>
+            <Badge variant="secondary" className="text-xs">Org Pro+</Badge>
+          </div>
+
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Activity by Day of Week */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Activity className="h-4 w-4" /> Activity by Day</CardTitle>
+                <CardDescription>Posts and vibes by day of the week.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={advanced.activityByDayOfWeek}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}/>
+                    <Legend />
+                    <Bar dataKey="posts" fill="hsl(var(--primary))" name="Posts" />
+                    <Bar dataKey="vibes" fill="hsl(221, 83%, 53%)" name="Vibes" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Activity by Hour */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Activity className="h-4 w-4" /> Peak Hours</CardTitle>
+                <CardDescription>When your community is most active (UTC).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={advanced.activityByHour}>
+                    <defs>
+                      <linearGradient id="colorHour" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.6}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} />
+                    <YAxis />
+                    <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }} labelFormatter={(h) => `${h}:00 UTC`} />
+                    <Area type="monotone" dataKey="posts" stroke="hsl(var(--primary))" fill="url(#colorHour)" name="Posts" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Retention */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Member Retention (30d)</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="text-4xl font-bold text-primary">{advanced.retention.retentionRate}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {advanced.retention.activeMembers} of {advanced.retention.totalMembers} members active
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Content Mix */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Content Mix</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={150}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'With Image', value: advanced.contentMix.withImage },
+                        { name: 'Text Only', value: advanced.contentMix.textOnly },
+                      ]}
+                      cx="50%" cy="50%"
+                      innerRadius={40} outerRadius={60}
+                      dataKey="value"
+                    >
+                      {PIE_COLORS.map((c, i) => <Cell key={i} fill={c} />)}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center gap-4 text-xs mt-1">
+                  <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {advanced.contentMix.withImage} images</span>
+                  <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {advanced.contentMix.textOnly} text</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Contributors */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Top Contributors</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {advanced.topContributors.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No contributors yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {advanced.topContributors.slice(0, 5).map((c, i) => (
+                      <div key={c.userId} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground font-mono text-xs w-4">{i + 1}</span>
+                          <span className="font-medium truncate max-w-[120px]">{c.name}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">{c.posts} posts · {c.vibes} vibes</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        </>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center gap-4 p-4">
+            <Sparkles className="h-8 w-8 text-muted-foreground shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium text-sm">Want deeper insights?</p>
+              <p className="text-xs text-muted-foreground">Upgrade to Org Pro for activity heatmaps, retention metrics, top contributors, and content mix analytics.</p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => router.push('/billing')}>
+              <Sparkles className="mr-1 h-3 w-3" /> Upgrade
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -54,7 +54,7 @@ export async function getMaxRsvpPoints(userId: string): Promise<{ max: number; r
   try {
     const { getContributionSummary } = await import('./contribution-service');
     const summary = await getContributionSummary(userId);
-    const rep = summary.totalPoints;
+    const rep = summary.allTimePoints;
     if (rep >= 100) return { max: 50, reputation: rep };
     if (rep >= 50) return { max: 25, reputation: rep };
     return { max: 10, reputation: rep };

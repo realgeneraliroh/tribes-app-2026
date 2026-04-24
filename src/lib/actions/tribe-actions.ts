@@ -1,6 +1,6 @@
 'use server';
 
-import { requireAuth, getCurrentUserId } from './shared';
+import { requireAuth, requireVerifiedEmail, getCurrentUserId } from './shared';
 import type { Tribe, TribeMember, PendingMember } from '@/lib/types';
 import { trackContribution } from './shared';
 import type { TribeAccessLevel } from '@/lib/services/tribe-auth';
@@ -58,7 +58,7 @@ export async function checkTribeAccess(tribeId: string): Promise<TribeAccessLeve
 // ======== TRIBE SERVICE (MUTATIONS — all hardened with auth) ========
 
 export async function createTribe(payload: Parameters<typeof import('@/lib/services/tribe-service').createTribe>[0]): Promise<Tribe> {
-  const userId = await requireAuth();
+  const userId = await requireVerifiedEmail();
   // Subscription guard: check if user can create another tribe
   const { canCreateTribe } = await import('@/lib/services/subscription-guard');
   const check = await canCreateTribe(userId);
@@ -141,6 +141,14 @@ export async function leaveTribe(tribeId: string): Promise<void> {
   return fn(userId, tribeId);
 }
 
+export async function deleteTribe(tribeId: string): Promise<void> {
+  const userId = await requireAuth();
+  const { requireTribeFounder } = await import('@/lib/services/tribe-auth');
+  await requireTribeFounder(userId, tribeId);
+  const { deleteTribe: fn } = await import('@/lib/services/tribe-service');
+  return fn(userId, tribeId);
+}
+
 export async function requestToJoinTribe(tribeId: string): Promise<'joined' | 'pending' | 'rejected'> {
   const userId = await requireAuth();
   const { requestToJoinTribe: fn } = await import('@/lib/services/tribe-service');
@@ -154,4 +162,36 @@ export async function getTribeAnalytics(tribeId: string) {
   await requireTribeSpeaker(userId, tribeId);
   const { getTribeAnalytics: fn } = await import('@/lib/services/tribe-service');
   return fn(tribeId);
+}
+
+/**
+ * Advanced analytics (Org Pro+) — activity heatmaps, top contributors, retention.
+ * Returns null if the user doesn't have the 'analytics' feature.
+ */
+export async function getAdvancedTribeAnalytics(tribeId: string) {
+  const userId = await requireAuth();
+  const { requireTribeSpeaker } = await import('@/lib/services/tribe-auth');
+  await requireTribeSpeaker(userId, tribeId);
+
+  // Feature gate
+  const { hasFeature } = await import('@/lib/services/subscription-guard');
+  const hasAccess = await hasFeature(userId, 'analytics');
+  if (!hasAccess) return null;
+
+  const { getAdvancedTribeAnalytics: fn } = await import('@/lib/services/tribe-service');
+  return fn(tribeId);
+}
+
+// ======== VERIFIED STATUS ========
+/**
+ * Returns whether the tribe owner has a verified profile badge.
+ */
+export async function getTribeOwnerVerified(tribeId: string): Promise<boolean> {
+  const { db } = await import('@/db');
+  const { tribes, users } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const [tribe] = await db.select({ createdBy: tribes.createdBy }).from(tribes).where(eq(tribes.id, tribeId)).limit(1);
+  if (!tribe?.createdBy) return false;
+  const [user] = await db.select({ isVerified: users.isVerified }).from(users).where(eq(users.id, tribe.createdBy)).limit(1);
+  return user?.isVerified ?? false;
 }

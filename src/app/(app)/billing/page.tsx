@@ -39,7 +39,7 @@ const individualCoopTier = {
   description: "For active creators and leaders who want to support and govern the community.",
   features: [
     "Co-Op voting rights on platform decisions",
-    "Create and manage public & private Tribes",
+    "Create and manage up to 5 Tribes",
     "Host Events for your Tribes",
     "Unlimited personal Bonds",
     "Early access to new features",
@@ -47,17 +47,36 @@ const individualCoopTier = {
   cta: "Become a Member",
 };
 
+const creatorTier = {
+  name: "Creator",
+  icon: Sparkles,
+  price: "$14",
+  priceDescription: "/ month",
+  yearlyPrice: "$140",
+  yearlyDescription: "/ year (save 17%)",
+  planId: "creator",
+  description: "For power users who create content and run multiple tribes.",
+  features: [
+    "Everything in Individual Co-Op",
+    "Create and manage up to 15 Tribes",
+    "Family Bonds & Vault Backup",
+    "Creator analytics dashboard",
+    "Reserved alias priority",
+  ],
+  cta: "Go Creator",
+};
+
 const organizationalTiers = [
     {
         name: "Base",
         icon: Building,
-        price: "$29",
+        price: "$49",
         priceDescription: "/ month",
         planId: "org_base",
         description: "For small creators, vendors, and organizations ready to build.",
         features: [
             "Up to 1,000 members",
-            "Includes all Individual Member benefits",
+            "Includes all Creator benefits",
             "Core Creator Toolkit",
             "Direct commerce with 5% transaction fee",
             "Verified organizational profile",
@@ -67,7 +86,7 @@ const organizationalTiers = [
     {
         name: "Pro",
         icon: BarChart,
-        price: "$79",
+        price: "$99",
         priceDescription: "/ month",
         planId: "org_pro",
         description: "For growing organizations that need more scale and insight.",
@@ -169,6 +188,8 @@ export default function BillingPage() {
   // Find the tier features for the current plan
   const currentTierFeatures = currentPlanId === 'individual_coop'
     ? individualCoopTier.features
+    : currentPlanId === 'creator'
+    ? creatorTier.features
     : organizationalTiers.find(t => t.planId === currentPlanId)?.features ?? [];
 
   // ──────────────────────────── MEMBER VIEW ────────────────────────────
@@ -204,7 +225,7 @@ export default function BillingPage() {
                   {subSource === 'founding'
                     ? 'You joined as a Founding Member. Your early support is what makes this platform possible.'
                     : subSource === 'earned'
-                    ? 'You earned your membership through community contributions. Thank you for making this place great.'
+                    ? 'You earned your membership through community contributions. Earned memberships renew monthly based on your activity.'
                     : 'Your membership powers the co-op. Thank you for supporting an ad-free, member-owned platform.'
                   }
                 </CardDescription>
@@ -217,12 +238,24 @@ export default function BillingPage() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-3">Your Benefits</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  {currentTierFeatures.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <Check className="h-4 w-4 text-emerald-500 mr-2 mt-0.5 shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
+                  {currentTierFeatures.map((feature, index) => {
+                    // Mark voting as excluded for earned members
+                    const isVoting = feature.toLowerCase().includes('voting');
+                    const isExcluded = isVoting && subSource === 'earned';
+                    return (
+                      <li key={index} className={cn('flex items-start', isExcluded && 'opacity-50')}>
+                        {isExcluded ? (
+                          <Lock className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 shrink-0" />
+                        ) : (
+                          <Check className="h-4 w-4 text-emerald-500 mr-2 mt-0.5 shrink-0" />
+                        )}
+                        <span>
+                          {feature}
+                          {isExcluded && <span className="text-xs ml-1">(paid members only)</span>}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -242,6 +275,15 @@ export default function BillingPage() {
                     <dt className="text-muted-foreground">Plan</dt>
                     <dd className="font-medium">{currentPlanName}</dd>
                   </div>
+                  {subSource === 'earned' && contribSummary?.daysUntilReset !== null && contribSummary?.daysUntilReset !== undefined && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Renews in</dt>
+                      <dd className={cn('font-medium', contribSummary.daysUntilReset <= 7 ? 'text-amber-600' : 'text-foreground')}>
+                        {contribSummary.daysUntilReset} days
+                        {contribSummary.daysUntilReset <= 7 && ' ⚠️'}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             </div>
@@ -264,14 +306,43 @@ export default function BillingPage() {
               </Button>
             )}
             {subSource === 'founding' && (
-              <p className="text-sm text-muted-foreground">
-                ✨ As a Founding Member, your membership is complimentary. No payment required.
-              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+                <p className="text-sm text-muted-foreground flex-1">
+                  ✨ As a Founding Member, your membership is complimentary. No payment required.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={loadingPlan === `${individualCoopTier.planId}-monthly`}
+                  onClick={() => handleCheckout(individualCoopTier.planId, 'monthly')}
+                >
+                  {loadingPlan === `${individualCoopTier.planId}-monthly` && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
+                  Support the Co-Op — $7/mo
+                </Button>
+              </div>
             )}
             {subSource === 'earned' && (
-              <p className="text-sm text-muted-foreground">
-                🏆 You earned this through community contributions. Keep contributing to maintain your status!
-              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    🏆 Earned through contributions. Keep posting, commenting, and vibing to maintain your status!
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Upgrade to a paid plan for voting rights and permanent membership.
+                  </p>
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={loadingPlan === `${individualCoopTier.planId}-monthly`}
+                  onClick={() => handleCheckout(individualCoopTier.planId, 'monthly')}
+                >
+                  {loadingPlan === `${individualCoopTier.planId}-monthly` && <Loader2 className="h-3 w-3 animate-spin mr-2" />}
+                  <Vote className="h-4 w-4 mr-1" /> Unlock Voting — $7/mo
+                </Button>
+              </div>
             )}
           </CardFooter>
         </Card>
@@ -398,7 +469,7 @@ export default function BillingPage() {
       </header>
 
       {/* Earn-path progress (only for free users with contributions) */}
-      {user && contribSummary && contribSummary.totalPoints > 0 && (
+      {user && contribSummary && contribSummary.monthlyPoints > 0 && (
         <section>
           <Card className="shadow-lg border-muted">
             <CardHeader>
@@ -406,7 +477,11 @@ export default function BillingPage() {
                 <TrendingUp className="h-7 w-7 text-muted-foreground" />
                 <div>
                   <CardTitle className="text-lg tracking-normal">Your Contribution Progress</CardTitle>
-                  <CardDescription>Keep contributing to earn free Co-Op membership!</CardDescription>
+                  <CardDescription>
+                    {contribSummary.daysUntilReset !== null
+                      ? `Earned membership active — ${contribSummary.daysUntilReset} days until renewal`
+                      : 'Keep contributing to earn free membership this month!'}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -415,13 +490,13 @@ export default function BillingPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{contribSummary.contributions.length} contributions</span>
                   <span className="font-medium">
-                    {contribSummary.totalPoints} / {contribSummary.threshold} pts
-                    {contribSummary.progress >= 100 && ' — Ready to earn membership!'}
+                    {contribSummary.monthlyPoints} / {contribSummary.threshold} pts (this month)
+                    {contribSummary.progress >= 100 && ' ✓ Membership earned!'}
                   </span>
                 </div>
                 <Progress value={contribSummary.progress} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  Earn {contribSummary.threshold} points through posts, moderation, referrals, and events to unlock free membership.
+                  Earn {contribSummary.threshold} points per month through posts, comments, vibes, and events to maintain free membership. Points reset monthly.
                 </p>
               </div>
             </CardContent>
@@ -507,7 +582,7 @@ export default function BillingPage() {
           <User className="h-8 w-8 text-primary" />
           <h2 className="text-3xl font-semibold tracking-normal text-foreground">Individual Tiers</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <Card className="shadow-lg flex flex-col">
                <CardHeader className="pt-6">
                   <div className="flex items-center space-x-3 mb-2">
@@ -534,7 +609,7 @@ export default function BillingPage() {
                 </CardFooter>
             </Card>
 
-            <Card className="shadow-lg border-primary ring-2 ring-primary flex flex-col">
+            <Card className="shadow-lg flex flex-col">
                <CardHeader className="pt-6">
                   <div className="flex items-center space-x-3 mb-2">
                     <individualCoopTier.icon className="h-8 w-8 text-primary" />
@@ -564,6 +639,43 @@ export default function BillingPage() {
                   <Button className="w-full" variant="outline" disabled={loadingPlan === `${individualCoopTier.planId}-yearly`} onClick={() => handleCheckout(individualCoopTier.planId, 'yearly')}>
                     {loadingPlan === `${individualCoopTier.planId}-yearly` && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                     Annual — $70/yr (save 17%)
+                  </Button>
+                </CardFooter>
+            </Card>
+
+            <Card className="shadow-lg border-primary ring-2 ring-primary flex flex-col">
+              <div className="py-1 px-3 bg-primary text-primary-foreground text-xs font-semibold rounded-t-lg flex items-center justify-center">
+                <Star className="mr-1.5 h-4 w-4" /> Most Popular
+              </div>
+               <CardHeader className="pt-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <creatorTier.icon className="h-8 w-8 text-primary" />
+                    <CardTitle className="text-xl tracking-normal">{creatorTier.name}</CardTitle>
+                  </div>
+                  <CardDescription>{creatorTier.description}</CardDescription>
+                  <div className="flex items-baseline pt-2">
+                    <span className="text-3xl font-bold tracking-tighter">{creatorTier.price}</span>
+                    <span className="text-sm text-muted-foreground ml-1">{creatorTier.priceDescription}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">or {creatorTier.yearlyPrice} {creatorTier.yearlyDescription}</p>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-3">
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {creatorTier.features.map((f, i) => (
+                      <li key={i} className="flex items-start">
+                        <Check className="h-4 w-4 text-accent mr-2 mt-0.5 shrink-0" /><span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter className="flex-col gap-2">
+                  <Button className="w-full" variant="default" disabled={loadingPlan === `${creatorTier.planId}-monthly`} onClick={() => handleCheckout(creatorTier.planId, 'monthly')}>
+                    {loadingPlan === `${creatorTier.planId}-monthly` && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {creatorTier.cta} — $14/mo
+                  </Button>
+                  <Button className="w-full" variant="outline" disabled={loadingPlan === `${creatorTier.planId}-yearly`} onClick={() => handleCheckout(creatorTier.planId, 'yearly')}>
+                    {loadingPlan === `${creatorTier.planId}-yearly` && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Annual — $140/yr (save 17%)
                   </Button>
                 </CardFooter>
             </Card>

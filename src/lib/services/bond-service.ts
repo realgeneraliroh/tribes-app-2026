@@ -256,6 +256,14 @@ export async function createBondRequest(
     throw new Error(`${bondCheck.planName} plan allows ${bondCheck.limit} bonds (you have ${bondCheck.current}). Upgrade to create more.`);
   }
 
+  // Validation: family bonds require paid feature
+  if (bondType === 'family') {
+    const { hasFeature } = await import('@/lib/services/subscription-guard');
+    if (!(await hasFeature(fromUserId, 'family_bonds'))) {
+      throw new Error('Family bonds require a paid membership. Upgrade to create family bonds.');
+    }
+  }
+
   const id = crypto.randomUUID();
   await db.insert(bondRequests).values({
     id,

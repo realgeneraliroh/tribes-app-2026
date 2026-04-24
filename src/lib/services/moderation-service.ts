@@ -115,6 +115,18 @@ export async function removePost(payload: RemovePostPayload): Promise<void> {
   }).where(eq(posts.id, payload.postId));
 }
 
+/**
+ * Looks up who reported a post (for awarding moderation points on upheld reports).
+ */
+export async function getReportForPost(postId: string): Promise<{ reportedBy: string } | null> {
+  const [report] = await db.select({ reporterId: reports.reporterId })
+    .from(reports)
+    .where(eq(reports.postId, postId))
+    .limit(1);
+  if (!report?.reporterId) return null;
+  return { reportedBy: report.reporterId };
+}
+
 interface BanMemberFromTribePayload {
   tribeId: string;
   memberId: string;

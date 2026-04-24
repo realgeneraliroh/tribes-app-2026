@@ -22,6 +22,7 @@ function rowToProfile(row: typeof users.$inferSelect, aliases: string[]): UserPr
     emailVerified: row.emailVerified ?? false,
     totpEnabled: row.totpEnabled ?? false,
     aiDataSharingEnabled: row.aiDataSharingEnabled ?? true,
+    isVerified: row.isVerified ?? false,
     accountCreatedAt: row.createdAt ?? new Date(),
   };
 }
@@ -49,8 +50,15 @@ export async function updateUserProfile(userId: string, updates: Partial<Omit<Us
   const existing = rows[0];
   if (!existing) return null;
 
-  // ── Reserved alias uniqueness check ──────────────────────────
+  // ── Reserved alias subscription check ─────────────────────────
   if (updates.reservedAlias && updates.reservedAlias !== existing.reservedAlias) {
+    const { canReserveAlias } = await import('./subscription-guard');
+    const aliasCheck = await canReserveAlias(userId);
+    if (!aliasCheck.allowed) {
+      throw new Error('Upgrade to Individual Co-Op or higher to reserve a global alias.');
+    }
+
+    // ── Reserved alias uniqueness check ──────────────────────────
     const [collision] = await db.select({ id: users.id })
       .from(users)
       .where(and(

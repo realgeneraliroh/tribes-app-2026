@@ -1,6 +1,6 @@
 'use server';
 
-import { requireAuth, getCurrentUserId, trackContribution } from './shared';
+import { requireAuth, requireVerifiedEmail, getCurrentUserId, trackContribution } from './shared';
 import type { TribePost, MoodStreamPost, ReportedPost, Tribe, StoryTopic, SourceArticle, DiscussionComment } from '@/lib/types';
 import type { PostFormValues } from '@/components/dialogs/create-post-dialog';
 import { postLimiter, commentLimiter, rsvpLimiter } from '@/lib/auth/rate-limit';
@@ -56,7 +56,7 @@ export async function getMoodStreamPosts(): Promise<MoodStreamPost[]> {
 }
 
 export async function createTribePost(tribeId: string, payload: CreatePostPayload): Promise<TribePost> {
-  const userId = await requireAuth();
+  const userId = await requireVerifiedEmail();
   await postLimiter.check(userId);
   const { createTribePost: fn } = await import('@/lib/services/post-service');
   const result = await fn(tribeId, payload, userId);
@@ -82,19 +82,23 @@ export async function toggleVibe(targetId: string, targetType: 'post' | 'comment
   const userId = await requireAuth();
   await rsvpLimiter.check(userId);
   const { toggleVibe: fn } = await import('@/lib/services/post-service');
-  return fn(userId, targetId, targetType, emoji);
+  const result = await fn(userId, targetId, targetType, emoji);
+  // Track vibe contribution (only when adding, not removing)
+  if (result.vibed) {
+    trackContribution(userId, 'vibe_given', targetId, `Vibed on ${targetType}`);
+  }
+  return result;
 }
 
 // ======== COMMENTS ========
 export async function createComment(postId: string, content: string, parentCommentId?: string) {
-  const userId = await requireAuth();
+  const userId = await requireVerifiedEmail();
   await commentLimiter.check(userId);
   if (!content.trim()) throw new Error('Comment cannot be empty');
   const { createComment: fn } = await import('@/lib/services/post-service');
   const comment = await fn(postId, userId, content.trim(), parentCommentId);
-  // Fire-and-forget contribution tracking
-  const { recordContribution } = await import('@/lib/services/contribution-service');
-  recordContribution(userId, 'post', comment.id, `Commented on post ${postId}`).catch(() => {});
+  // Fire-and-forget contribution tracking (comment type, not post)
+  trackContribution(userId, 'comment', comment.id, `Commented on post ${postId}`);
   return comment;
 }
 
@@ -121,7 +125,8 @@ export async function reportPost(payload: { postId: string; postTitle?: string; 
   const userId = await requireAuth();
   const { reportPost: fn } = await import('@/lib/services/moderation-service');
   const result = await fn(payload, userId);
-  trackContribution(userId, 'moderation', payload.postId, `Reported post: ${payload.reason}`);
+  // NOTE: Moderation points are NOT awarded here.
+  // Points are awarded only when the report is upheld (via awardModerationPoints).
   return result;
 }
 
@@ -129,7 +134,8 @@ export async function reportComment(payload: { commentId: string; commentAuthor:
   const userId = await requireAuth();
   const { reportComment: fn } = await import('@/lib/services/moderation-service');
   await fn(payload, userId);
-  trackContribution(userId, 'moderation', payload.commentId, `Reported comment by ${payload.commentAuthor}`);
+  // NOTE: Moderation points are NOT awarded here.
+  // Points are awarded only when the report is upheld (via awardModerationPoints).
 }
 
 export async function dismissReport(postId: string): Promise<void> {
@@ -167,7 +173,17 @@ export async function removePost(payload: { postId: string; reason: string; prev
     await requireTribeSpeaker(userId, post.tribeId);
   }
   const { removePost: fn } = await import('@/lib/services/moderation-service');
-  return fn(payload);
+  await fn(payload);
+
+  // Award moderation points to whoever reported this post (report upheld!)
+  try {
+    const { getReportForPost } = await import('@/lib/services/moderation-service');
+    const report = await getReportForPost(payload.postId);
+    if (report?.reportedBy && report.reportedBy !== userId) {
+      const { awardModerationPoints } = await import('@/lib/services/contribution-service');
+      await awardModerationPoints(report.reportedBy, payload.postId);
+    }
+  } catch { /* best-effort */ }
 }
 
 /**
