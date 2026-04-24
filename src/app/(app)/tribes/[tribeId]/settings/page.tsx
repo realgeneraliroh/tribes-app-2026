@@ -254,7 +254,7 @@ export default function TribeSettingsPage() {
                         className="select-none"
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className={`absolute top-3 right-3 flex gap-2 z-20 transition-opacity ${isRepositioning ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         <Button
                           type="button"
                           size="sm"
