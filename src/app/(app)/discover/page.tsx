@@ -104,7 +104,7 @@ export default function DiscoverPage() {
       {activeTab === 'tribes' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTribes.length > 0 ? filteredTribes.map(tribe => (
-            <Link key={tribe.id} href={`/tribes/${tribe.id}`} className="block group">
+            <Link key={tribe.id} href={tribe.slug ? `/t/${tribe.slug}` : `/tribes/${tribe.id}`} className="block group">
               <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary/30 h-full">
                 {tribe.cover && (
                   <div className="relative h-28 w-full overflow-hidden">

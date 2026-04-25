@@ -194,7 +194,7 @@ export async function createRingPost(payload: CreateRingPostPayload): Promise<Tr
 /**
  * Returns a lightweight list of the user's tribes for the compose tribe selector.
  */
-export async function getMyTribesList(): Promise<{ id: string; name: string }[]> {
+export async function getMyTribesList(): Promise<{ id: string; name: string; slug: string | null }[]> {
   const userId = await getCurrentUserId();
   if (!userId) return [];
   const { db } = await import('@/db');
@@ -205,9 +205,9 @@ export async function getMyTribesList(): Promise<{ id: string; name: string }[]>
     .from(tribeMembers)
     .where(eq(tribeMembers.userId, userId));
 
-  const results: { id: string; name: string }[] = [];
+  const results: { id: string; name: string; slug: string | null }[] = [];
   for (const row of memberRows) {
-    const [tribe] = await db.select({ id: tribes.id, name: tribes.name })
+    const [tribe] = await db.select({ id: tribes.id, name: tribes.name, slug: tribes.slug })
       .from(tribes)
       .where(eq(tribes.id, row.tribeId))
       .limit(1);

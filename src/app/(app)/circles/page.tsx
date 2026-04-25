@@ -17,7 +17,7 @@ import { useUser } from '@/hooks/use-user';
 export default function CirclesPage() {
   const [activeTab, setActiveTab] = useState<'bonds' | 'tribes'>('bonds');
   const [bonds, setBonds] = useState<Bond[]>([]);
-  const [tribes, setTribes] = useState<{ id: string; name: string }[]>([]);
+  const [tribes, setTribes] = useState<{ id: string; name: string; slug: string | null }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const { role } = useUser();
@@ -161,7 +161,7 @@ export default function CirclesPage() {
           {filteredTribes.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredTribes.map(tribe => (
-                <Link key={tribe.id} href={`/tribes/${tribe.id}`} className="block group">
+                <Link key={tribe.id} href={tribe.slug ? `/t/${tribe.slug}` : `/tribes/${tribe.id}`} className="block group">
                   <Card className="hover:shadow-md transition-all duration-200 hover:border-primary/30">
                     <CardHeader className="pb-2 p-4">
                       <div className="flex items-center gap-3">
