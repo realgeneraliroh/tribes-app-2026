@@ -43,7 +43,7 @@ export function TribeHeroBanner() {
             <DropdownMenuContent align="end">
               {isTribeAdmin && (
                 <>
-                  <DropdownMenuItem onClick={() => router.push(`/tribes/${tribeId}/settings`)}>
+                  <DropdownMenuItem onClick={() => router.push(`/t/${state.tribe?.slug || tribeId}/settings`)}>
                     <Settings className="mr-2 h-4 w-4" /> Tribe Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

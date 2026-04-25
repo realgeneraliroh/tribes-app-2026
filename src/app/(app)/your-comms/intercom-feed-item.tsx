@@ -10,9 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MessageSquareText, User, HeartHandshake, Rss, Loader2, Smile, Send, Megaphone } from "lucide-react";
+import { MessageSquareText, User, HeartHandshake, Rss, Loader2, Smile, Send, Megaphone, Pin } from "lucide-react";
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { toggleVibe, createComment, getCommentsForPost } from '@/lib/actions/content-actions';
+import { toggleVibe, createComment, getCommentsForPost, togglePinToWall } from '@/lib/actions/content-actions';
 import type { CommunicationItem, DiscussionComment } from '@/lib/types';
 import { CommentInline } from './comment-inline';
 
@@ -28,8 +29,10 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
   const [loadedComments, setLoadedComments] = useState<DiscussionComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [isPinned, setIsPinned] = useState(item.pinnedToWall ?? false);
+  const [isPinning, setIsPinning] = useState(false);
   const emoticons = VIBE_EMOTICONS;
-  const isPost = item.type === 'mood-stream';
+  const isPost = item.type === 'mood-stream' || item.type === 'ring-post';
 
   const handleVibeSelection = async (vibe: string) => {
     if (!isPost) return;
@@ -99,10 +102,32 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
     title = item.sender || "Unknown";
     subtitle = `in ${item.moodName || "Mood"} Stream`;
     body = item.content || "";
+  } else if (item.type === "ring-post") {
+    const ringLabels: Record<string, string> = {
+      journal: '🪞 Journal',
+      inner_circle: '❤️ Inner Circle',
+      my_people: '🤝 My People',
+      tribes: '👥 Tribes',
+    };
+    icon = item.pinnedToWall
+      ? <Megaphone className="h-5 w-5 text-amber-500" />
+      : <Rss className="h-5 w-5 text-primary" />;
+    title = item.sender || "Unknown";
+    subtitle = item.pinnedToWall
+      ? `📌 Wall update`
+      : (item.ring ? ringLabels[item.ring] || 'Post' : 'Post');
+    if (item.moodName) subtitle += ` • ${item.moodName}`;
+    body = item.content || "";
   }
 
-  return (
-    <Card className="shadow-none sm:shadow-md hover:sm:shadow-lg transition-shadow duration-200 overflow-hidden">
+  const isBond = item.type === 'family-bond' || item.type === 'regular-bond';
+  const bondProfileHref = isBond && item.bondTargetId ? `/profile/${item.bondTargetId}` : undefined;
+
+  const cardContent = (
+    <Card className={cn(
+      "shadow-none sm:shadow-md hover:sm:shadow-lg transition-shadow duration-200 overflow-hidden",
+      isBond && "cursor-pointer hover:bg-accent/5 transition-colors"
+    )}>
       <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
         <div className="flex items-start space-x-3">
           <Avatar className="h-10 w-10">
@@ -185,6 +210,42 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
             <Send className="mr-1.5 h-4 w-4" /> Reply
           </Button>
         )}
+        {/* Pin to Wall button — visible on own journal/ring posts */}
+        {isPost && (item.ring === 'journal' || item.type === 'ring-post') && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "text-muted-foreground hover:text-amber-600",
+              isPinned && "text-amber-600"
+            )}
+            disabled={isPinning}
+            onClick={async () => {
+              setIsPinning(true);
+              try {
+                const result = await togglePinToWall(item.id);
+                setIsPinned(result.pinned);
+                toast({
+                  title: result.pinned ? 'Pinned to Wall' : 'Unpinned from Wall',
+                  description: result.pinned
+                    ? 'This post now appears on your public wall.'
+                    : 'This post has been removed from your wall.',
+                });
+              } catch {
+                toast({ title: 'Error', description: 'Could not toggle pin.', variant: 'destructive' });
+              } finally {
+                setIsPinning(false);
+              }
+            }}
+          >
+            {isPinning ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Pin className={cn("mr-1.5 h-4 w-4", isPinned && "fill-amber-600")} />
+            )}
+            {isPinned ? 'Pinned' : 'Pin'}
+          </Button>
+        )}
       </CardFooter>
       {showComments && loadedComments.length > 0 && (
         <div className="px-3 sm:px-4 pb-2 space-y-3 border-t pt-3">
@@ -221,4 +282,14 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
       )}
     </Card>
   );
+  // Wrap bond cards in a Link to the target's profile
+  if (bondProfileHref) {
+    return (
+      <Link href={bondProfileHref} className="block no-underline">
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 };

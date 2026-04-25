@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon, History, Palette, Trash2, Image as ImageIcon, Move, Upload } from 'lucide-react';
+import { ArrowLeft, Settings as SettingsIcon, Globe, Lock, Tag, Link2, ShieldAlert, Copy, Check, Info, ShieldCheck as ReputationIcon, History, Palette, Trash2, Image as ImageIcon, Move, Upload, Loader2 as Loader } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 import { useUser } from '@/hooks/use-user';
@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { getTribeById, updateTribeSettings, checkTribeAccess, deleteTribe } from '@/lib/actions/tribe-actions';
+import { getTribeById, getTribeBySlug, updateTribeSettings, checkTribeAccess, deleteTribe, regenerateInviteToken } from '@/lib/actions/tribe-actions';
 import type { Tribe } from '@/lib/types';
 import { moodsData as allMoodsData } from '@/lib/moods-data';
 import { REPUTATION_GATE_OPTIONS, type ReputationStatus } from '@/lib/constants';
@@ -55,7 +55,9 @@ type TribeSettingsFormValues = z.infer<typeof tribeSettingsFormSchema>;
 export default function TribeSettingsPage() {
   const router = useRouter();
   const params = useParams();
-  const tribeId = params.tribeId as string;
+  const slugParam = params.slug as string | undefined;
+  const tribeIdParam = params.tribeId as string | undefined;
+  const [tribeId, setTribeId] = useState(tribeIdParam || '');
   const { toast } = useToast();
   const { role } = useUser();
 
@@ -78,15 +80,23 @@ export default function TribeSettingsPage() {
   const startPosY = useRef(50);
 
   useEffect(() => {
-    // Determine access via server-side tribe authorization (not global role)
-    const resolveAccess = async () => {
-      const accessLevel = await checkTribeAccess(tribeId);
+    // Resolve slug → tribeId if coming from /t/[slug]/settings
+    const resolveAndCheckAccess = async () => {
+      let effectiveId = tribeIdParam || '';
+      if (slugParam && !tribeIdParam) {
+        const resolved = await getTribeBySlug(slugParam);
+        if (!resolved) { router.push('/tribes'); return; }
+        effectiveId = resolved.id;
+        setTribeId(effectiveId);
+      }
+      // Determine access via server-side tribe authorization (not global role)
+      const accessLevel = await checkTribeAccess(effectiveId);
       // Only founders and platform admins can access settings
       const canAccess = accessLevel === 'platform_admin' || accessLevel === 'founder';
       setHasAccess(canAccess);
     };
-    resolveAccess();
-  }, [tribeId]);
+    resolveAndCheckAccess();
+  }, [slugParam, tribeIdParam]);
 
   const form = useForm<TribeSettingsFormValues>({
     resolver: zodResolver(tribeSettingsFormSchema),
@@ -173,11 +183,26 @@ export default function TribeSettingsPage() {
 
   const handleCopyLink = () => {
     if (!tribe) return;
-    const inviteLink = `${window.location.origin}/join?tribe=${tribe.id}`;
+    const inviteLink = `${window.location.origin}/invite/${tribe.inviteToken || tribe.id}`;
     navigator.clipboard.writeText(inviteLink);
     setIsCopied(true);
     toast({ title: "Copied!", description: "Invite link copied to clipboard." });
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const handleRegenerateToken = async () => {
+    if (!tribe) return;
+    setIsRegenerating(true);
+    try {
+      const newToken = await regenerateInviteToken(tribeId);
+      setTribe({ ...tribe, inviteToken: newToken });
+      toast({ title: "Link Regenerated", description: "The old invite link is now invalid." });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Failed to regenerate invite link." });
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   if (hasAccess === undefined || isPageLoading) {
@@ -217,7 +242,7 @@ export default function TribeSettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center mt-2">
-        <Button variant="outline" size="sm" onClick={() => router.push(`/tribes/${tribeId}`)}>
+        <Button variant="outline" size="sm" onClick={() => router.push(`/t/${tribe.slug}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {tribe.name}
         </Button>
@@ -627,12 +652,26 @@ export default function TribeSettingsPage() {
 
                  <div className="rounded-lg border p-4 shadow-sm">
                     <h3 className="text-base font-semibold text-foreground mb-1">Invite Link</h3>
-                    <p className="text-sm text-muted-foreground mb-3">Share this link to invite users to your tribe. It will respect your chosen join mechanism.</p>
+                    <p className="text-sm text-muted-foreground mb-3">Share this secure link to invite users to your tribe. Only one link is active at a time.</p>
                     <div className="flex items-center space-x-2">
-                        <Input value={`${typeof window !== 'undefined' ? window.location.origin : ''}/join?tribe=${tribe.id}`} readOnly className="text-sm" />
-                        <Button type="button" variant="secondary" onClick={handleCopyLink} size="icon">
+                        <Input value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${tribe.inviteToken || '...'}`} readOnly className="text-sm font-mono" />
+                        <Button type="button" variant="secondary" onClick={handleCopyLink} size="icon" title="Copy link">
                             {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                             <span className="sr-only">{isCopied ? "Copied" : "Copy"}</span>
+                        </Button>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                            Regenerating will invalidate the current link.
+                        </p>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerateToken}
+                            disabled={isRegenerating}
+                        >
+                            {isRegenerating ? <><Loader className="mr-2 h-3 w-3 animate-spin" />Regenerating...</> : 'Regenerate Link'}
                         </Button>
                     </div>
                 </div>

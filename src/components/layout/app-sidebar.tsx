@@ -16,19 +16,15 @@ import {
 } from "@/components/ui/sidebar";
 import { AppLogo } from "@/components/icons/app-logo";
 import {
-  LayoutDashboard, 
+  Rss,
   Users,
-  Smile,
-  Bot,
+  Compass,
+  User,
   Settings,
   HeartHandshake,
-  BookOpen,
   PlusCircle,
-  Link2,
   CalendarPlus,
-  CalendarDays,
   ShieldAlert,
-  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,18 +33,14 @@ import type { UserRole } from "@/lib/types";
 import { useUser } from "@/hooks/use-user";
 
 const navItems: { href: string; icon: React.ElementType; label: string; tooltip: string; roles?: UserRole[] }[] = [
-  { href: "/your-comms", icon: LayoutDashboard, label: "Intercom", tooltip: "Intercom" },
-  { href: "/tribes", icon: Users, label: "Tribes", tooltip: "Tribes" },
-  { href: "/bonds", icon: Link2, label: "Bonds", tooltip: "Manage Bonds" },
-  { href: "/moods", icon: Smile, label: "Moods", tooltip: "Moods" },
-  { href: "/search", icon: Search, label: "Search", tooltip: "Discover" },
-  { href: "/events", icon: CalendarDays, label: "Events", tooltip: "Discover Events" },
-  { href: "/our-story", icon: BookOpen, label: "Our Story", tooltip: "Our Story" },
-  { href: "/ai-assistant", icon: Bot, label: "T-Codex Prime", tooltip: "T-Codex Prime" },
-  { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue", roles: ['Admin'] },
+  { href: "/your-comms", icon: Rss, label: "Feed", tooltip: "Your Feed" },
+  { href: "/circles", icon: Users, label: "Circles", tooltip: "Bonds & Tribes" },
+  { href: "/discover", icon: Compass, label: "Discover", tooltip: "Explore" },
+  { href: "/my-space", icon: User, label: "My Space", tooltip: "Your Wall & Profile" },
 ];
 
 const bottomNavItems: { href: string; icon: React.ElementType; label: string; tooltip: string; roles?: UserRole[] }[] = [
+  { href: "/admin/mod-queue", icon: ShieldAlert, label: "Mod Queue", tooltip: "Moderation Queue", roles: ['Admin'] },
   { href: "/settings", icon: Settings, label: "Settings", tooltip: "Settings" },
 ];
 

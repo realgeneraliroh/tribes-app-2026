@@ -2,7 +2,8 @@
 
 "use client";
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useTribeIdFromParams } from '@/hooks/use-tribe-id';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
@@ -33,8 +34,7 @@ import { banMemberFromTribe } from '@/lib/actions/content-actions';
 
 export default function ManageMembersPage() {
   const router = useRouter();
-  const params = useParams();
-  const tribeId = params.tribeId as string;
+  const { tribeId } = useTribeIdFromParams();
   const { toast } = useToast();
   const { role } = useUser();
 
@@ -211,7 +211,7 @@ export default function ManageMembersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center">
-        <Button variant="outline" size="sm" onClick={() => router.push(`/tribes/${tribeId}`)}>
+        <Button variant="outline" size="sm" onClick={() => router.push(`/t/${tribe?.slug || tribeId}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {tribe.name}
         </Button>

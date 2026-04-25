@@ -105,6 +105,55 @@ export async function generateInviteCode(maxUses: number = 5) {
   return fn(userId, maxUses);
 }
 
+export async function getMyInviteCodes() {
+  const userId = await requireAuth();
+  const { getUserInviteCodes } = await import('@/lib/services/invite-service');
+  return getUserInviteCodes(userId);
+}
+
+export async function revokeInviteCode(codeId: string) {
+  const userId = await requireAuth();
+  const { db } = await import('@/db');
+  const { inviteCodes } = await import('@/db/schema');
+  const { eq, and } = await import('drizzle-orm');
+
+  // Verify ownership OR admin
+  const isAdmin = await _isAdmin(userId);
+  const [code] = await db.select().from(inviteCodes)
+    .where(isAdmin ? eq(inviteCodes.id, codeId) : and(eq(inviteCodes.id, codeId), eq(inviteCodes.createdBy, userId)))
+    .limit(1);
+  if (!code) throw new Error('Code not found or you do not own it');
+
+  // Set maxUses to usedCount to exhaust it
+  await db.update(inviteCodes)
+    .set({ maxUses: code.usedCount ?? 0 })
+    .where(eq(inviteCodes.id, codeId));
+}
+
+// ======== ADMIN INVITE CODES ========
+async function _isAdmin(userId: string): Promise<boolean> {
+  const { db } = await import('@/db');
+  const { users } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const [user] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  return user?.role === 'Admin';
+}
+
+export async function getAllInviteCodes() {
+  const userId = await requireAuth();
+  if (!(await _isAdmin(userId))) throw new Error('Admin only');
+  const { getAllInviteCodes: fn } = await import('@/lib/services/invite-service');
+  return fn();
+}
+
+export async function createFoundingCode(planId: string = 'individual_coop', maxUses: number = 10) {
+  const userId = await requireAuth();
+  if (!(await _isAdmin(userId))) throw new Error('Admin only');
+  const { createFoundingCodes } = await import('@/lib/services/invite-service');
+  const codes = await createFoundingCodes('admin-ui', 1, planId, maxUses);
+  return { code: codes[0]! };
+}
+
 // ======== CHECKOUT ========
 export async function createCheckoutSession(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
   if (process.env.BILLING_ENABLED !== 'true') {
@@ -226,6 +275,33 @@ export async function getWallBlocks() {
   if (!userId) return [];
   const { getWallBlocks: fn } = await import('@/lib/services/wall-service');
   return fn(userId);
+}
+
+// Public wall access (any authenticated user can view another user's wall)
+export async function getPublicProfile(targetUserId: string) {
+  await requireAuth(); // Must be logged in
+  const { getUserProfile: fn } = await import('@/lib/services/user-service');
+  const profile = await fn(targetUserId);
+  if (!profile) return null;
+  return {
+    id: profile.id,
+    name: profile.name,
+    bio: profile.bio,
+    avatar: profile.avatar,
+    reputationStatus: profile.reputationStatus,
+  };
+}
+
+export async function getPublicWallBlocks(targetUserId: string) {
+  await requireAuth();
+  const { getWallBlocks: fn } = await import('@/lib/services/wall-service');
+  return fn(targetUserId);
+}
+
+export async function getPublicWallStyle(targetUserId: string) {
+  await requireAuth();
+  const { getWallStyle: fn } = await import('@/lib/services/wall-service');
+  return fn(targetUserId);
 }
 
 export async function saveWallBlock(block: { id: string; type: string; content: string; sortOrder: number }) {

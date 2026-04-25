@@ -19,7 +19,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Redirect back to tribe settings with success indicator
+  // Resolve slug for the new URL pattern
+  const { db: appDb } = await import('@/db');
+  const { tribes } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const [tribe] = await appDb.select({ slug: tribes.slug }).from(tribes).where(eq(tribes.id, tribeId)).limit(1);
+  const slug = tribe?.slug || tribeId;
+
   return NextResponse.redirect(
-    new URL(`/tribes/${tribeId}/settings?connect=success`, request.url)
+    new URL(`/t/${slug}/settings?connect=success`, request.url)
   );
 }

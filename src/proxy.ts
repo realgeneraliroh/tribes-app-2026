@@ -23,6 +23,7 @@ function isPublicRoute(pathname: string): boolean {
   
   // Public browsing routes (read-only discovery)
   if (pathname.startsWith('/moods')) return true;
+  if (pathname.startsWith('/t/')) return true;  // New slug-based tribe routes
   if (pathname.startsWith('/tribes/') && pathname !== '/tribes/create') return true;
   
   // API routes handle their own auth
@@ -37,6 +38,15 @@ function isPublicRoute(pathname: string): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ── Legacy tribe URL redirect: /tribes/tribe-XXXX → /api/resolve-tribe/tribe-XXXX ──
+  const legacyTribeMatch = pathname.match(/^\/tribes\/(tribe-\d+)(\/.*)?$/);
+  if (legacyTribeMatch) {
+    const tribeId = legacyTribeMatch[1];
+    const suffix = legacyTribeMatch[2] || '';
+    const resolveUrl = new URL(`/api/resolve-tribe/${tribeId}${suffix}`, request.url);
+    return NextResponse.rewrite(resolveUrl);
+  }
 
   // Allow public routes through without session check
   if (isPublicRoute(pathname)) {

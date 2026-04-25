@@ -1,15 +1,219 @@
 'use server';
 
 import { requireAuth, requireVerifiedEmail, getCurrentUserId, trackContribution } from './shared';
-import type { TribePost, MoodStreamPost, ReportedPost, Tribe, StoryTopic, SourceArticle, DiscussionComment } from '@/lib/types';
+import type { TribePost, MoodStreamPost, ReportedPost, Tribe, StoryTopic, SourceArticle, DiscussionComment, Ring, CommunicationItem } from '@/lib/types';
 import type { PostFormValues } from '@/components/dialogs/create-post-dialog';
 import { postLimiter, commentLimiter, rsvpLimiter } from '@/lib/auth/rate-limit';
+
+/**
+ * Server action: Fetch the unified feed with ring + mood filtering.
+ */
+export async function getUnifiedFeedAction(
+  ringFilter?: Ring | 'all' | 'streams',
+  moodSlugs?: string[],
+  limit?: number,
+  offset?: number,
+): Promise<CommunicationItem[]> {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const { getUnifiedFeed } = await import('@/lib/services/feed-service');
+  return getUnifiedFeed({ userId, ringFilter, moodSlugs, limit, offset });
+}
+
+/**
+ * Server action: Toggle pinnedToWall on a post (must be owned by current user).
+ */
+export async function togglePinToWall(postId: string): Promise<{ pinned: boolean }> {
+  const userId = await requireAuth();
+  const { db } = await import('@/db');
+  const { posts } = await import('@/db/schema');
+  const { eq, and } = await import('drizzle-orm');
+
+  const [post] = await db.select({ pinnedToWall: posts.pinnedToWall, authorId: posts.authorId })
+    .from(posts).where(eq(posts.id, postId)).limit(1);
+  if (!post) throw new Error('Post not found');
+  if (post.authorId !== userId) throw new Error('Not authorized');
+
+  const newPinned = !post.pinnedToWall;
+  await db.update(posts).set({ pinnedToWall: newPinned }).where(eq(posts.id, postId));
+  return { pinned: newPinned };
+}
+
+/**
+ * Server action: Get pinned wall posts for a user (their journal posts where pinnedToWall=true).
+ */
+export async function getPinnedWallPosts(targetUserId?: string): Promise<TribePost[]> {
+  const userId = targetUserId ?? await getCurrentUserId();
+  if (!userId) return [];
+
+  const { db } = await import('@/db');
+  const { posts } = await import('@/db/schema');
+  const { eq, and, desc } = await import('drizzle-orm');
+  const { rowToTribePost } = await import('@/lib/mappers/post-mapper');
+
+  const rows = await db.select().from(posts)
+    .where(and(
+      eq(posts.authorId, userId),
+      eq(posts.pinnedToWall, true),
+    ))
+    .orderBy(desc(posts.createdAt))
+    .limit(20);
+
+  return rows.map(row => rowToTribePost(row));
+}
+
+/**
+ * Server action: Get user's most recent mood tag (from their latest post with a mood).
+ */
+export async function getCurrentMood(): Promise<{ moodTag: string; postId: string } | null> {
+  const userId = await getCurrentUserId();
+  if (!userId) return null;
+
+  const { db } = await import('@/db');
+  const { posts } = await import('@/db/schema');
+  const { eq, and, isNotNull, desc } = await import('drizzle-orm');
+
+  const [row] = await db.select({ id: posts.id, moodTag: posts.moodTag })
+    .from(posts)
+    .where(and(eq(posts.authorId, userId), isNotNull(posts.moodTag)))
+    .orderBy(desc(posts.createdAt))
+    .limit(1);
+
+  if (!row || !row.moodTag) return null;
+  return { moodTag: row.moodTag, postId: row.id };
+}
 
 /** Serializable payload for creating a tribe post (image already uploaded client-side). */
 export interface CreatePostPayload {
   title?: string;
   content: string;
   imageUrl?: string;
+}
+
+/** Payload for universal ring-based post creation (Concentric Rings). */
+export interface CreateRingPostPayload {
+  content: string;
+  ring: 'journal' | 'inner_circle' | 'my_people' | 'tribes';
+  title?: string;
+  imageUrl?: string;
+  moodTag?: string;
+  tribeIds?: string[]; // Required when ring = 'tribes'
+}
+
+/**
+ * Universal post creation — routes to the correct ring.
+ * This is the primary compose action for the Concentric Rings model.
+ */
+export async function createRingPost(payload: CreateRingPostPayload): Promise<TribePost> {
+  const userId = await requireVerifiedEmail();
+  await postLimiter.check(userId);
+
+  if (!payload.content.trim()) throw new Error('Post content cannot be empty.');
+
+  const { db } = await import('@/db');
+  const { posts, users: usersTable, tribeMembers } = await import('@/db/schema');
+  const { eq, and } = await import('drizzle-orm');
+  const { rowToTribePost } = await import('@/lib/mappers/post-mapper');
+
+  // Fetch author info
+  const [author] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const authorName = author?.name ?? 'Unknown User';
+  const initials = (authorName.substring(0, 2)).toUpperCase();
+
+  if (payload.ring === 'tribes') {
+    // Tribe ring — reuse existing createTribePost for the first tribe,
+    // then cross-post to additional tribes
+    if (!payload.tribeIds || payload.tribeIds.length === 0) {
+      throw new Error('Select at least one tribe to post to.');
+    }
+
+    // Create the primary post in the first tribe
+    const { createTribePost: fn } = await import('@/lib/services/post-service');
+    const primaryPost = await fn(payload.tribeIds[0]!, {
+      title: payload.title,
+      content: payload.content.trim(),
+      imageUrl: payload.imageUrl,
+    }, userId);
+
+    // Update with ring metadata
+    await db.update(posts).set({
+      ring: 'tribes',
+      moodTag: payload.moodTag ?? null,
+    }).where(eq(posts.id, primaryPost.id));
+
+    // Cross-post to additional tribes
+    if (payload.tribeIds.length > 1) {
+      const { sharePostToTribe } = await import('@/lib/services/post-service');
+      for (const tribeId of payload.tribeIds.slice(1)) {
+        await sharePostToTribe(primaryPost.id, tribeId, userId, 'main_profile');
+      }
+    }
+
+    trackContribution(userId, 'post', primaryPost.id, `Posted to tribe(s)`);
+    return { ...primaryPost, ring: 'tribes', moodTag: payload.moodTag };
+  }
+
+  // Non-tribe rings: journal, inner_circle, my_people
+  const id = `post-${payload.ring}-${Date.now()}`;
+  await db.insert(posts).values({
+    id,
+    tribeId: null, // No tribe for non-tribe rings
+    authorId: userId,
+    authorName,
+    authorAvatar: author?.avatar ?? null,
+    authorAvatarFallback: initials,
+    title: payload.title || null,
+    content: payload.content.trim(),
+    imageUrl: payload.imageUrl || null,
+    imageAlt: payload.imageUrl ? 'User uploaded image' : null,
+    dataAiHintImage: payload.imageUrl ? 'user upload' : null,
+    vibeCount: 0,
+    commentCount: 0,
+    isRemoved: false,
+    canBeReposted: payload.ring !== 'journal', // Journal posts are private, not repostable
+    ring: payload.ring,
+    moodTag: payload.moodTag ?? null,
+    pinnedToWall: false,
+    createdAt: new Date(),
+  });
+
+  const [created] = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+  const result = rowToTribePost(created!);
+
+  // Process @mentions for non-journal posts
+  if (payload.ring !== 'journal') {
+    import('@/lib/services/mention-service').then(({ processMentions }) =>
+      processMentions(payload.content, userId, 'post', id)
+    ).catch(() => {});
+  }
+
+  trackContribution(userId, 'post', id, `Posted to ${payload.ring}`);
+  return result;
+}
+
+/**
+ * Returns a lightweight list of the user's tribes for the compose tribe selector.
+ */
+export async function getMyTribesList(): Promise<{ id: string; name: string }[]> {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+  const { db } = await import('@/db');
+  const { tribeMembers, tribes } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+
+  const memberRows = await db.select({ tribeId: tribeMembers.tribeId })
+    .from(tribeMembers)
+    .where(eq(tribeMembers.userId, userId));
+
+  const results: { id: string; name: string }[] = [];
+  for (const row of memberRows) {
+    const [tribe] = await db.select({ id: tribes.id, name: tribes.name })
+      .from(tribes)
+      .where(eq(tribes.id, row.tribeId))
+      .limit(1);
+    if (tribe) results.push(tribe);
+  }
+  return results;
 }
 
 // ======== STORIES ========
@@ -111,9 +315,11 @@ export async function getCommentsForPost(postId: string) {
   const { eq } = await import('drizzle-orm');
   const [post] = await db.select({ tribeId: posts.tribeId }).from(posts).where(eq(posts.id, postId)).limit(1);
   if (post) {
-    const { getTribeById: fetchTribe } = await import('@/lib/data-access/tribes');
-    const tribe = await fetchTribe(post.tribeId, userId);
-    if (!tribe) throw new Error('Tribe not found or access denied.');
+    if (post.tribeId) {
+      const { getTribeById: fetchTribe } = await import('@/lib/data-access/tribes');
+      const tribe = await fetchTribe(post.tribeId, userId);
+      if (!tribe) throw new Error('Tribe not found or access denied.');
+    }
   }
 
   const { getCommentsForPost: fn } = await import('@/lib/services/post-service');
@@ -146,8 +352,10 @@ export async function dismissReport(postId: string): Promise<void> {
   const { eq } = await import('drizzle-orm');
   const [post] = await db.select({ tribeId: posts.tribeId }).from(posts).where(eq(posts.id, postId)).limit(1);
   if (post) {
-    const { requireTribeSpeaker } = await import('@/lib/services/tribe-auth');
-    await requireTribeSpeaker(userId, post.tribeId);
+    if (post.tribeId) {
+      const { requireTribeSpeaker } = await import('@/lib/services/tribe-auth');
+      await requireTribeSpeaker(userId, post.tribeId);
+    }
   }
   const { dismissReport: fn } = await import('@/lib/services/moderation-service');
   return fn(postId);
@@ -169,8 +377,10 @@ export async function removePost(payload: { postId: string; reason: string; prev
   const { eq } = await import('drizzle-orm');
   const [post] = await db.select({ tribeId: posts.tribeId }).from(posts).where(eq(posts.id, payload.postId)).limit(1);
   if (post) {
-    const { requireTribeSpeaker } = await import('@/lib/services/tribe-auth');
-    await requireTribeSpeaker(userId, post.tribeId);
+    if (post.tribeId) {
+      const { requireTribeSpeaker } = await import('@/lib/services/tribe-auth');
+      await requireTribeSpeaker(userId, post.tribeId);
+    }
   }
   const { removePost: fn } = await import('@/lib/services/moderation-service');
   await fn(payload);

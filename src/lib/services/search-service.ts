@@ -7,7 +7,7 @@ import { tribes, events, users } from '@/db/schema';
 import { like, or, sql } from 'drizzle-orm';
 
 export interface SearchResults {
-  tribes: { id: string; name: string; description: string; memberCount: number; isPublic: boolean }[];
+  tribes: { id: string; slug: string; name: string; description: string; memberCount: number; isPublic: boolean }[];
   events: { id: string; name: string; description: string; eventDate: Date | null; locationName: string; coverImage?: string }[];
   users: { id: string; name: string; avatarUrl?: string }[];
 }
@@ -21,6 +21,7 @@ export async function searchAll(query: string, limit: number = 5): Promise<Searc
   const [tribeResults, eventResults, userResults] = await Promise.all([
     db.select({
       id: tribes.id,
+      slug: tribes.slug,
       name: tribes.name,
       description: tribes.description,
       memberCount: tribes.memberCount,
@@ -62,6 +63,7 @@ export async function searchAll(query: string, limit: number = 5): Promise<Searc
   return {
     tribes: tribeResults.map(t => ({
       id: t.id,
+      slug: t.slug || t.id,
       name: t.name,
       description: t.description ?? '',
       memberCount: t.memberCount ?? 0,

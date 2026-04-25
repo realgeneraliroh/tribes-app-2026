@@ -11,9 +11,10 @@ interface MyPostsBlockProps {
   posts: (Partial<TribePost> & { id: string, sharedWith?: Record<string, string> })[];
   onShare: (post: Partial<TribePost> & { id: string, sharedWith?: Record<string, string> }) => void;
   onCreatePost: () => void;
+  readOnly?: boolean;
 }
 
-const WallItemCard = ({ post, onShare }: { post: Partial<TribePost> & { id: string, sharedWith?: Record<string, string> }, onShare: (post: Partial<TribePost> & { id: string, sharedWith?: Record<string, string> }) => void }) => {
+const WallItemCard = ({ post, onShare, readOnly }: { post: Partial<TribePost> & { id: string, sharedWith?: Record<string, string> }, onShare: (post: Partial<TribePost> & { id: string, sharedWith?: Record<string, string> }) => void, readOnly?: boolean }) => {
   const sharedTribes = post.sharedWith ? Object.keys(post.sharedWith) : [];
 
   return (
@@ -47,15 +48,17 @@ const WallItemCard = ({ post, onShare }: { post: Partial<TribePost> & { id: stri
             </ul>
           </div>
         )}
-        <Button variant="outline" size="sm" onClick={() => onShare(post)}>
+        {!readOnly && (
+          <Button variant="outline" size="sm" onClick={() => onShare(post)}>
             <Share2 className="mr-2 h-4 w-4" /> Share
-        </Button>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
 };
 
-export default function MyPostsBlock({ posts, onShare, onCreatePost }: MyPostsBlockProps) {
+export default function MyPostsBlock({ posts, onShare, onCreatePost, readOnly }: MyPostsBlockProps) {
   return (
     <Card className="bg-muted/30">
         <CardHeader>
@@ -63,28 +66,36 @@ export default function MyPostsBlock({ posts, onShare, onCreatePost }: MyPostsBl
                 <div>
                     <CardTitle className="flex items-center text-2xl">
                         <FileText className="mr-3 h-6 w-6 text-primary"/>
-                        My Posts
+                        {readOnly ? 'Posts' : 'My Posts'}
                     </CardTitle>
-                    <CardDescription className="mt-1">Content you've created. Share it with your tribes.</CardDescription>
+                    <CardDescription className="mt-1">
+                      {readOnly ? 'Content shared on this wall.' : "Content you've created. Share it with your tribes."}
+                    </CardDescription>
                 </div>
-                <Button variant="outline" onClick={onCreatePost}>
+                {!readOnly && (
+                  <Button variant="outline" onClick={onCreatePost}>
                     <PlusCircle className="mr-2 h-4 w-4"/>
                     Create Post
-                </Button>
+                  </Button>
+                )}
             </div>
         </CardHeader>
         <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {posts.length > 0 ? (
                     posts.map((post) => (
-                        <WallItemCard key={post.id} post={post} onShare={onShare} />
+                        <WallItemCard key={post.id} post={post} onShare={onShare} readOnly={readOnly} />
                     ))
                  ) : (
                     <div className="col-span-full text-center py-12">
                         <Card className="inline-block p-8 shadow-md">
                             <CardContent className="flex flex-col items-center justify-center">
-                                <p className="text-muted-foreground">You haven't created any posts yet.</p>
-                                <Button variant="link" className="mt-2" onClick={onCreatePost}>Create your first post</Button>
+                                <p className="text-muted-foreground">
+                                  {readOnly ? 'No posts yet.' : "You haven't created any posts yet."}
+                                </p>
+                                {!readOnly && (
+                                  <Button variant="link" className="mt-2" onClick={onCreatePost}>Create your first post</Button>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Lock, Send, Loader2, AlertTriangle, RefreshCw, Wifi, WifiOff, Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Lock, Send, Loader2, AlertTriangle, RefreshCw, Wifi, WifiOff, Search, X, ChevronUp, ChevronDown, User as UserIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
@@ -308,6 +308,11 @@ export default function BondChatPage() {
             )}
           </div>
         </div>
+        {bond.targetId && (
+          <Button variant="ghost" size="icon" onClick={() => router.push(`/profile/${bond.targetId}`)} title="View Wall">
+            <UserIcon className="h-4 w-4" />
+          </Button>
+        )}
         <Button variant="ghost" size="icon" onClick={() => messageSearch.setIsOpen(!messageSearch.isOpen)}>
           <Search className="h-4 w-4" />
         </Button>

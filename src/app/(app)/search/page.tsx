@@ -25,7 +25,7 @@ import { searchAll } from '@/lib/actions/content-actions';
 import { format } from 'date-fns';
 
 type SearchResults = {
-  tribes: { id: string; name: string; description: string; memberCount: number; isPublic: boolean }[];
+  tribes: { id: string; slug: string; name: string; description: string; memberCount: number; isPublic: boolean }[];
   events: { id: string; name: string; description: string; eventDate: Date | null; locationName: string; coverImage?: string }[];
   users: { id: string; name: string; avatarUrl?: string }[];
 };
@@ -138,7 +138,7 @@ export default function SearchPage() {
               </h2>
               <div className="space-y-2">
                 {results.tribes.map(tribe => (
-                  <Link key={tribe.id} href={`/tribes/${tribe.id}`}>
+                  <Link key={tribe.id} href={`/t/${tribe.slug}`}>
                     <Card className="hover:bg-accent/50 transition-colors cursor-pointer border-border/50">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

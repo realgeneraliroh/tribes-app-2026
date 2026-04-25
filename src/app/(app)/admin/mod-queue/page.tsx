@@ -227,7 +227,7 @@ export default function ModQueuePage() {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return reports.filter(report => {
       const post = getPostById(report.postId);
-      const tribe = post ? getTribeById(post.tribeId) : undefined;
+      const tribe = (post?.tribeId) ? getTribeById(post.tribeId) : undefined;
       return (
         (report.postTitle && report.postTitle.toLowerCase().includes(lowerSearchTerm)) ||
         (post?.title && post.title.toLowerCase().includes(lowerSearchTerm)) ||
@@ -255,8 +255,8 @@ export default function ModQueuePage() {
         aValue = a.reporterName?.toLowerCase() || '';
         bValue = b.reporterName?.toLowerCase() || '';
       } else if (sortConfig.key === 'tribeName') {
-        const tribeA = getPostById(a.postId) ? getTribeById(getPostById(a.postId)!.tribeId) : undefined;
-        const tribeB = getPostById(b.postId) ? getTribeById(getPostById(b.postId)!.tribeId) : undefined;
+        const tribeA = getPostById(a.postId)?.tribeId ? getTribeById(getPostById(a.postId)!.tribeId!) : undefined;
+        const tribeB = getPostById(b.postId)?.tribeId ? getTribeById(getPostById(b.postId)!.tribeId!) : undefined;
         aValue = tribeA?.name.toLowerCase() || '';
         bValue = tribeB?.name.toLowerCase() || '';
       } else {
@@ -449,7 +449,7 @@ export default function ModQueuePage() {
             <Accordion type="multiple" className="w-full space-y-3">
               {paginatedReports.map((report) => {
                 const post = getPostById(report.postId);
-                const tribe = post ? getTribeById(post.tribeId) : undefined;
+                const tribe = (post?.tribeId) ? getTribeById(post.tribeId) : undefined;
                 const isThisPostBeingActioned = isTakingAction === report.postId;
 
                 return (
@@ -561,7 +561,7 @@ export default function ModQueuePage() {
                                <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button size="icon" variant="secondary" onClick={() => handleViewTribe(post.tribeId)} disabled={isThisPostBeingActioned}>
+                                            <Button size="icon" variant="secondary" onClick={() => post.tribeId && handleViewTribe(post.tribeId)} disabled={isThisPostBeingActioned || !post.tribeId}>
                                                 <Eye className="h-4 w-4"/>
                                                 <span className="sr-only">View Tribe</span>
                                             </Button>

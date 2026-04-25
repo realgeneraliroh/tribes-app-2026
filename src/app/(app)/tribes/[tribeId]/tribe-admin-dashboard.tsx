@@ -40,16 +40,16 @@ export function TribeAdminDashboard() {
         </div>
         <Separator />
         <div className="flex flex-wrap gap-3">
-          <Link href={`/tribes/${tribeId}/manage-members`} passHref className="flex-1">
+          <Link href={`/t/${tribe.slug}/manage-members`} passHref className="flex-1">
             <Button variant="outline" className="w-full"><UsersRound className="mr-2 h-4 w-4" /> Manage Members</Button>
           </Link>
-          <Link href={`/tribes/${tribeId}/mod-queue`} passHref className="flex-1">
+          <Link href={`/t/${tribe.slug}/mod-queue`} passHref className="flex-1">
             <Button variant="outline" className="w-full"><ListChecks className="mr-2 h-4 w-4" /> Moderation Queue</Button>
           </Link>
-          <Link href={`/tribes/${tribeId}/analytics`} passHref className="flex-1">
+          <Link href={`/t/${tribe.slug}/analytics`} passHref className="flex-1">
             <Button variant="outline" className="w-full"><BarChart2 className="mr-2 h-4 w-4" /> Engagement Analytics</Button>
           </Link>
-          <Link href={`/tribes/${tribeId}/settings`} passHref className="flex-1">
+          <Link href={`/t/${tribe.slug}/settings`} passHref className="flex-1">
             <Button variant="outline" className="w-full"><Settings className="mr-2 h-4 w-4" /> Tribe Settings</Button>
           </Link>
         </div>

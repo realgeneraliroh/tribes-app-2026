@@ -84,7 +84,7 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
       <div className="flex items-center space-x-3">
         <Image src={tribe.cover} alt={tribe.name} width={40} height={40} className="rounded-md object-cover h-10 w-10" data-ai-hint={tribe.dataAiHint} />
         <div>
-          <Link href={`/tribes/${tribe.id}`} passHref>
+          <Link href={`/t/${tribe.slug}`} passHref>
             <h3 className="font-semibold text-sm hover:underline">{tribe.name}</h3>
           </Link>
           <div className="flex items-center text-xs text-muted-foreground space-x-2">
@@ -118,7 +118,7 @@ const TribeListItem: React.FC<{ tribe: Tribe; isMyTribe: boolean; onJoin: (tribe
         </div>
       </div>
       {isMyTribe ? (
-        <Link href={`/tribes/${tribe.id}`} passHref>
+        <Link href={`/t/${tribe.slug}`} passHref>
           <Button variant="outline" size="sm">
             <Eye className="mr-1.5 h-3.5 w-3.5" /> View
           </Button>
@@ -266,7 +266,7 @@ export default function TribesPage() {
         
         return (
             <Card key={tribe.id} className="shadow-lg hover:shadow-xl transition-shadow flex flex-col overflow-hidden">
-                <Link href={`/tribes/${tribe.id}`} passHref className="contents">
+                <Link href={`/t/${tribe.slug}`} passHref className="contents">
                     <div className="relative h-40 w-full">
                     <Image src={tribe.cover} alt={tribe.name} fill style={{ objectFit: 'cover', objectPosition: tribe.coverPosition || 'center' }} data-ai-hint={tribe.dataAiHint} />
                     <TooltipProvider>
@@ -326,7 +326,7 @@ export default function TribesPage() {
                 </Link>
                 <CardFooter>
                     {isMyTribeList ? (
-                    <Link href={`/tribes/${tribe.id}`} passHref className="w-full">
+                    <Link href={`/t/${tribe.slug}`} passHref className="w-full">
                         <Button variant="default" className="w-full bg-primary hover:bg-primary/90">
                         View Tribe <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>

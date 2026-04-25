@@ -14,6 +14,7 @@ import type { Tribe } from '@/lib/types';
 function rowToTribe(row: typeof tribes.$inferSelect, moods: string[]): Tribe {
   return {
     id: row.id,
+    slug: row.slug || row.id,
     name: row.name,
     description: row.description,
     members: row.memberCount ?? 0,
@@ -29,6 +30,7 @@ function rowToTribe(row: typeof tribes.$inferSelect, moods: string[]): Tribe {
     brandColor: row.brandColor ?? undefined,
     brandLogo: row.brandLogo ?? undefined,
     createdBy: row.createdBy ?? undefined,
+    inviteToken: row.inviteToken ?? undefined,
   };
 }
 
@@ -129,6 +131,40 @@ export async function findTribeByName(name: string, viewerUserId?: string | null
     const canSee = visibleIds === 'all' || visibleIds.has(row.id);
     if (!canSee) return null;
   }
+
+  const moods = await getMoodsForTribe(row.id);
+  return rowToTribe(row, moods);
+}
+
+/**
+ * Fetches a single tribe by its URL slug.
+ * Returns null if the tribe is private and the viewer is not a member.
+ */
+export async function getTribeBySlug(slug: string, viewerUserId?: string | null): Promise<Tribe | null> {
+  const rows = await db.select().from(tribes).where(eq(tribes.slug, slug)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+
+  // Access control: private tribes are invisible to non-members
+  if (!row.isPublic) {
+    const visibleIds = await getViewerTribeIds(viewerUserId);
+    const canSee = visibleIds === 'all' || visibleIds.has(row.id);
+    if (!canSee) return null;
+  }
+
+  const moods = await getMoodsForTribe(row.id);
+  return rowToTribe(row, moods);
+}
+
+/**
+ * Fetches a single tribe by its invite token.
+ * No access control — if you have the token, you can see the tribe to join it.
+ */
+export async function getTribeByInviteToken(token: string): Promise<Tribe | null> {
+  if (!token || token.length < 8) return null;
+  const rows = await db.select().from(tribes).where(eq(tribes.inviteToken, token)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
 
   const moods = await getMoodsForTribe(row.id);
   return rowToTribe(row, moods);

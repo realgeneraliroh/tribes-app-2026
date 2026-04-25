@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useTribeIdFromParams } from '@/hooks/use-tribe-id';
 import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
@@ -50,10 +51,9 @@ const sortOptionsTribe: SortOptionTribe[] = [
 
 export default function TribeModQueuePage() {
   const router = useRouter();
-  const params = useParams();
   const { toast } = useToast();
   const { role } = useUser();
-  const tribeId = params.tribeId as string;
+  const { tribeId } = useTribeIdFromParams();
   const [hasAccess, setHasAccess] = useState<boolean | undefined>(undefined);
 
   const [tribe, setTribe] = useState<Tribe | null>(null);
@@ -275,7 +275,7 @@ export default function TribeModQueuePage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center mt-2">
-        <Button variant="outline" size="sm" onClick={() => router.push(`/tribes/${tribeId}`)}>
+        <Button variant="outline" size="sm" onClick={() => router.push(`/t/${tribe?.slug || tribeId}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to {tribe.name}
         </Button>

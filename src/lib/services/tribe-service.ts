@@ -26,9 +26,14 @@ type CreateTribePayload = z.infer<typeof createTribeFormSchema> & {
 
 export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
   const id = `tribe-${Date.now()}`;
+  const { generateUniqueSlug } = await import('@/lib/slugify');
+  const { generateInviteToken } = await import('@/lib/invite-token');
+  const slug = await generateUniqueSlug(payload.name);
+  const inviteToken = generateInviteToken();
 
   await db.insert(tribes).values({
     id,
+    slug,
     name: payload.name,
     description: payload.description,
     memberCount: 1,
@@ -38,6 +43,7 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
     homepageUrl: payload.homepageUrl || null,
     joinMechanism: 'instant',
     createdBy: payload.createdBy || null,
+    inviteToken,
     createdAt: new Date(),
   });
 
@@ -64,6 +70,7 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
 
   return {
     id,
+    slug,
     name: payload.name,
     description: payload.description,
     members: 1,
@@ -73,6 +80,7 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
     moods: payload.moods,
     homepageUrl: payload.homepageUrl || undefined,
     joinMechanism: 'instant',
+    inviteToken,
   };
 }
 

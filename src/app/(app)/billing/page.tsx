@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, User, Briefcase, HeartHandshake, Building, BarChart, Rocket, ShieldCheck, Vote, Annoyed, UserPlus, Lock, Gift, Loader2, Sparkles, Crown, TrendingUp } from "lucide-react";
+import { Check, Star, User, Briefcase, HeartHandshake, Building, BarChart, Rocket, ShieldCheck, Vote, Annoyed, UserPlus, Lock, Gift, Loader2, Sparkles, Crown, TrendingUp, Copy, Trash2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/hooks/use-user";
-import { validateInviteCode, redeemInviteCode, createCheckoutSession, getMySubscription, getContributionSummary } from '@/lib/actions/profile-actions';
+import { validateInviteCode, redeemInviteCode, createCheckoutSession, getMySubscription, getContributionSummary, getMyInviteCodes, revokeInviteCode, getAllInviteCodes, createFoundingCode } from '@/lib/actions/profile-actions';
 
 const freeTier = {
     name: "Always Free",
@@ -118,20 +118,29 @@ const organizationalTiers = [
 
 export default function BillingPage() {
   const { toast } = useToast();
-  const { user, isLoading: isUserLoading } = useUser();
+  const { user, role, isLoading: isUserLoading } = useUser();
+  const isAdmin = role === 'Admin';
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState("");
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<{ valid: boolean; planName?: string } | null>(null);
   const [subscription, setSubscription] = useState<Awaited<ReturnType<typeof getMySubscription>> | null>(null);
   const [contribSummary, setContribSummary] = useState<Awaited<ReturnType<typeof getContributionSummary>> | null>(null);
+  const [inviteCodes, setInviteCodes] = useState<Awaited<ReturnType<typeof getMyInviteCodes>>>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [adminCodes, setAdminCodes] = useState<Awaited<ReturnType<typeof getAllInviteCodes>>>([]);
+  const [isCreatingFoundingCode, setIsCreatingFoundingCode] = useState(false);
 
   useEffect(() => {
     if (user) {
       getMySubscription().then(setSubscription).catch(() => {});
       getContributionSummary().then(setContribSummary).catch(() => {});
+      getMyInviteCodes().then(setInviteCodes).catch(() => {});
+      if (isAdmin) {
+        getAllInviteCodes().then(setAdminCodes).catch(() => {});
+      }
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   const handleCheckout = async (planId: string, interval: 'monthly' | 'yearly' = 'monthly') => {
     if (!user) {
@@ -355,31 +364,212 @@ export default function BillingPage() {
               <div>
                 <CardTitle className="text-lg tracking-normal">Invite Friends</CardTitle>
                 <CardDescription>
-                  Share a personal invite code with friends. When they join, you earn 25 referral points toward your reputation.
+                  Share personal invite codes with friends. When they join, you earn 25 referral points and a mutual bond is created.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Code List */}
+            {inviteCodes.length > 0 && (
+              <div className="space-y-2">
+                {inviteCodes.map((code) => {
+                  const isExhausted = (code.usedCount ?? 0) >= (code.maxUses ?? 1);
+                  const remaining = (code.maxUses ?? 1) - (code.usedCount ?? 0);
+                  return (
+                    <div
+                      key={code.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border",
+                        isExhausted ? "opacity-50 bg-muted/30" : "bg-muted/10"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <code className="text-sm font-mono font-semibold tracking-wide shrink-0">
+                          {code.id}
+                        </code>
+                        <Badge variant={isExhausted ? "secondary" : "outline"} className="shrink-0 text-xs">
+                          {isExhausted ? "Exhausted" : `${code.usedCount ?? 0}/${code.maxUses ?? 1} used`}
+                        </Badge>
+                        {!isExhausted && remaining <= 1 && (
+                          <span className="text-xs text-amber-500 font-medium">{remaining} left</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!isExhausted && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Copy code"
+                            onClick={() => {
+                              navigator.clipboard.writeText(code.id);
+                              toast({ title: "Copied!", description: `${code.id} copied to clipboard.` });
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {!isExhausted && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive/60 hover:text-destructive"
+                            title="Revoke code"
+                            onClick={async () => {
+                              try {
+                                await revokeInviteCode(code.id);
+                                setInviteCodes(prev => prev.map(c =>
+                                  c.id === code.id ? { ...c, maxUses: c.usedCount ?? 0 } : c
+                                ));
+                                toast({ title: "Revoked", description: `${code.id} can no longer be used.` });
+                              } catch {
+                                toast({ variant: "destructive", title: "Error", description: "Failed to revoke code." });
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Generate Button */}
             <Button
               variant="outline"
               className="font-mono"
+              disabled={isGenerating}
               onClick={async () => {
+                setIsGenerating(true);
                 try {
                   const { generateInviteCode } = await import('@/lib/actions/profile-actions');
                   const result = await generateInviteCode();
                   navigator.clipboard.writeText(result.code);
                   toast({ title: "Code Generated!", description: `${result.code} — copied to clipboard!` });
+                  // Refresh the list
+                  getMyInviteCodes().then(setInviteCodes).catch(() => {});
                 } catch (e: unknown) {
                   toast({ title: "Error", description: ((e instanceof Error) ? e.message : 'An error occurred'), variant: "destructive" });
+                } finally {
+                  setIsGenerating(false);
                 }
               }}
             >
-              <UserPlus className="h-4 w-4 mr-2" />
+              {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
               Generate Invite Code
             </Button>
+            <p className="text-xs text-muted-foreground">
+              Each code allows up to 5 signups. You can have up to 3 active codes at a time.
+            </p>
           </CardContent>
         </Card>
+
+        {/* Admin: System Invite Codes */}
+        {isAdmin && (
+          <Card className="shadow-lg border-amber-500/30">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <ShieldCheck className="h-7 w-7 text-amber-500" />
+                <div>
+                  <CardTitle className="text-lg tracking-normal">System Invite Codes</CardTitle>
+                  <CardDescription>
+                    Admin view of all invite codes. Create founding codes that grant Co-Op membership.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* All system codes */}
+              {adminCodes.length > 0 && (
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {adminCodes.map((code) => {
+                    const isExhausted = (code.usedCount ?? 0) >= (code.maxUses ?? 1);
+                    const planLabel = code.grantsPlanId === 'individual_coop' ? 'Co-Op' : code.grantsPlanId === 'free' ? 'Free' : code.grantsPlanId ?? 'Free';
+                    const isFoundingCode = code.grantsPlanId === 'individual_coop';
+                    return (
+                      <div
+                        key={code.id}
+                        className={cn(
+                          "flex items-center justify-between p-3 rounded-lg border",
+                          isExhausted ? "opacity-40 bg-muted/20" : isFoundingCode ? "bg-amber-500/5 border-amber-500/20" : "bg-muted/10"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <code className="text-xs font-mono font-semibold tracking-wide shrink-0">
+                            {code.id}
+                          </code>
+                          <Badge variant={isFoundingCode ? "default" : "secondary"} className="shrink-0 text-xs">
+                            {planLabel}
+                          </Badge>
+                          <Badge variant={isExhausted ? "secondary" : "outline"} className="shrink-0 text-xs">
+                            {isExhausted ? "Exhausted" : `${code.usedCount ?? 0}/${code.maxUses ?? 1}`}
+                          </Badge>
+                          {!code.createdBy && (
+                            <span className="text-xs text-muted-foreground">system</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!isExhausted && (
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Copy"
+                              onClick={() => { navigator.clipboard.writeText(code.id); toast({ title: "Copied!", description: code.id }); }}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {!isExhausted && (
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive" title="Revoke"
+                              onClick={async () => {
+                                try {
+                                  await revokeInviteCode(code.id);
+                                  setAdminCodes(prev => prev.map(c => c.id === code.id ? { ...c, maxUses: c.usedCount ?? 0 } : c));
+                                  toast({ title: "Revoked", description: `${code.id} revoked.` });
+                                } catch { toast({ variant: "destructive", title: "Error", description: "Failed to revoke." }); }
+                              }}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Create Founding Code */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="font-mono border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                  disabled={isCreatingFoundingCode}
+                  onClick={async () => {
+                    setIsCreatingFoundingCode(true);
+                    try {
+                      const result = await createFoundingCode('individual_coop', 10);
+                      navigator.clipboard.writeText(result.code);
+                      toast({ title: "Founding Code Created!", description: `${result.code} — grants Co-Op membership. Copied!` });
+                      getAllInviteCodes().then(setAdminCodes).catch(() => {});
+                    } catch (e: unknown) {
+                      toast({ title: "Error", description: (e instanceof Error ? e.message : 'Failed'), variant: "destructive" });
+                    } finally {
+                      setIsCreatingFoundingCode(false);
+                    }
+                  }}
+                >
+                  {isCreatingFoundingCode ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  Create Founding Code
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Founding codes grant Individual Co-Op membership. Each allows 10 redemptions.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Upgrade to Org (only for individual plan holders) */}
         {currentPlanId === 'individual_coop' && (

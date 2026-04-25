@@ -48,6 +48,7 @@ function rowToBond(row: typeof bonds.$inferSelect): Bond {
     isTribeNicknameReported: row.isNicknameReported ?? false,
     showInIntercom: row.showInIntercom ?? true,
     allowChatInitiation: row.allowChatInitiation ?? false,
+    innerCircle: row.innerCircle ?? false,
     keyType: (row.keyType ?? 'standard') as Bond['keyType'],
     eventId: row.eventId ?? undefined,
     accessTier: (row.accessTier ?? undefined) as Bond['accessTier'],
@@ -323,6 +324,7 @@ export async function acceptBondRequest(requestId: string, acceptorUserId: strin
     expiresAt,
     lastRefreshedAt: now,
     reconnectsCount: 0,
+    innerCircle: isFamily, // Family bonds auto-join Inner Circle
   });
 
   // For mutual bond types (family, friend, professional, collaborator), create the reverse bond too
@@ -340,6 +342,7 @@ export async function acceptBondRequest(requestId: string, acceptorUserId: strin
       expiresAt,
       lastRefreshedAt: now,
       reconnectsCount: 0,
+      innerCircle: isFamily, // Family bonds auto-join Inner Circle
     });
   }
 }
@@ -472,6 +475,70 @@ export async function createFollowerBond(
   });
 }
 
+/**
+ * Creates a mutual referral bond between an inviter and invitee.
+ * This is platform-granted (bypasses subscription guard) and auto-accepted.
+ * Creates bonds in BOTH directions so both users see the connection.
+ *
+ * This forms the "trust chain" — every user is connected to the person
+ * who invited them, creating an auditable graph for bot detection.
+ */
+export async function createReferralBond(
+  inviteeId: string,
+  inviterId: string,
+): Promise<void> {
+  // Look up inviter's name for the bond display
+  const { users } = await import('@/db/schema');
+  const [inviter] = await db.select({ name: users.name }).from(users)
+    .where(eq(users.id, inviterId)).limit(1);
+  const [invitee] = await db.select({ name: users.name }).from(users)
+    .where(eq(users.id, inviteeId)).limit(1);
+
+  const inviterName = inviter?.name ?? 'Unknown';
+  const inviteeName = invitee?.name ?? 'Unknown';
+  const now = new Date();
+
+  // Bond: invitee → inviter
+  const existingForward = await db.select().from(bonds)
+    .where(and(eq(bonds.userId, inviteeId), eq(bonds.targetId, inviterId)))
+    .limit(1);
+  if (existingForward.length === 0) {
+    await db.insert(bonds).values({
+      id: `bond-ref-${inviteeId.substring(0, 8)}-${inviterId.substring(0, 8)}-${Date.now()}`,
+      userId: inviteeId,
+      targetId: inviterId,
+      targetType: 'user',
+      targetName: inviterName,
+      bondType: 'friend',
+      formationMethod: 'digital_introduction',
+      passkeyStatus: 'active',
+      expiresAt: new Date(now.getTime() + 365 * 86400000), // 1 year
+      lastRefreshedAt: now,
+      reconnectsCount: 0,
+    });
+  }
+
+  // Bond: inviter → invitee
+  const existingReverse = await db.select().from(bonds)
+    .where(and(eq(bonds.userId, inviterId), eq(bonds.targetId, inviteeId)))
+    .limit(1);
+  if (existingReverse.length === 0) {
+    await db.insert(bonds).values({
+      id: `bond-ref-${inviterId.substring(0, 8)}-${inviteeId.substring(0, 8)}-${Date.now()}`,
+      userId: inviterId,
+      targetId: inviteeId,
+      targetType: 'user',
+      targetName: inviteeName,
+      bondType: 'friend',
+      formationMethod: 'digital_introduction',
+      passkeyStatus: 'active',
+      expiresAt: new Date(now.getTime() + 365 * 86400000), // 1 year
+      lastRefreshedAt: now,
+      reconnectsCount: 0,
+    });
+  }
+}
+
 // ============================================================
 // EXISTING BOND OPERATIONS (preserved from Phase 1)
 // ============================================================
@@ -564,6 +631,7 @@ export async function saveBondSettings(updatedBond: Bond, userId: string): Promi
     nicknameVibe: updatedBond.tribeNicknameVibe ?? null,
     isNicknameReported: updatedBond.isTribeNicknameReported ?? false,
     allowChatInitiation: updatedBond.allowChatInitiation ?? false,
+    innerCircle: updatedBond.innerCircle ?? false,
   }).where(eq(bonds.id, updatedBond.id));
 }
 

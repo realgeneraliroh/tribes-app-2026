@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
-import { getTribeById, getTribeMembers, leaveTribe, getMyTribeIds, requestToJoinTribe, checkTribeAccess } from '@/lib/actions/tribe-actions';
+import { getTribeById, getTribeBySlug, getTribeMembers, leaveTribe, getMyTribeIds, requestToJoinTribe, checkTribeAccess } from '@/lib/actions/tribe-actions';
 import { getEventsForTribe } from '@/lib/actions/event-actions';
 import { getPostsForTribe, promotePostToMoods, repost, createTribePost, getActiveReportedPostIds, getActiveReportsForTribe, reportPost, reportComment, toggleVibe, createComment, deleteOwnPost } from '@/lib/actions/content-actions';
 import type { Tribe, Event, TribePost, ReportedPost, TribeMember, DiscussionComment } from '@/lib/types';
@@ -154,7 +154,12 @@ export function useTribeDetail() {
 export function TribeDetailProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const params = useParams();
-  const tribeId = params.tribeId as string;
+  // Support both /tribes/[tribeId] (legacy) and /t/[slug] (new) routes
+  const slugParam = params.slug as string | undefined;
+  const tribeIdParam = params.tribeId as string | undefined;
+  // Once we resolve, we store the actual tribeId for all internal operations
+  const [resolvedTribeId, setResolvedTribeId] = React.useState<string>(tribeIdParam || '');
+  const tribeId = resolvedTribeId || tribeIdParam || '';
   const { toast } = useToast();
   const { role, user } = useUser();
   const isLoggedIn = !!role;
@@ -169,22 +174,35 @@ export function TribeDetailProvider({ children }: { children: React.ReactNode })
 
   // ── Data Sync ──
   const syncAllData = useCallback(async () => {
-    if (!tribeId) return;
     dispatch({ type: 'SET_LOADING', payload: true });
 
+    // Resolve tribe: by slug (new route) or by ID (legacy route)
+    let tribeData: Tribe | null = null;
+    if (slugParam) {
+      tribeData = await getTribeBySlug(slugParam);
+      if (tribeData) setResolvedTribeId(tribeData.id);
+    } else if (tribeIdParam) {
+      tribeData = await getTribeById(tribeIdParam);
+    }
+
+    if (!tribeData) {
+      router.push('/tribes');
+      return;
+    }
+
+    const effectiveTribeId = tribeData.id;
     const myTribeIds = await getMyTribeIds();
-    const memberOfTribe = myTribeIds.includes(tribeId) || tribeId === TRIBE_0_ID;
+    const memberOfTribe = myTribeIds.includes(effectiveTribeId) || effectiveTribeId === TRIBE_0_ID;
 
     // Resolve tribe access level from server
-    const accessLevel = await checkTribeAccess(tribeId);
+    const accessLevel = await checkTribeAccess(effectiveTribeId);
     setTribeAccessLevel(accessLevel);
 
-    const [tribeData, membersData, postsData, reportedIds, tribeReports] = await Promise.all([
-      getTribeById(tribeId),
-      getTribeMembers(tribeId),
-      getPostsForTribe(tribeId),
+    const [membersData, postsData, reportedIds, tribeReports] = await Promise.all([
+      getTribeMembers(effectiveTribeId),
+      getPostsForTribe(effectiveTribeId),
       getActiveReportedPostIds(),
-      getActiveReportsForTribe(tribeId),
+      getActiveReportsForTribe(effectiveTribeId),
     ]);
 
     if (tribeData) {
@@ -220,9 +238,9 @@ export function TribeDetailProvider({ children }: { children: React.ReactNode })
     } else {
       router.push('/tribes');
     }
-  }, [tribeId, router]);
+  }, [slugParam, tribeIdParam, router]);
 
-  useEffect(() => { syncAllData(); }, [tribeId, syncAllData]);
+  useEffect(() => { syncAllData(); }, [slugParam, tribeIdParam, syncAllData]);
   useEffect(() => {
     window.addEventListener('focus', syncAllData);
     return () => window.removeEventListener('focus', syncAllData);

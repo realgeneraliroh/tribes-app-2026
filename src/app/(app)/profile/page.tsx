@@ -2,7 +2,7 @@
 import { redirect } from 'next/navigation';
 
 export default function ProfilePage() {
-  // The profile page has been merged into the more comprehensive settings page.
-  redirect('/settings');
+  // Your own profile is your wall — redirect there
+  redirect('/my-wall');
   return null; 
 }

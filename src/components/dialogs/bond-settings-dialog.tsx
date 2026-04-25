@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import type { Bond } from '@/lib/types';
-import { AtSign, UserCheck, UserCog, Info as InfoIcon, Flag, Heart, Smile, Meh } from 'lucide-react';
+import { AtSign, UserCheck, UserCog, Info as InfoIcon, Flag, Heart, Smile, Meh, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
@@ -35,6 +35,7 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
   const [theirPseudonymForYou, setTheirPseudonymForYou] = useState("");
   const [displayPreference, setDisplayPreference] = useState<'my_alias' | 'tribe_assigned_nickname'>('my_alias');
   const [currentNicknameVibe, setCurrentNicknameVibe] = useState<Bond['tribeNicknameVibe'] | undefined>(undefined);
+  const [innerCircle, setInnerCircle] = useState(false);
 
 
   useEffect(() => {
@@ -46,12 +47,14 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
       }
       setDisplayPreference(bond.displayPreferenceForTribeNickname || (bond.pseudonym ? 'my_alias' : 'tribe_assigned_nickname'));
       setCurrentNicknameVibe(bond.tribeNicknameVibe);
+      setInnerCircle(bond.innerCircle ?? false);
     } else if (!isOpen) {
       setNotificationsEnabled(true);
       setYourPseudonym("");
       setTheirPseudonymForYou("");
       setDisplayPreference('my_alias');
       setCurrentNicknameVibe(undefined);
+      setInnerCircle(false);
     }
   }, [isOpen, bond]);
 
@@ -67,7 +70,8 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
             targetPseudonymForMe: bond.targetType === 'user' ? (theirPseudonymForYou.trim() || undefined) : undefined,
             displayPreferenceForTribeNickname: bond.targetType === 'tribe' && bond.tribeAssignedNickname ? displayPreference : undefined,
             tribeNicknameVibe: bond.targetType === 'tribe' && bond.tribeAssignedNickname ? currentNicknameVibe : undefined,
-            isTribeNicknameReported: bond.isTribeNicknameReported 
+            isTribeNicknameReported: bond.isTribeNicknameReported,
+            innerCircle: bond.targetType === 'user' ? innerCircle : bond.innerCircle,
         };
         onSave(updatedBond);
     }
@@ -116,6 +120,32 @@ export function BondSettingsDialog({ isOpen, onOpenChange, bond, onSave }: BondS
             </div>
           </div>
         </fieldset>
+
+        {bond.targetType === 'user' && (
+          <>
+            <Separator />
+            <fieldset>
+              <legend className="text-base font-semibold text-foreground mb-3">Trust Level</legend>
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                <div className="flex-1">
+                  <Label htmlFor={`inner-circle-${bond.id}`} className="cursor-pointer text-sm flex items-center">
+                    <ShieldCheck className="h-4 w-4 mr-2 text-emerald-600" />
+                    Inner Circle
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5 pl-6">
+                    Add to your Inner Circle. Only you can see this — they won&apos;t be notified.
+                  </p>
+                </div>
+                <Switch
+                  id={`inner-circle-${bond.id}`}
+                  checked={innerCircle}
+                  onCheckedChange={setInnerCircle}
+                  aria-label="Toggle Inner Circle membership for this bond"
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
 
         <Separator />
 

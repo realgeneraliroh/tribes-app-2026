@@ -2,23 +2,23 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback } from 'react';
 import { moodsData as allMoods } from '@/lib/moods-data';
-import type { MoodStreamPost, Bond, CommunicationItem, DiscussionComment } from '@/lib/types';
+import type { CommunicationItem, Ring } from '@/lib/types';
 import type { ActivityItem } from '@/lib/services/notification-service';
-import { getBonds } from '@/lib/actions/bond-actions';
-import { getMoodStreamPosts, toggleVibe, createComment, getCommentsForPost, getActivityFeed, getLatestMessagePreview } from '@/lib/actions/content-actions';
-import { useToast } from '@/hooks/use-toast';
+import { getUnifiedFeedAction, getActivityFeed } from '@/lib/actions/content-actions';
 import { showLocalNotification } from '@/hooks/use-push-notifications';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-const DEFAULT_SELECTED_MOODS = ['chill', 'focus', 'showcase', 'discover'];
-const LOCAL_STORAGE_KEY = 'tribesAppSelectedMoods';
+type RingFilterValue = Ring | 'all' | 'streams';
+
+const RING_STORAGE_KEY = 'tribes_ring_filter';
+const MOOD_STORAGE_KEY = 'tribes_mood_filter';
 
 interface IntercomState {
   isLoading: boolean;
-  allCommsData: CommunicationItem[];
+  feedItems: CommunicationItem[];
+  ringFilter: RingFilterValue;
   selectedMoodSlugs: string[];
-  isTunerOpen: boolean;
   hasLoadedFromStorage: boolean;
   activeTab: 'feed' | 'activity';
   activityItems: ActivityItem[];
@@ -27,10 +27,10 @@ interface IntercomState {
 
 type Action =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_COMMS_DATA'; payload: CommunicationItem[] }
+  | { type: 'SET_FEED_ITEMS'; payload: CommunicationItem[] }
+  | { type: 'SET_RING_FILTER'; payload: RingFilterValue }
   | { type: 'SET_MOOD_SLUGS'; payload: string[] }
   | { type: 'TOGGLE_MOOD'; payload: { slug: string; checked: boolean } }
-  | { type: 'SET_TUNER_OPEN'; payload: boolean }
   | { type: 'SET_LOADED_FROM_STORAGE' }
   | { type: 'SET_ACTIVE_TAB'; payload: 'feed' | 'activity' }
   | { type: 'SET_ACTIVITY_ITEMS'; payload: ActivityItem[] }
@@ -39,7 +39,8 @@ type Action =
 function reducer(state: IntercomState, action: Action): IntercomState {
   switch (action.type) {
     case 'SET_LOADING': return { ...state, isLoading: action.payload };
-    case 'SET_COMMS_DATA': return { ...state, allCommsData: action.payload, isLoading: false };
+    case 'SET_FEED_ITEMS': return { ...state, feedItems: action.payload, isLoading: false };
+    case 'SET_RING_FILTER': return { ...state, ringFilter: action.payload };
     case 'SET_MOOD_SLUGS': return { ...state, selectedMoodSlugs: action.payload };
     case 'TOGGLE_MOOD': return {
       ...state,
@@ -47,7 +48,6 @@ function reducer(state: IntercomState, action: Action): IntercomState {
         ? [...state.selectedMoodSlugs, action.payload.slug]
         : state.selectedMoodSlugs.filter(s => s !== action.payload.slug),
     };
-    case 'SET_TUNER_OPEN': return { ...state, isTunerOpen: action.payload };
     case 'SET_LOADED_FROM_STORAGE': return { ...state, hasLoadedFromStorage: true };
     case 'SET_ACTIVE_TAB': return { ...state, activeTab: action.payload };
     case 'SET_ACTIVITY_ITEMS': return { ...state, activityItems: action.payload, isLoadingActivity: false };
@@ -61,11 +61,12 @@ function reducer(state: IntercomState, action: Action): IntercomState {
 interface IntercomContextValue {
   state: IntercomState;
   dispatch: React.Dispatch<Action>;
-  familyComms: CommunicationItem[];
-  regularComms: CommunicationItem[];
-  highlightsFromYourMoods: CommunicationItem[];
+  feedItems: CommunicationItem[];
   activityCount: number;
   allMoods: typeof allMoods;
+  refreshFeed: () => void;
+  setRingFilter: (ring: RingFilterValue) => void;
+  setMoodSlugs: (slugs: string[]) => void;
 }
 
 const IntercomContext = createContext<IntercomContextValue | null>(null);
@@ -81,9 +82,9 @@ export function useIntercom() {
 export function IntercomProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, {
     isLoading: true,
-    allCommsData: [],
+    feedItems: [],
+    ringFilter: 'all',
     selectedMoodSlugs: [],
-    isTunerOpen: false,
     hasLoadedFromStorage: false,
     activeTab: 'feed',
     activityItems: [],
@@ -92,83 +93,68 @@ export function IntercomProvider({ children }: { children: React.ReactNode }) {
 
   // Load filter state from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.every(s => typeof s === 'string')) {
-          dispatch({ type: 'SET_MOOD_SLUGS', payload: parsed });
-        } else {
-          dispatch({ type: 'SET_MOOD_SLUGS', payload: DEFAULT_SELECTED_MOODS });
-        }
-      } catch {
-        dispatch({ type: 'SET_MOOD_SLUGS', payload: DEFAULT_SELECTED_MOODS });
-      }
-    } else {
-      dispatch({ type: 'SET_MOOD_SLUGS', payload: DEFAULT_SELECTED_MOODS });
+    const storedRing = localStorage.getItem(RING_STORAGE_KEY) as RingFilterValue | null;
+    if (storedRing) {
+      dispatch({ type: 'SET_RING_FILTER', payload: storedRing });
     }
+
+    try {
+      const storedMoods = localStorage.getItem(MOOD_STORAGE_KEY);
+      if (storedMoods) {
+        const parsed = JSON.parse(storedMoods);
+        if (Array.isArray(parsed)) {
+          dispatch({ type: 'SET_MOOD_SLUGS', payload: parsed });
+        }
+      }
+    } catch { /* ignore */ }
+
     dispatch({ type: 'SET_LOADED_FROM_STORAGE' });
   }, []);
 
   // Persist filter state
   useEffect(() => {
     if (state.hasLoadedFromStorage) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.selectedMoodSlugs));
+      localStorage.setItem(RING_STORAGE_KEY, state.ringFilter);
+      localStorage.setItem(MOOD_STORAGE_KEY, JSON.stringify(state.selectedMoodSlugs));
     }
-  }, [state.selectedMoodSlugs, state.hasLoadedFromStorage]);
+  }, [state.ringFilter, state.selectedMoodSlugs, state.hasLoadedFromStorage]);
 
-  // Fetch all feed data
-  useEffect(() => {
-    const fetchAllData = async () => {
-      const [bonds, moodPosts] = await Promise.all([getBonds(), getMoodStreamPosts()]);
-
-      // Build bond message items from real DB data
-      const bondMessages: CommunicationItem[] = [];
-      for (const b of bonds.filter(b => b.bondType === 'family' || b.bondType === 'friend')) {
-        const latestMsg = await getLatestMessagePreview(b.id);
-        const initials = b.targetName.split(" ").map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        bondMessages.push({
-          id: `bond-msg-${b.id}`,
-          type: b.bondType === 'family' ? 'family-bond' : 'regular-bond',
-          sender: b.targetName,
-          bondName: b.targetName,
-          message: latestMsg?.preview || 'Start a conversation!',
-          vibes: 0,
-          timestamp: latestMsg?.sentAt ?? b.lastRefreshedAt,
-          avatarFallback: initials,
-        } as CommunicationItem);
-      }
-      const moodStreamItems: CommunicationItem[] = moodPosts.map(post => {
-        const primaryMoodSlug = post.moodTags[0];
-        const moodDetails = allMoods.find(m => m.slug === primaryMoodSlug);
-        return {
-          id: post.id,
-          type: "mood-stream",
-          tribeName: post.tribeName,
-          tribeId: post.tribeId,
-          content: post.content,
-          title: post.title,
-          moodSlug: primaryMoodSlug,
-          moodName: moodDetails?.name || primaryMoodSlug,
-          avatarSrc: post.authorAvatarSrc,
-          avatarFallback: post.authorAvatarFallback || post.author?.substring(0, 2),
-          timestamp: post.timestamp,
-          vibes: post.vibes,
-          dataAiHint: post.dataAiHintAvatar,
-          imageUrl: post.imageUrl,
-          imageAlt: post.imageAlt,
-          dataAiHintImage: post.dataAiHintImage,
-          sender: post.author,
-          promotedByName: post.promotedByName,
-        } as CommunicationItem;
-      });
-      const combined = [...bondMessages, ...moodStreamItems].sort(
-        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+  // Fetch unified feed when filters change
+  const fetchFeed = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const items = await getUnifiedFeedAction(
+        state.ringFilter,
+        state.selectedMoodSlugs.length > 0 ? state.selectedMoodSlugs : undefined,
+        50,
+        0,
       );
-      dispatch({ type: 'SET_COMMS_DATA', payload: combined });
-    };
-    fetchAllData();
+      dispatch({ type: 'SET_FEED_ITEMS', payload: items });
+    } catch {
+      dispatch({ type: 'SET_FEED_ITEMS', payload: [] });
+    }
+  }, [state.ringFilter, state.selectedMoodSlugs]);
+
+  useEffect(() => {
+    if (state.hasLoadedFromStorage) {
+      fetchFeed();
+    }
+  }, [state.hasLoadedFromStorage, fetchFeed]);
+
+  // Ring filter setter
+  const setRingFilter = useCallback((ring: RingFilterValue) => {
+    dispatch({ type: 'SET_RING_FILTER', payload: ring });
   }, []);
+
+  // Mood filter setter
+  const setMoodSlugs = useCallback((slugs: string[]) => {
+    dispatch({ type: 'SET_MOOD_SLUGS', payload: slugs });
+  }, []);
+
+  // External refresh trigger (e.g. ComposeBox after posting)
+  const refreshFeed = useCallback(() => {
+    fetchFeed();
+  }, [fetchFeed]);
 
   // Load activity feed when tab switches + fire local notifications for new items
   const prevActivityCountRef = React.useRef(0);
@@ -201,26 +187,13 @@ export function IntercomProvider({ children }: { children: React.ReactNode }) {
   }, [state.activeTab]);
 
   // Derived data
-  const familyComms = useMemo(() =>
-    state.allCommsData.filter(c => c.type === 'family-bond'), [state.allCommsData]);
-  const regularComms = useMemo(() =>
-    state.allCommsData.filter(c => c.type === 'regular-bond'), [state.allCommsData]);
-  const highlightsFromYourMoods = useMemo(() => {
-    if (state.selectedMoodSlugs.length === 0 && state.hasLoadedFromStorage) return [];
-    const slugs = state.selectedMoodSlugs.length > 0
-      ? state.selectedMoodSlugs
-      : (state.hasLoadedFromStorage ? [] : DEFAULT_SELECTED_MOODS);
-    return state.allCommsData
-      .filter(c => c.type === 'mood-stream' && c.moodSlug && slugs.includes(c.moodSlug))
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 5);
-  }, [state.selectedMoodSlugs, state.hasLoadedFromStorage, state.allCommsData]);
   const activityCount = useMemo(() =>
     state.activityItems.filter((a: ActivityItem) => !a.read).length, [state.activityItems]);
 
   const value = useMemo<IntercomContextValue>(() => ({
-    state, dispatch, familyComms, regularComms, highlightsFromYourMoods, activityCount, allMoods,
-  }), [state, familyComms, regularComms, highlightsFromYourMoods, activityCount]);
+    state, dispatch, feedItems: state.feedItems, activityCount, allMoods,
+    refreshFeed, setRingFilter, setMoodSlugs,
+  }), [state, activityCount, refreshFeed, setRingFilter, setMoodSlugs]);
 
   return <IntercomContext.Provider value={value}>{children}</IntercomContext.Provider>;
 }

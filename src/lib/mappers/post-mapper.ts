@@ -3,7 +3,7 @@
  * Single source of truth — imported by post-service and moderation-service.
  */
 import type { posts } from '@/db/schema';
-import type { TribePost, DiscussionComment } from '@/lib/types';
+import type { TribePost, DiscussionComment, Ring } from '@/lib/types';
 
 /**
  * Maps a Drizzle `posts` row to the application-level `TribePost` type.
@@ -15,7 +15,7 @@ export function rowToTribePost(
 ): TribePost {
   return {
     id: row.id,
-    tribeId: row.tribeId,
+    tribeId: row.tribeId ?? undefined,
     authorId: row.authorId,
     authorName: row.authorName,
     authorAvatar: row.authorAvatar ?? undefined,
@@ -34,6 +34,9 @@ export function rowToTribePost(
     removalReason: row.removalReason ?? undefined,
     originalPostId: row.originalPostId ?? undefined,
     isPinned: row.isPinned ?? false,
+    ring: (row.ring as Ring) ?? undefined,
+    moodTag: row.moodTag ?? undefined,
+    pinnedToWall: row.pinnedToWall ?? false,
     commentsData,
   };
 }

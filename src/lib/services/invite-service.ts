@@ -159,30 +159,31 @@ export async function redeemInviteCode(
     .set({ usedCount: (currentCode?.usedCount ?? 0) + 1 })
     .where(eq(inviteCodes.id, normalizedCode));
 
-  // Referral tracking: award inviter 25 reputation points and auto-send a bond request
-  try {
-    const [codeRecord] = await db.select({ createdBy: inviteCodes.createdBy })
-      .from(inviteCodes).where(eq(inviteCodes.id, normalizedCode)).limit(1);
-    const createdBy = codeRecord?.createdBy;
-    if (createdBy && createdBy !== userId) {
-      const { recordContribution } = await import('@/lib/services/contribution-service');
-      await recordContribution(createdBy, 'referral', userId, `Referred user via invite code ${normalizedCode}`);
+  // Referral tracking: auto-bond inviter ↔ invitee + attempt referral points
+  const [codeRecord] = await db.select({ createdBy: inviteCodes.createdBy })
+    .from(inviteCodes).where(eq(inviteCodes.id, normalizedCode)).limit(1);
+  const createdBy = codeRecord?.createdBy;
 
-      // Auto-create a bond request from the new user to the inviter
-      try {
-        const { createBondRequest } = await import('@/lib/services/bond-service');
-        await createBondRequest(
-          userId,         // fromUserId (invitee)
-          createdBy,      // toUserId (inviter)
-          'friend',       // bondType
-          'digital_introduction', // formationMethod
-          'I just joined using your invite code!'
-        );
-      } catch (bondErr) {
-        console.warn('[invite-service] auto bond request failed:', bondErr);
-      }
+  if (createdBy && createdBy !== userId) {
+    // 1. Auto-create mutual referral bond (ALWAYS — this is the trust chain)
+    try {
+      const { createReferralBond } = await import('@/lib/services/bond-service');
+      await createReferralBond(userId, createdBy);
+    } catch (bondErr) {
+      console.warn('[invite-service] auto referral bond failed:', bondErr);
     }
-  } catch (e) { console.warn('[invite-service] referral tracking failed:', e); }
+
+    // 2. Attempt referral contribution points via the proper gated function.
+    //    This will throw if the user hasn't verified email or is < 7 days old —
+    //    that's fine, the points will be awarded later by a deferred check.
+    try {
+      const { awardReferralPoints } = await import('@/lib/services/contribution-service');
+      await awardReferralPoints(createdBy, userId);
+    } catch (contribErr) {
+      // Expected for new users — points will be awarded when criteria are met
+      console.log('[invite-service] referral points deferred (user too new):', (contribErr as Error).message);
+    }
+  }
 
   return { planName: plan.name, source };
 }
@@ -270,4 +271,20 @@ export async function createFoundingCodes(
 
   console.log(`[invite] Created ${count} founding codes for "${label}": ${codes.join(', ')}`);
   return codes;
+}
+
+/**
+ * Admin: gets all invite codes in the system with usage data.
+ */
+export async function getAllInviteCodes() {
+  return db.select({
+    id: inviteCodes.id,
+    createdBy: inviteCodes.createdBy,
+    grantsPlanId: inviteCodes.grantsPlanId,
+    maxUses: inviteCodes.maxUses,
+    usedCount: inviteCodes.usedCount,
+    createdAt: inviteCodes.createdAt,
+    expiresAt: inviteCodes.expiresAt,
+  }).from(inviteCodes)
+    .orderBy(inviteCodes.createdAt);
 }

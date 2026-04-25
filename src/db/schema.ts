@@ -156,6 +156,9 @@ export const bonds = sqliteTable('bonds', {
   showInIntercom: integer('show_in_intercom', { mode: 'boolean' }).default(true),
   allowChatInitiation: integer('allow_chat_initiation', { mode: 'boolean' }).default(false),
 
+  // Concentric Rings — trust level (PRIVATE: never exposed to other users)
+  innerCircle: integer('inner_circle', { mode: 'boolean' }).default(false),
+
   // Event bond fields
   keyType: text('key_type').default('standard'),
   eventId: text('event_id'),
@@ -192,6 +195,7 @@ export const blockedUsers = sqliteTable('blocked_users', {
 
 export const tribes = sqliteTable('tribes', {
   id: text('id').primaryKey(),
+  slug: text('slug').unique(),                      // URL-safe slug, e.g. 'moore-family'
   name: text('name').notNull().unique(),
   description: text('description').notNull(),
   memberCount: integer('member_count').default(0),
@@ -206,6 +210,7 @@ export const tribes = sqliteTable('tribes', {
   createdBy: text('created_by').references(() => users.id),
   brandColor: text('brand_color'),                // Hex color for org branding (e.g. '#4F46E5')
   brandLogo: text('brand_logo'),                  // URL to org logo image
+  inviteToken: text('invite_token').unique(),     // Random unguessable invite token
   createdAt: integer('created_at', { mode: 'timestamp' }),
 });
 
@@ -239,7 +244,7 @@ export const pendingMembers = sqliteTable('pending_members', {
 
 export const posts = sqliteTable('posts', {
   id: text('id').primaryKey(),
-  tribeId: text('tribe_id').notNull().references(() => tribes.id, { onDelete: 'cascade' }),
+  tribeId: text('tribe_id').references(() => tribes.id, { onDelete: 'cascade' }), // Nullable: journal/bond-ring posts have no tribe
   authorId: text('author_id').notNull().references(() => users.id),
   authorName: text('author_name').notNull(),
   authorAvatar: text('author_avatar'),
@@ -258,6 +263,12 @@ export const posts = sqliteTable('posts', {
   originalPostId: text('original_post_id'),
   isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
   moodVisibility: text('mood_visibility').default('public'), // 'public' | 'tribe_network' | 'members_only'
+
+  // Concentric Rings — post scoping
+  ring: text('ring').default('tribes'), // 'journal' | 'inner_circle' | 'my_people' | 'tribes'
+  moodTag: text('mood_tag'),            // Primary mood slug (e.g. 'chill', 'kin') — for feed filtering
+  pinnedToWall: integer('pinned_to_wall', { mode: 'boolean' }).default(false), // Journal → Wall promotion
+
   createdAt: integer('created_at', { mode: 'timestamp' }),
 });
 

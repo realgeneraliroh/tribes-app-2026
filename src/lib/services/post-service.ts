@@ -106,15 +106,18 @@ export async function getMoodStreamPosts(viewerUserId?: string): Promise<MoodStr
     // Enforce moodVisibility: restrict non-public posts to tribe members
     if (postRow.moodVisibility && postRow.moodVisibility !== 'public') {
       const viewerTribeIds = await getUserTribeIds(viewerUserId);
-      if (!viewerTribeIds.includes(postRow.tribeId)) continue; // Not a member → skip
+      if (!postRow.tribeId || !viewerTribeIds.includes(postRow.tribeId)) continue; // Not a member → skip
     }
 
     const tags = taggedPosts.filter(t => t.postId === postId).map(t => t.moodSlug);
 
     // Look up tribe name
     const { tribes } = await import('@/db/schema');
-    const tribeRows = await db.select().from(tribes).where(eq(tribes.id, postRow.tribeId)).limit(1);
-    const tribe = tribeRows[0];
+    let tribe;
+    if (postRow.tribeId) {
+      const tribeRows = await db.select().from(tribes).where(eq(tribes.id, postRow.tribeId)).limit(1);
+      tribe = tribeRows[0];
+    }
 
     // Look up promoter name (use first tag's promotedBy)
     let promotedByName: string | undefined;
@@ -131,7 +134,7 @@ export async function getMoodStreamPosts(viewerUserId?: string): Promise<MoodStr
       authorAvatarFallback: postRow.authorAvatarFallback,
       dataAiHintAvatar: postRow.dataAiHintAvatar ?? undefined,
       tribeName: tribe?.name ?? undefined,
-      tribeId: postRow.tribeId,
+      tribeId: postRow.tribeId ?? undefined,
       timestamp: postRow.createdAt ?? new Date(),
       title: postRow.title ?? undefined,
       content: postRow.content,

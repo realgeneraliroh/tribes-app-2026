@@ -24,6 +24,45 @@ export async function findTribeByName(name: string): Promise<Tribe | null> {
   return fn(name, userId);
 }
 
+export async function getTribeBySlug(slug: string): Promise<Tribe | null> {
+  const userId = await getCurrentUserId();
+  const { getTribeBySlug: fn } = await import('@/lib/data-access/tribes');
+  return fn(slug, userId);
+}
+
+export async function getTribeByInviteToken(token: string): Promise<Tribe | null> {
+  const { getTribeByInviteToken: fn } = await import('@/lib/data-access/tribes');
+  return fn(token);
+}
+
+export async function regenerateInviteToken(tribeId: string): Promise<string> {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  // Verify the caller is a founder/speaker of this tribe
+  const { db } = await import('@/db');
+  const { tribeMembers, tribes } = await import('@/db/schema');
+  const { eq, and } = await import('drizzle-orm');
+
+  const [membership] = await db.select({ role: tribeMembers.role })
+    .from(tribeMembers)
+    .where(and(eq(tribeMembers.tribeId, tribeId), eq(tribeMembers.userId, userId)))
+    .limit(1);
+
+  if (!membership || !['founder', 'speaker'].includes(membership.role || '')) {
+    throw new Error('Only tribe founders and speakers can regenerate invite links');
+  }
+
+  const { generateInviteToken } = await import('@/lib/invite-token');
+  const newToken = generateInviteToken();
+
+  await db.update(tribes)
+    .set({ inviteToken: newToken })
+    .where(eq(tribes.id, tribeId));
+
+  return newToken;
+}
+
 export async function getMyTribeIds(): Promise<string[]> {
   const userId = await getCurrentUserId();
   if (!userId) return [];

@@ -45,6 +45,9 @@ export type FormationMethod = "rfid_tap" | "digital_introduction" | "virtual_req
 export type KeyType = "standard" | "event_promo" | "event_attendee";
 export type AccessTier = "spectator" | "attendee" | "vip";
 
+// Concentric Rings
+export type Ring = "journal" | "inner_circle" | "my_people" | "tribes";
+
 export interface Bond {
   id: string;
   targetId?: string; // The raw user/tribe ID of the bond target (for blocking, etc.)
@@ -58,6 +61,7 @@ export interface Bond {
   reconnectsCount: number;
   showInIntercom?: boolean;
   allowChatInitiation?: boolean;
+  innerCircle?: boolean; // Concentric Rings trust level (PRIVATE — never shown to other users)
   keyType?: KeyType;
   eventId?: string;
   accessTier?: AccessTier;
@@ -117,7 +121,7 @@ export interface Event {
 
 export interface TribePost {
   id: string;
-  tribeId: string;
+  tribeId?: string; // Nullable for journal/bond-ring posts
   authorId: string;
   authorName: string;
   authorAvatar?: string;
@@ -137,6 +141,11 @@ export interface TribePost {
   removalReason?: string;
   originalPostId?: string;
   isPinned?: boolean;
+
+  // Concentric Rings
+  ring?: Ring;
+  moodTag?: string;
+  pinnedToWall?: boolean;
 }
 
 export interface ReportedPost {
@@ -204,6 +213,7 @@ export interface MoodStreamPost {
 // Tribe related types
 export interface Tribe {
   id: string;
+  slug: string;
   name: string;
   description: string;
   members: number;
@@ -219,6 +229,7 @@ export interface Tribe {
   brandColor?: string;
   brandLogo?: string;
   createdBy?: string;
+  inviteToken?: string;
 }
 
 // Story related types
@@ -250,9 +261,11 @@ export interface SourceArticle {
 // For YourCommsPage
 export interface CommunicationItem {
   id: string;
-  type: "family-bond" | "regular-bond" | "mood-stream";
+  type: "family-bond" | "regular-bond" | "mood-stream" | "ring-post";
+  ring?: Ring;
   sender?: string;
   bondName?: string;
+  bondTargetId?: string;
   tribeName?: string;
   tribeId?: string;
   message?: string;
@@ -269,4 +282,5 @@ export interface CommunicationItem {
   dataAiHintImage?: string;
   title?: string;
   promotedByName?: string;
+  pinnedToWall?: boolean;
 }

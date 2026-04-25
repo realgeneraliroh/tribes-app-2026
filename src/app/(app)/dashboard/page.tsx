@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 export default function DashboardPage() {
   useEffect(() => {
-    redirect('/my-wall');
+    redirect('/your-comms');
   }, []);
   return null;
 }

@@ -82,7 +82,7 @@ export default function CreateTribePage() {
         description: `Your new tribe "${values.name}" is now live.`,
       });
 
-      router.push('/tribes');
+      router.push(`/t/${newTribe.slug}`);
     } catch (error) {
        console.error("Failed to create tribe:", error);
        toast({
