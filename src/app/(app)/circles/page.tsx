@@ -24,13 +24,18 @@ export default function CirclesPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const [bondsResult, tribesResult] = await Promise.all([
-        getBonds(),
-        getMyTribesList(),
-      ]);
-      setBonds(bondsResult);
-      setTribes(tribesResult);
-      setIsLoading(false);
+      try {
+        const [bondsResult, tribesResult] = await Promise.all([
+          getBonds(),
+          getMyTribesList(),
+        ]);
+        setBonds(bondsResult);
+        setTribes(tribesResult);
+      } catch (err) {
+        console.error('[CirclesPage] Failed to fetch data:', err);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchData();
   }, []);

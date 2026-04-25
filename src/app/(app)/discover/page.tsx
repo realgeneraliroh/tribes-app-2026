@@ -25,13 +25,18 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const [tribesResult, eventsResult] = await Promise.all([
-        getTribes(),
-        getEvents(),
-      ]);
-      setTribes(tribesResult);
-      setEvents(eventsResult);
-      setIsLoading(false);
+      try {
+        const [tribesResult, eventsResult] = await Promise.all([
+          getTribes(),
+          getEvents(),
+        ]);
+        setTribes(tribesResult);
+        setEvents(eventsResult);
+      } catch (err) {
+        console.error('[DiscoverPage] Failed to fetch data:', err);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchData();
   }, []);

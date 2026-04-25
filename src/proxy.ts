@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, decrypt, encrypt } from '@/lib/auth/session';
 import { CSRF_COOKIE_NAME, generateCsrfToken } from '@/lib/auth/csrf';
+import { buildUrl } from '@/lib/url';
 
 /**
  * Phase 1A: Route Protection Proxy
@@ -44,7 +45,7 @@ export async function proxy(request: NextRequest) {
   if (legacyTribeMatch) {
     const tribeId = legacyTribeMatch[1];
     const suffix = legacyTribeMatch[2] || '';
-    const resolveUrl = new URL(`/api/resolve-tribe/${tribeId}${suffix}`, request.url);
+    const resolveUrl = buildUrl(`/api/resolve-tribe/${tribeId}${suffix}`, request);
     return NextResponse.rewrite(resolveUrl);
   }
 
@@ -58,7 +59,7 @@ export async function proxy(request: NextRequest) {
   
   if (!sessionCookie) {
     // No session — redirect to login with return URL
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = buildUrl('/login', request);
     loginUrl.searchParams.set('returnTo', pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -69,7 +70,7 @@ export async function proxy(request: NextRequest) {
     
     if (!parsed?.userId || !parsed?.sessionId) {
       // Invalid session payload — redirect to login
-      const loginUrl = new URL('/login', request.url);
+      const loginUrl = buildUrl('/login', request);
       const response = NextResponse.redirect(loginUrl);
       response.cookies.set(SESSION_COOKIE_NAME, '', { expires: new Date(0), path: '/' });
       return response;
@@ -92,7 +93,7 @@ export async function proxy(request: NextRequest) {
 
       if (!dbSession || dbSession.revokedAt || (dbSession.expiresAt && dbSession.expiresAt < new Date())) {
         // Session revoked or expired in DB — clear cookie and redirect
-        const loginUrl = new URL('/login', request.url);
+        const loginUrl = buildUrl('/login', request);
         const response = NextResponse.redirect(loginUrl);
         response.cookies.set(SESSION_COOKIE_NAME, '', { expires: new Date(0), path: '/' });
         return response;
@@ -106,7 +107,7 @@ export async function proxy(request: NextRequest) {
     // Check if account is pending deletion — redirect to recovery page
     // Allow settings page so user can cancel deletion
     if (parsed.deletionRequestedAt && pathname !== '/account-recovery' && pathname !== '/settings') {
-      return NextResponse.redirect(new URL('/account-recovery', request.url));
+      return NextResponse.redirect(buildUrl('/account-recovery', request));
     }
 
     // Refresh the session TTL (sliding window)
@@ -141,7 +142,7 @@ export async function proxy(request: NextRequest) {
   } catch (error) {
     // JWT verification failed (expired, tampered, etc.)
     console.error('[proxy] Session verification failed:', error);
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = buildUrl('/login', request);
     const response = NextResponse.redirect(loginUrl);
     response.cookies.set(SESSION_COOKIE_NAME, '', { expires: new Date(0), path: '/' });
     return response;

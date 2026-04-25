@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { tribes } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { buildUrl } from '@/lib/url';
 
 /**
  * Resolves a legacy tribe ID to its slug and issues a 301 redirect.
@@ -25,20 +26,20 @@ export async function GET(
 
   const row = rows[0];
   if (!row) {
-    return NextResponse.redirect(new URL('/tribes', request.url), 302);
+    return NextResponse.redirect(buildUrl('/tribes', request), 302);
   }
 
   // If slug exists, redirect to /t/{slug}
   if (row.slug) {
     return NextResponse.redirect(
-      new URL(`/t/${row.slug}${suffix}`, request.url),
+      buildUrl(`/t/${row.slug}${suffix}`, request),
       301
     );
   }
 
   // Fallback: tribe exists but has no slug yet — render the old route
   return NextResponse.redirect(
-    new URL(`/tribes/${tribeId}${suffix}`, request.url),
+    buildUrl(`/tribes/${tribeId}${suffix}`, request),
     302
   );
 }
