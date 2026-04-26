@@ -33,22 +33,26 @@ export function getBondTypeDisplay(bond: Bond): string {
 }
 
 /**
- * Get badge CSS classes for a bond type.
+ * Get badge inline styles for a bond type.
+ * 
+ * NOTE: The Tailwind config replaces the default color palette with
+ * theme CSS variables, so standard classes like bg-teal-500 are purged.
+ * We use inline styles to guarantee consistent rendering.
  */
-export function getBondTypeBadgeClasses(bond: Bond): string {
+export function getBondTypeBadgeStyle(bond: Bond): React.CSSProperties {
   if (bond.keyType === "event_promo" || bond.keyType === "event_attendee") {
-    return "border-transparent bg-purple-500 text-white hover:bg-purple-600";
+    return { backgroundColor: '#a855f7', color: '#fff', borderColor: 'transparent' }; // purple
   }
   switch (bond.bondType) {
-    case "family": return "border-transparent bg-pink-500 text-white hover:bg-pink-600";
-    case "friend": return "border-transparent bg-orange-500 text-white hover:bg-orange-600";
-    case "professional": return "border-transparent bg-sky-600 text-white hover:bg-sky-700";
-    case "collaborator": return "border-transparent bg-indigo-500 text-white hover:bg-indigo-600";
-    case "follower": return "border-transparent bg-teal-500 text-white hover:bg-teal-600";
-    case "supporter": return "border-transparent bg-emerald-500 text-white hover:bg-emerald-600";
+    case "family": return { backgroundColor: '#ec4899', color: '#fff', borderColor: 'transparent' }; // pink
+    case "friend": return { backgroundColor: '#f97316', color: '#fff', borderColor: 'transparent' }; // orange
+    case "professional": return { backgroundColor: '#0284c7', color: '#fff', borderColor: 'transparent' }; // sky
+    case "collaborator": return { backgroundColor: '#6366f1', color: '#fff', borderColor: 'transparent' }; // indigo
+    case "follower": return { backgroundColor: '#14b8a6', color: '#fff', borderColor: 'transparent' }; // teal
+    case "supporter": return { backgroundColor: '#10b981', color: '#fff', borderColor: 'transparent' }; // emerald
     default:
       const _exhaustiveCheck: never = bond.bondType;
-      return "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80";
+      return { borderColor: 'transparent' };
   }
 }
 

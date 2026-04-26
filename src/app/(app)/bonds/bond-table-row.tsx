@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { User, Users, Ticket, AtSign, UserCheck, UserCog, Star, MoreVertical, RefreshCw, Share2, HeartHandshake, Settings, Ban, Trash2, Rss } from "lucide-react";
 import { cn, formatDate } from '@/lib/utils';
 import type { Bond } from '@/lib/types';
-import { getBondTypeDisplay, getBondTypeBadgeClasses, PasskeyStatusIcon, ConnectVibeIcon } from '@/lib/bond-utils';
+import { getBondTypeDisplay, getBondTypeBadgeStyle, PasskeyStatusIcon, ConnectVibeIcon } from '@/lib/bond-utils';
 import { useBonds } from './bonds-context';
 
 interface BondTableRowProps {
@@ -46,7 +46,7 @@ export const BondTableRow: React.FC<BondTableRowProps> = ({ bond }) => {
           <div className="flex-grow min-w-0">
             <span className="block">{bond.targetName}</span>
             <div className={cn("sm:hidden mt-1", hasAliasInfo && "mb-2")}>
-              <Badge variant="outline" className={cn(getBondTypeBadgeClasses(bond), "whitespace-nowrap")}>
+              <Badge variant="outline" style={getBondTypeBadgeStyle(bond)} className="whitespace-nowrap">
                 {getBondTypeDisplay(bond)}
               </Badge>
             </div>
@@ -81,7 +81,7 @@ export const BondTableRow: React.FC<BondTableRowProps> = ({ bond }) => {
         </div>
       </TableCell>
       <TableCell className="hidden sm:table-cell">
-        <Badge variant="outline" className={cn(getBondTypeBadgeClasses(bond), "whitespace-nowrap")}>
+        <Badge variant="outline" style={getBondTypeBadgeStyle(bond)} className="whitespace-nowrap">
           {getBondTypeDisplay(bond)}
         </Badge>
       </TableCell>
