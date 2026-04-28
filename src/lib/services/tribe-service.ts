@@ -31,6 +31,27 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
   const slug = await generateUniqueSlug(payload.name);
   const inviteToken = generateInviteToken();
 
+  // Generate a random, vibrant brand color
+  const h = Math.floor(Math.random() * 360);
+  const s = 60 + Math.floor(Math.random() * 20); // 60-80% saturation
+  const l = 45 + Math.floor(Math.random() * 15); // 45-60% lightness
+  const randomBrandColor = `hsl(${h}, ${s}%, ${l}%)`; // Use HSL directly or convert to hex if needed. 
+  // The DB stores brand_color as text, so HSL is fine as long as the UI handles it.
+  // Actually, the UI uses it in CSS gradients, so it works. 
+  // But let's convert to HEX for maximum compatibility if possible.
+  
+  const hslToHex = (h: number, s: number, l: number) => {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  };
+  const brandColor = hslToHex(h, s, l);
+
   await db.insert(tribes).values({
     id,
     slug,
@@ -44,6 +65,7 @@ export async function createTribe(payload: CreateTribePayload): Promise<Tribe> {
     joinMechanism: 'instant',
     createdBy: payload.createdBy || null,
     inviteToken,
+    brandColor: brandColor,
     createdAt: new Date(),
   });
 

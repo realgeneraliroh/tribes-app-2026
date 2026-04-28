@@ -8,7 +8,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-export async function devLoginAction(role: 'admin' | 'member' | 'speaker' | 'free') {
+export async function devLoginAction(role: 'admin' | 'member' | 'speaker' | 'free' | 'dustin') {
   if (process.env.NODE_ENV !== 'development') {
     throw new Error('Forbidden');
   }
@@ -17,6 +17,8 @@ export async function devLoginAction(role: 'admin' | 'member' | 'speaker' | 'fre
   
   const targetId = role === 'admin'
     ? 'test-service-admin'
+    : role === 'dustin'
+    ? 'dustin'
     : role === 'free'
     ? 'test-free-user'
     : role === 'speaker'

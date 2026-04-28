@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MessageSquareText, User, HeartHandshake, Rss, Loader2, Smile, Send, Megaphone, Pin, Lock, Trash2, Pencil } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MessageSquareText, User, HeartHandshake, Rss, Loader2, Smile, Send, Megaphone, Pin, Lock, Trash2, Pencil, MoreVertical, Flag } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
@@ -42,6 +43,7 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
   const emoticons = VIBE_EMOTICONS;
   const isPost = item.type === 'mood-stream' || item.type === 'ring-post';
   const isOwnPost = isPost && !!user?.id && item.authorId === user.id;
+  const isTribeSpeaker = item.currentUserTribeRole ? ['founder', 'platform_admin', 'speaker'].includes(item.currentUserTribeRole) : false;
 
   const handleVibeSelection = async (vibe: string) => {
     if (!isPost) return;
@@ -157,12 +159,71 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
             </div>
             <CardDescription className="text-xs">
               {subtitle}
-              {item.type === 'mood-stream' && item.tribeName && (
+              {(item.type === 'mood-stream' || item.type === 'ring-post') && item.tribeName && (
                 <> • from <Link href={`/tribes/${item.tribeId}`} className="font-medium text-primary hover:underline">{item.tribeName}</Link></>
               )}
             </CardDescription>
           </div>
-          <div className="ml-auto pl-2 text-muted-foreground">{icon}</div>
+          <div className="ml-auto pl-2 text-muted-foreground flex items-center gap-1">
+            {isPost && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground -mr-2">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isTribeSpeaker && item.type === 'ring-post' && item.tribeId && (
+                    <>
+                      <DropdownMenuItem onClick={async () => {
+                          try {
+                            const { togglePinTribePost } = await import('@/lib/actions/content-actions');
+                            const { pinned } = await togglePinTribePost(item.id);
+                            toast({ 
+                              title: pinned ? 'Post Pinned' : 'Post Unpinned', 
+                              description: pinned ? 'This post will stay at the top of the tribe feed.' : 'Post unpinned from top.' 
+                            });
+                          } catch (err: unknown) {
+                            toast({ variant: 'destructive', title: 'Error', description: 'Failed to toggle pin.' });
+                          }
+                      }}>
+                        <Pin className="mr-2 h-4 w-4" /> Pin to Tribe Top
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {!isOwnPost && (
+                    <DropdownMenuItem onClick={async () => {
+                       try {
+                         const { reportPost } = await import('@/lib/actions/content-actions');
+                         await reportPost({
+                           postId: item.id,
+                           postTitle: item.title,
+                           reporterName: user?.name || 'Anonymous',
+                           reason: 'Reported from feed',
+                         });
+                         toast({ title: 'Post Reported', description: 'An admin will review it.' });
+                       } catch (e) {
+                         toast({ variant: 'destructive', title: 'Error', description: 'Failed to report.' });
+                       }
+                    }}>
+                      <Flag className="mr-2 h-4 w-4" /> Report Post
+                    </DropdownMenuItem>
+                  )}
+                  {isOwnPost && (
+                    <>
+                      <DropdownMenuItem onClick={() => handleOpenEditPostDialog(item)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit Post
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDelete(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete Post
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 pt-2 sm:pt-3">
@@ -280,27 +341,6 @@ export const IntercomFeedItem: React.FC<{ item: CommunicationItem }> = ({ item }
               <Pin className={cn("mr-1.5 h-4 w-4", isPinned && "fill-amber-600")} />
             )}
             {isPinned ? 'Pinned' : 'Pin'}
-          </Button>
-        )}
-        {/* Delete own post */}
-        {isOwnPost && !confirmDelete && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-destructive ml-auto"
-            onClick={() => setConfirmDelete(true)}
-          >
-            <Trash2 className="mr-1.5 h-4 w-4" /> Delete
-          </Button>
-        )}
-        {isOwnPost && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-primary"
-            onClick={() => handleOpenEditPostDialog(item)}
-          >
-            <Pencil className="mr-1.5 h-4 w-4" /> Edit
           </Button>
         )}
         {isOwnPost && confirmDelete && (

@@ -285,6 +285,7 @@ export interface CommunicationItem {
   ring?: Ring;
   authorId?: string;
   sender?: string;
+  currentUserTribeRole?: string;
   bondName?: string;
   bondId?: string;
   bondTargetId?: string;

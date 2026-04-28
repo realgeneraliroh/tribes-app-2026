@@ -14,6 +14,7 @@ import type { Ring } from '@/lib/types';
 import { ImagePlus, Send, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActionError } from '@/hooks/use-action-error';
+import { uploadFile } from '@/lib/upload';
 
 const STORAGE_KEY = 'tribes_last_ring';
 
@@ -58,12 +59,14 @@ export function ComposeBox({
   // Content state
   const [content, setContent] = useState('');
   const [moodTag, setMoodTag] = useState<string | null>(null);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const initials = (user?.name ?? 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-  const handleSubmit = () => {
-    if (!content.trim()) return;
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!content.trim() && imageFiles.length === 0) return;
 
     startTransition(async () => {
       try {
@@ -149,21 +152,40 @@ export function ComposeBox({
           }
         }
 
+        // Upload images first if any
+        let finalImageUrls: string[] = [];
+        if (imageFiles.length > 0) {
+          try {
+            const uploadPromises = imageFiles.map(async (file) => {
+              const result = await uploadFile(file, 'posts', 'public-tribe-post');
+              return typeof result === 'string' ? result : result.url || result.fileId;
+            });
+            finalImageUrls = await Promise.all(uploadPromises);
+          } catch (uploadErr) {
+            console.error('[ComposeBox] Image upload failed:', uploadErr);
+            throw new Error(uploadErr instanceof Error ? uploadErr.message : 'Failed to upload images.');
+          }
+        }
+
         await createRingPost({
           content: content.trim(),
           ring,
           moodTag: moodTag ?? undefined,
-          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
           // For backward compatibility, also send the first image to imageUrl
-          imageUrl: imageUrls.length > 0 ? imageUrls[0] : undefined,
+          imageUrl: finalImageUrls.length > 0 ? finalImageUrls[0] : undefined,
           tribeIds: ring === 'tribes' ? selectedTribeIds : undefined,
           encryption,
         });
 
+        // Cleanup object URLs
+        previewUrls.forEach(url => URL.revokeObjectURL(url));
+
         // Reset
         setContent('');
         setMoodTag(null);
-        setImageUrls([]);
+        setImageFiles([]);
+        setPreviewUrls([]);
         setIsExpanded(false);
 
         toast({
@@ -187,7 +209,7 @@ export function ComposeBox({
     const role = user?.role || 'Human_Free';
     const limit = IMAGE_LIMITS[role] || 1;
 
-    if (imageUrls.length + files.length > limit) {
+    if (imageFiles.length + files.length > limit) {
       toast({
         variant: 'destructive',
         title: 'Limit reached',
@@ -196,22 +218,15 @@ export function ComposeBox({
       return;
     }
 
-    try {
-      const uploadPromises = files.map(async (file) => {
-        const { uploadFile } = await import('@/lib/upload');
-        const url = await uploadFile(file, 'posts', 'public-tribe-post');
-        return url as string;
-      });
-
-      const newUrls = await Promise.all(uploadPromises);
-      setImageUrls(prev => [...prev, ...newUrls]);
-    } catch {
-      toast({ variant: 'destructive', title: 'Upload failed', description: 'Could not upload some images.' });
-    }
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setImageFiles(prev => [...prev, ...files]);
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
   };
 
   const removeImage = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
+    URL.revokeObjectURL(previewUrls[index]);
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -256,9 +271,9 @@ export function ComposeBox({
                 />
 
                 {/* Image previews */}
-                {imageUrls.length > 0 && (
+                {previewUrls.length > 0 && (
                   <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-                    {imageUrls.map((url, idx) => (
+                    {previewUrls.map((url, idx) => (
                       <div key={idx} className="relative group">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={url} alt={`Preview ${idx}`} className="h-20 w-20 rounded-md object-cover border shadow-sm" />
@@ -293,24 +308,25 @@ export function ComposeBox({
                         multiple
                         className="hidden"
                         onChange={handleImageUpload}
-                        disabled={imageUrls.length >= (IMAGE_LIMITS[user?.role || 'Human_Free'] || 1)}
+                        disabled={previewUrls.length >= (IMAGE_LIMITS[user?.role || 'Human_Free'] || 1)}
                       />
                       <div className={cn(
                         "h-8 w-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors",
-                        imageUrls.length >= (IMAGE_LIMITS[user?.role || 'Human_Free'] || 1) && "opacity-40 cursor-not-allowed"
+                        previewUrls.length >= (IMAGE_LIMITS[user?.role || 'Human_Free'] || 1) && "opacity-40 cursor-not-allowed"
                       )}>
                         <ImagePlus className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </label>
-                    {imageUrls.length > 0 && (
+                    {previewUrls.length > 0 && (
                       <span className="text-[10px] text-muted-foreground font-medium">
-                        {imageUrls.length}/{IMAGE_LIMITS[user?.role || 'Human_Free'] || 1}
+                        {previewUrls.length}/{IMAGE_LIMITS[user?.role || 'Human_Free'] || 1}
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       className="text-xs h-8"
@@ -318,15 +334,18 @@ export function ComposeBox({
                         setIsExpanded(false);
                         setContent('');
                         setMoodTag(null);
-                        setImageUrls([]);
+                        previewUrls.forEach(url => URL.revokeObjectURL(url));
+                        setImageFiles([]);
+                        setPreviewUrls([]);
                       }}
                     >
                       Cancel
                     </Button>
                     <Button
+                      type="button"
                       size="sm"
                       className="text-xs h-8 gap-1"
-                      disabled={!content.trim() || isPending || (ring === 'tribes' && selectedTribeIds.length === 0)}
+                      disabled={(!content.trim() && imageFiles.length === 0) || isPending || (ring === 'tribes' && selectedTribeIds.length === 0)}
                       onClick={handleSubmit}
                     >
                       {isPending ? (

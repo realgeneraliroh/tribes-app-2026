@@ -6,7 +6,7 @@
 import { db } from '@/db';
 import { posts, bonds, postMoodTags, blockedUsers, tribeMembers, tribes, users } from '@/db/schema';
 import { eq, desc, and, or, inArray } from 'drizzle-orm';
-import { getBlockedAuthorIds, getUserTribeIds } from './query-helpers';
+import { getBlockedAuthorIds, getUserTribeIds, getUserTribeRoles } from './query-helpers';
 import type { CommunicationItem, Ring } from '@/lib/types';
 import { rowToTribePost } from '@/lib/mappers/post-mapper';
 import { moodsData } from '@/lib/moods-data';
@@ -37,11 +37,17 @@ export async function getUnifiedFeed(params: UnifiedFeedParams): Promise<Communi
   const { userId, ringFilter = 'all', moodSlugs = [], limit = 50, offset = 0 } = params;
 
   // Pre-fetch common lookups
-  const [blockedIds, userBonds, userTribeIds] = await Promise.all([
+  const [blockedIds, userBonds, userTribeIds, userTribeRoles] = await Promise.all([
     getBlockedAuthorIds(userId),
     getUserBonds(userId),
     getUserTribeIds(userId),
+    getUserTribeRoles(userId),
   ]);
+
+  const tribeRows = userTribeIds.length > 0 
+    ? await db.select({ id: tribes.id, name: tribes.name }).from(tribes).where(inArray(tribes.id, userTribeIds))
+    : [];
+  const tribeNameMap = new Map(tribeRows.map(t => [t.id, t.name]));
 
   const items: CommunicationItem[] = [];
 
@@ -53,12 +59,12 @@ export async function getUnifiedFeed(params: UnifiedFeedParams): Promise<Communi
   }
 
   // ── Ring-based Posts ──────────────────────────────────────────────────────
-  const ringPosts = await fetchRingPosts(userId, ringFilter, userBonds, userTribeIds, blockedIds, moodSlugs);
+  const ringPosts = await fetchRingPosts(userId, ringFilter, userBonds, userTribeIds, blockedIds, moodSlugs, userTribeRoles, tribeNameMap);
   items.push(...ringPosts);
 
   // ── Mood Stream Posts (promoted posts) ────────────────────────────────────
   if (ringFilter === 'all' || ringFilter === 'streams') {
-    const streamPosts = await fetchMoodStreamPosts(userId, blockedIds, moodSlugs);
+    const streamPosts = await fetchMoodStreamPosts(userId, blockedIds, moodSlugs, userTribeRoles);
     items.push(...streamPosts);
   }
 
@@ -180,6 +186,8 @@ async function fetchRingPosts(
   userTribeIds: string[],
   blockedIds: string[],
   moodSlugs: string[],
+  userTribeRoles: Record<string, string>,
+  tribeNameMap: Map<string, string>,
 ): Promise<CommunicationItem[]> {
   const items: CommunicationItem[] = [];
 
@@ -192,7 +200,9 @@ async function fetchRingPosts(
 
     for (const row of journalRows) {
       if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-      items.push(postRowToFeedItem(row, 'journal'));
+      const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+      const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+      items.push(postRowToFeedItem(row, 'journal', false, tribeName, role));
     }
   }
 
@@ -212,7 +222,9 @@ async function fetchRingPosts(
 
       for (const row of icRows) {
         if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-        items.push(postRowToFeedItem(row, 'inner_circle'));
+        const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+        const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+        items.push(postRowToFeedItem(row, 'inner_circle', false, tribeName, role));
       }
     }
 
@@ -223,7 +235,9 @@ async function fetchRingPosts(
       .limit(10);
     for (const row of ownIcRows) {
       if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-      items.push(postRowToFeedItem(row, 'inner_circle'));
+      const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+      const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+      items.push(postRowToFeedItem(row, 'inner_circle', false, tribeName, role));
     }
   }
 
@@ -243,7 +257,9 @@ async function fetchRingPosts(
 
       for (const row of mpRows) {
         if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-        items.push(postRowToFeedItem(row, 'my_people'));
+        const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+        const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+        items.push(postRowToFeedItem(row, 'my_people', false, tribeName, role));
       }
     }
 
@@ -254,7 +270,9 @@ async function fetchRingPosts(
       .limit(10);
     for (const row of ownMpRows) {
       if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-      items.push(postRowToFeedItem(row, 'my_people'));
+      const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+      const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+      items.push(postRowToFeedItem(row, 'my_people', false, tribeName, role));
     }
   }
 
@@ -272,7 +290,9 @@ async function fetchRingPosts(
       for (const row of tribeRows) {
         if (blockedIds.includes(row.authorId)) continue;
         if (moodSlugs.length > 0 && row.moodTag && !moodSlugs.includes(row.moodTag)) continue;
-        items.push(postRowToFeedItem(row, 'tribes'));
+        const tribeName = row.tribeId ? tribeNameMap.get(row.tribeId) : undefined;
+        const role = row.tribeId ? userTribeRoles[row.tribeId] : undefined;
+        items.push(postRowToFeedItem(row, 'tribes', false, tribeName, role));
       }
     }
   }
@@ -287,6 +307,7 @@ async function fetchMoodStreamPosts(
   userId: string,
   blockedIds: string[],
   moodSlugs: string[],
+  userTribeRoles: Record<string, string>,
 ): Promise<CommunicationItem[]> {
   const tagRows = await db.select().from(postMoodTags);
   const postIds = [...new Set(tagRows.map(t => t.postId))];
@@ -322,6 +343,7 @@ async function fetchMoodStreamPosts(
 
     const moodDetails = moodsData.find(m => m.slug === moodSlug);
     const tribeName = postRow.tribeId ? tribeMap.get(postRow.tribeId) : undefined;
+    const role = postRow.tribeId ? userTribeRoles[postRow.tribeId] : undefined;
     const promotedByName = tags[0]?.promotedBy ? promoterMap.get(tags[0].promotedBy) : undefined;
 
     items.push({
@@ -346,6 +368,7 @@ async function fetchMoodStreamPosts(
       dataAiHintImage: postRow.dataAiHintImage ?? undefined,
       sender: postRow.authorName,
       promotedByName,
+      currentUserTribeRole: role,
     });
   }
 
@@ -387,6 +410,8 @@ function postRowToFeedItem(
   row: typeof posts.$inferSelect,
   ring: Ring,
   isPinnedWallUpdate = false,
+  tribeName?: string,
+  currentUserTribeRole?: string,
 ): CommunicationItem {
   return {
     id: row.id,
@@ -408,6 +433,8 @@ function postRowToFeedItem(
     moodSlug: row.moodTag ?? undefined,
     moodName: row.moodTag ? (moodsData.find(m => m.slug === row.moodTag)?.name || row.moodTag) : undefined,
     tribeId: row.tribeId ?? undefined,
+    tribeName,
+    currentUserTribeRole,
     pinnedToWall: isPinnedWallUpdate || (row.pinnedToWall ?? false),
     // E2E encryption data (Phase 3)
     isEncrypted: row.isEncrypted ?? false,

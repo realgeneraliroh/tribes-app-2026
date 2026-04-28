@@ -188,6 +188,14 @@ export default function LoginPage() {
               <span className="text-xs text-muted-foreground uppercase tracking-widest block text-center mb-2">Automated Testing</span>
               <Button 
                 variant="secondary" 
+                onClick={() => handleDevLogin('dustin' as any)}
+                className="w-full bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border border-indigo-500/30 font-mono tracking-wider text-xs h-10"
+                disabled={isLoading}
+              >
+                🛠️ Login as Dustin (Founder)
+              </Button>
+              <Button 
+                variant="secondary" 
                 onClick={() => handleDevLogin('admin')}
                 className="w-full bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border border-orange-500/30 font-mono tracking-wider text-xs h-10"
                 disabled={isLoading}

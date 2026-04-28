@@ -384,15 +384,21 @@ export function TribeDetailProvider({ children }: { children: React.ReactNode })
   const handleCreatePost = useCallback(async (values: PostFormValues) => {
     if (!state.tribe) return;
     try {
-      // Upload image client-side first (File objects can't be serialized to server actions)
-      let imageUrl: string | undefined;
-      if (values.image) {
-        imageUrl = await uploadFile(values.image, 'posts');
+      // Upload images client-side first in parallel
+      let finalImageUrls: string[] = [];
+      if (values.images && values.images.length > 0) {
+        const uploadPromises = values.images.map(async (file) => {
+          const result = await uploadFile(file, 'posts', 'public-tribe-post');
+          return typeof result === 'string' ? result : result.url || result.fileId;
+        });
+        finalImageUrls = await Promise.all(uploadPromises);
       }
+
       await createTribePost(state.tribe.id, {
         title: values.title,
         content: values.content,
-        imageUrl,
+        imageUrls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
+        imageUrl: finalImageUrls.length > 0 ? finalImageUrls[0] : undefined, // Compatibility
       });
       dispatch({ type: 'CLOSE_CREATE_POST' });
       toast({ title: 'Post Created', description: 'Your post has been published to the tribe feed.' });

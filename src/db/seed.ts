@@ -116,6 +116,7 @@ async function seed() {
     { id: 'userA', name: 'GreenThumb', role: 'Human_Member' },
     { id: 'userB', name: 'CityDweller', role: 'Human_Member' },
     { id: 'userC', name: 'PolicyWonk', role: 'Human_Member' },
+    { id: 'dustin', name: 'Dustin Moore', role: 'Admin' },
     // Members
     { id: 'user1', name: 'Alice Wonderland', role: 'Human_Member' },
     { id: 'user2', name: 'Bob The Builder', role: 'Human_Member' },

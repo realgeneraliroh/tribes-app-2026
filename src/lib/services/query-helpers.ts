@@ -25,6 +25,21 @@ export async function getUserTribeIds(userId?: string): Promise<string[]> {
 }
 
 /**
+ * Helper: get a map of tribeId -> role for a user.
+ */
+export async function getUserTribeRoles(userId?: string): Promise<Record<string, string>> {
+  if (!userId) return {};
+  const rows = await db.select({ tribeId: tribeMembers.tribeId, role: tribeMembers.role })
+    .from(tribeMembers)
+    .where(eq(tribeMembers.userId, userId));
+  const map: Record<string, string> = {};
+  rows.forEach(r => {
+    map[r.tribeId] = r.role || 'member';
+  });
+  return map;
+}
+
+/**
  * Resolves a user's display name and avatar for a given tribe context.
  * logic: bond preference (nickname) > joinedAsAlias > real user name.
  */

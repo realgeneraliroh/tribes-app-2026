@@ -22,7 +22,7 @@ import {
 const postFormSchema = z.object({
   title: z.string().max(150, { message: "Title cannot be more than 150 characters." }).optional(),
   content: z.string().min(1, { message: "Post content cannot be empty." }).max(5000, { message: "Post content cannot exceed 5000 characters." }),
-  image: z.custom<File | undefined>().refine(file => !file || (file instanceof File && file.size <= 5 * 1024 * 1024), `Max file size is 5MB.`),
+  images: z.array(z.custom<File>().refine(file => file instanceof File && file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`)).optional().default([]),
 });
 
 export type PostFormValues = z.infer<typeof postFormSchema>;
@@ -39,37 +39,55 @@ export function CreatePostDialog({
   onPostCreated,
 }: CreatePostDialogProps) {
   const { toast } = useToast();
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(postFormSchema),
     defaultValues: {
       title: "",
       content: "",
-      image: undefined,
+      images: [],
     },
   });
 
   useEffect(() => {
     if (!isOpen) {
       form.reset();
-      setImagePreview(null);
+      setImagePreviews([]);
     }
   }, [isOpen, form]);
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      form.setValue("image", file, { shouldValidate: true });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      form.setValue("image", undefined);
-      setImagePreview(null);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      const currentFiles = form.getValues("images") || [];
+      const updatedFiles = [...currentFiles, ...newFiles].slice(0, 4); // Limit to 4 images
+      
+      form.setValue("images", updatedFiles, { shouldValidate: true });
+      
+      // Update previews
+      const newPreviews: string[] = [];
+      let loaded = 0;
+      updatedFiles.forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newPreviews.push(reader.result as string);
+          loaded++;
+          if (loaded === updatedFiles.length) {
+            setImagePreviews(newPreviews);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  const removeImage = (index: number) => {
+    const currentFiles = form.getValues("images") || [];
+    const updatedFiles = currentFiles.filter((_, i) => i !== index);
+    form.setValue("images", updatedFiles, { shouldValidate: true });
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   function onSubmit(values: PostFormValues) {
@@ -85,11 +103,11 @@ export function CreatePostDialog({
               <Edit3 className="mr-2 h-5 w-5 text-primary" /> Create Post
             </ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
-              Create a new private post on your wall. You can share it with tribes later.
+              Create a new post for this tribe.
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 px-4 sm:px-0">
             <FormField
               control={form.control}
               name="title"
@@ -124,23 +142,44 @@ export function CreatePostDialog({
 
             <FormField
               control={form.control}
-              name="image"
+              name="images"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image (Optional)</FormLabel>
+                  <FormLabel>Images (Optional)</FormLabel>
                     <FormControl>
-                      <div className="flex items-center space-x-4">
-                        {imagePreview ? (
-                          <Image src={imagePreview} alt="Post preview" width={100} height={100} className="rounded-md object-cover h-24 w-24 border" data-ai-hint="user upload" />
-                        ) : (
-                          <div className="h-24 w-24 rounded-md bg-muted flex items-center justify-center border">
-                            <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                      <div className="space-y-4">
+                        {imagePreviews.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {imagePreviews.map((preview, idx) => (
+                              <div key={idx} className="relative aspect-square rounded-md overflow-hidden border group">
+                                <Image src={preview} alt={`Preview ${idx}`} fill className="object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(idx)}
+                                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         )}
-                        <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs"/>
+                        <div className="flex items-center space-x-4">
+                          {imagePreviews.length < 4 && (
+                            <div className="flex-1">
+                              <Input 
+                                type="file" 
+                                accept="image/*" 
+                                multiple 
+                                onChange={handleImageChange} 
+                                className="cursor-pointer"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </FormControl>
-                  <FormDescription>Upload an image for your post (max 5MB).</FormDescription>
+                  <FormDescription>Upload up to 4 images (max 5MB each).</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
