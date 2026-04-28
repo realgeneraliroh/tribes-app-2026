@@ -61,11 +61,13 @@ resource "hcloud_firewall" "tribes_backup" {
   name = "tribes-backup-fw"
 
   # SSH from prod server only (for restic SFTP)
+  # NOTE: prod server IP is hardcoded here to avoid a circular dependency /
+  # null-value issue when the primary IP is unassigned during tofu operations.
   rule {
     direction  = "in"
     protocol   = "tcp"
     port       = "22"
-    source_ips = concat(var.admin_ips, ["${hcloud_server.tribes_prod.ipv4_address}/32"])
+    source_ips = concat(var.admin_ips, ["5.78.189.222/32"])
   }
 
   rule {
@@ -100,6 +102,13 @@ resource "hcloud_server" "tribes_prod" {
     project = "tribes"
     role    = "app"
   }
+
+  # ssh_keys, user_data, and public_net are write-only or already-assigned at
+  # creation time — the Hetzner provider cannot reconcile them after import.
+  # Ignore to prevent spurious diffs and failed apply attempts.
+  lifecycle {
+    ignore_changes = [ssh_keys, user_data, public_net]
+  }
 }
 
 # ── Backup Server ────────────────────────────────────────────
@@ -119,6 +128,13 @@ resource "hcloud_server" "tribes_backup" {
     env     = "production"
     project = "tribes"
     role    = "backup"
+  }
+
+  # ssh_keys and user_data are write-only at creation time — the Hetzner
+  # provider cannot read them back after import, so tofu will always see
+  # drift on these fields. Ignore them to prevent accidental server replacement.
+  lifecycle {
+    ignore_changes = [ssh_keys, user_data]
   }
 }
 
