@@ -190,6 +190,12 @@ export const passwordLoginLimiter = new RateLimiter({
   maxRequests: 5,            // Stricter than passkey's 10
 });
 
+export const totpChallengeLimiter = new RateLimiter({
+  prefix: 'totp_challenge',
+  windowMs: 5 * 60 * 1000,   // 5 minutes
+  maxRequests: 5,             // 5 TOTP attempts per 5 minutes — brute-force infeasible
+});
+
 export const signupLimiter = new RateLimiter({
   prefix: 'signup',
   windowMs: 60 * 60 * 1000,  // 1 hour

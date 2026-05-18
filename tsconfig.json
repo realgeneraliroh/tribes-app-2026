@@ -37,6 +37,9 @@
   ],
   "exclude": [
     "node_modules",
-    "scratch"
+    "scratch",
+    "tests",
+    "vitest.config.ts",
+    "playwright.config.ts"
   ]
 }
