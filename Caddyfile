@@ -8,6 +8,17 @@
 #   DOMAIN=tribes.app docker compose -f docker-compose.prod.yml up -d
 # ============================================================
 
+# Shared security headers — imported by every server block
+(security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Permitted-Cross-Domain-Policies "none"
+    }
+}
+
 {$APP_DOMAIN:tribes.app} {
     # Next.js app — blue/green load balancing
     # Caddy routes to whichever container is healthy; during deploys
@@ -25,9 +36,10 @@
         health_timeout 3s
     }
 
-    # Security headers (complement Next.js CSP headers)
+    import security_headers
+
+    # App-specific headers (complement Next.js CSP headers)
     header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Robots-Tag "noindex, nofollow"  # Remove for public launch
     }
 
@@ -44,6 +56,8 @@
         header_up Connection "Upgrade"
         header_up Upgrade "websocket"
     }
+
+    import security_headers
 }
 
 {$MEDIA_DOMAIN:media.tribes.app} {
@@ -53,6 +67,8 @@
     rewrite * /buckets{path}
 
     reverse_proxy seaweedfs-filer:8888
+
+    import security_headers
 
     # Long-lived cache for immutable media files
     header Cache-Control "public, max-age=31536000, immutable"
