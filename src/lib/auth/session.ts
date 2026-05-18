@@ -116,7 +116,12 @@ export async function getSession() {
   const session = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!session) return null;
   try {
-    return await decrypt(session);
+    const parsed = await decrypt(session);
+    if (parsed?.sessionId) {
+      const isValid = await isSessionValid(parsed.sessionId);
+      if (!isValid) return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -127,19 +132,23 @@ export async function updateSession(request: NextRequest) {
   if (!session) return;
 
   // Refresh the session so it doesn't expire
-  const parsed = await decrypt(session);
-  parsed.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const res = NextResponse.next();
-  res.cookies.set({
-    name: SESSION_COOKIE_NAME,
-    value: await encrypt(parsed),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    expires: parsed.expires,
-  });
-  return res;
+  try {
+    const parsed = await decrypt(session);
+    parsed.expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const res = NextResponse.next();
+    res.cookies.set({
+      name: SESSION_COOKIE_NAME,
+      value: await encrypt(parsed),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: parsed.expires,
+    });
+    return res;
+  } catch {
+    return;
+  }
 }
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await getSession();
@@ -151,4 +160,34 @@ export async function getCurrentSessionId(): Promise<string | null> {
   const session = await getSession();
   if (!session) return null;
   return (session.sessionId as string) || null;
+}
+
+// 60-second TTL cache to avoid DB hit on every request
+const sessionValidityCache = new Map<string, { valid: boolean; expiresAt: number }>();
+const CACHE_TTL_MS = 60_000;
+
+async function isSessionValid(sessionId: string): Promise<boolean> {
+  const cached = sessionValidityCache.get(sessionId);
+  if (cached && Date.now() < cached.expiresAt) return cached.valid;
+
+  const { db } = await import('@/db');
+  const { sessions } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+
+  const [row] = await db.select({ revokedAt: sessions.revokedAt, expiresAt: sessions.expiresAt })
+    .from(sessions).where(eq(sessions.id, sessionId)).limit(1);
+
+  const valid = !!row && !row.revokedAt && (!row.expiresAt || row.expiresAt > new Date());
+
+  sessionValidityCache.set(sessionId, { valid, expiresAt: Date.now() + CACHE_TTL_MS });
+
+  // Lazy cleanup: evict stale entries when cache grows
+  if (sessionValidityCache.size > 1000) {
+    const now = Date.now();
+    for (const [k, v] of sessionValidityCache) {
+      if (now >= v.expiresAt) sessionValidityCache.delete(k);
+    }
+  }
+
+  return valid;
 }

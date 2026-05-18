@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { AppLogo } from "@/components/icons/app-logo";
 import { Fingerprint, Loader2, Mail, KeyRound } from "lucide-react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { loginUserAction, finishLoginAction, loginWithPasswordAction } from "@/lib/auth-actions";
+import { loginUserAction, finishLoginAction, loginWithPasswordAction, verifyTotpAndLoginAction } from "@/lib/auth-actions";
 import { useToast } from "@/hooks/use-toast";
 import { isAuthMethodEnabled } from "@/lib/auth/auth-config";
 import { TurnstileWidget, type TurnstileWidgetRef } from "@/components/turnstile-widget";
@@ -182,6 +182,54 @@ function LoginForm() {
     }
   }
 
+  const [requiresTotp, setRequiresTotp] = useState(false);
+  const [totpChallengeToken, setTotpChallengeToken] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+
+  async function handleTotpSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!totpCode.trim() || !totpChallengeToken) return;
+
+    setIsLoading(true);
+    try {
+      const result = await verifyTotpAndLoginAction(totpChallengeToken, totpCode);
+
+      if ('error' in result) {
+        toast({
+          variant: "destructive",
+          title: "Verification Failed",
+          description: result.error,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Initialize local E2E key in IndexedDB if not already present
+      try {
+        const { getOrCreateJournalKey } = await import('@/lib/crypto/journal-encryption');
+        await getOrCreateJournalKey();
+      } catch (cryptoErr) {
+        console.error('[auth] Failed to initialize local E2E key store:', cryptoErr);
+      }
+
+      toast({
+        title: "Welcome Back",
+        description: "You have been logged in successfully.",
+      });
+
+      const returnTo = searchParams.get('callbackUrl') || searchParams.get('returnTo');
+      router.push(returnTo || "/your-comms");
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err?.message || "An unexpected error occurred.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!emailOrUsername.trim() || !password) return;
@@ -198,6 +246,13 @@ function LoginForm() {
         });
         turnstileRef.current?.reset();
         setTurnstileToken(null);
+        setIsLoading(false);
+        return;
+      }
+
+      if ('requiresTotp' in result && result.requiresTotp) {
+        setRequiresTotp(true);
+        setTotpChallengeToken(result.challengeToken);
         setIsLoading(false);
         return;
       }
@@ -251,6 +306,67 @@ function LoginForm() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (requiresTotp) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardHeader className="space-y-2 text-center">
+            <div className="flex justify-center mb-6">
+              <AppLogo width={72} height={72} />
+            </div>
+            <CardTitle className="text-3xl font-bold font-mono text-primary">Two-Factor Auth</CardTitle>
+            <CardDescription>Enter the 6-digit verification code from your authenticator app</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 py-6">
+            <form onSubmit={handleTotpSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="totp-code">Verification Code</Label>
+                <Input
+                  id="totp-code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="000000"
+                  required
+                  disabled={isLoading}
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  className="h-12 text-center text-2xl tracking-[0.5em] font-mono bg-background/50 border-primary/20 focus-visible:ring-primary"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || totpCode.length !== 6}
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <KeyRound className="mr-2 h-5 w-5" />
+                )}
+                Verify & Sign In
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <button
+              onClick={() => {
+                setRequiresTotp(false);
+                setTotpChallengeToken(null);
+                setTotpCode("");
+              }}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors font-semibold font-mono"
+            >
+              Cancel & Return to Login
+            </button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
   }
 
   return (

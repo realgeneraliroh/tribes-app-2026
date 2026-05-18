@@ -13,7 +13,7 @@ import { eq, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { loginLimiter, signupLimiter, signupSubnetLimiter, passwordLoginLimiter, getClientIp, getSubnet } from '@/lib/auth/rate-limit';
+import { loginLimiter, signupLimiter, signupSubnetLimiter, passwordLoginLimiter, totpChallengeLimiter, getClientIp, getSubnet } from '@/lib/auth/rate-limit';
 import bcrypt from 'bcryptjs';
 import { isAuthMethodEnabled } from '@/lib/auth/auth-config';
 
@@ -368,7 +368,7 @@ export async function loginWithPasswordAction(
   emailOrUsername: string,
   password: string,
   turnstileToken?: string
-): Promise<{ success: boolean } | { error: string }> {
+): Promise<{ success: boolean; requiresTotp?: false } | { error: string } | { requiresTotp: true; challengeToken: string }> {
   try {
     if (!isAuthMethodEnabled('password')) {
       return { error: 'Password authentication is not enabled on this instance.' };
@@ -404,14 +404,69 @@ export async function loginWithPasswordAction(
       return { error: 'Invalid email/username or password.' };
     }
 
+    // TOTP 2FA enforcement — issue a signed, short-lived challenge token
+    // so the client cannot call verifyTotpAndLoginAction with an arbitrary userId
+    if (user.totpEnabled) {
+      const { createTotpChallengeToken } = await import('@/lib/auth/totp-challenge');
+      const challengeToken = await createTotpChallengeToken(user.id);
+      return { requiresTotp: true, challengeToken };
+    }
+
     // Create session
     const sessionAuth = await import('@/lib/auth/session');
     await sessionAuth.createSession(user.id);
 
     revalidatePath('/');
-    return { success: true };
+    return { success: true, requiresTotp: false };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'An unexpected error occurred. Please try again.';
+    return { error: message };
+  }
+}
+
+export async function verifyTotpAndLoginAction(
+  challengeToken: string,
+  code: string
+): Promise<{ success: boolean } | { error: string }> {
+  try {
+    // Rate limit TOTP attempts per IP — 6 digits = 1M combos, must be throttled
+    const headersList = await headers();
+    const ip = getClientIp(headersList);
+    await totpChallengeLimiter.check(ip);
+
+    // Verify the challenge token to extract the userId — proves password was already validated
+    const { verifyTotpChallengeToken } = await import('@/lib/auth/totp-challenge');
+    const userId = await verifyTotpChallengeToken(challengeToken);
+    if (!userId) {
+      return { error: 'Challenge expired or invalid. Please log in again.' };
+    }
+
+    const { TOTP } = await import('otpauth');
+    const [user] = await db.select({ totpSecret: users.totpSecret, totpEnabled: users.totpEnabled })
+      .from(users).where(eq(users.id, userId)).limit(1);
+
+    if (!user?.totpEnabled || !user.totpSecret) {
+      return { error: 'TOTP not configured for this account.' };
+    }
+
+    const totp = new TOTP({
+      issuer: 'Tribes.app',
+      label: userId,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: user.totpSecret,
+    });
+
+    const delta = totp.validate({ token: code, window: 1 });
+    if (delta === null) return { error: 'Invalid verification code.' };
+
+    const sessionAuth = await import('@/lib/auth/session');
+    await sessionAuth.createSession(userId);
+    revalidatePath('/');
+    return { success: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'An unexpected error occurred.';
     return { error: message };
   }
 }
@@ -512,9 +567,17 @@ export async function resetPasswordAction(
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await db.update(users)
-      .set({ passwordHash })
-      .where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      await tx.update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, userId));
+
+      // Revoke all existing sessions — the old password (and any attacker session) is now invalid
+      const { sessions } = await import('@/db/schema');
+      await tx.update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(eq(sessions.userId, userId));
+    });
 
     return { success: true };
   } catch (e) {
