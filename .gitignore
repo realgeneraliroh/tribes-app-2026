@@ -113,3 +113,8 @@ keys/*.p8
 docs/dev-post-*
 docs/post-*
 docs/images/
+
+# Local IDE and environment metadata
+.idx/
+.vscode/
+.modified
