@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 // ============================================================
 // Environment-driven image host patterns (replaces hardcoded IPs)
@@ -65,7 +65,7 @@ function buildSecurityHeaders() {
   const connectSources = ["'self'"];
   if (wsRelay) connectSources.push(wsRelay);
   if (appUrl) connectSources.push(appUrl);
-  
+
   // In development, allow connections to any host to support IP-based testing on mobile devices
   if (process.env.NODE_ENV !== 'production') {
     connectSources.push('*');
@@ -93,6 +93,10 @@ function buildSecurityHeaders() {
     { key: 'Content-Security-Policy', value: csp },
     // Allow Turnstile iframe to access the features it needs for bot detection
     { key: 'Permissions-Policy', value: 'xr-spatial-tracking=()' },
+    // Legacy XSS filter for older browsers (Chrome < 78, IE, Safari < 15.4)
+    { key: 'X-XSS-Protection', value: '1; mode=block' },
+    // Prevent Adobe Flash/Acrobat from loading cross-domain data
+    { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
   ];
 }
 
