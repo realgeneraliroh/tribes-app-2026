@@ -3,6 +3,9 @@ import groovy.json.JsonSlurper
 apply plugin: 'com.android.application'
 
 def getAppVersionName() {
+    if (project.hasProperty('versionName')) {
+        return project.property('versionName')
+    }
     def jsonFile = file("../../package.json")
     if (jsonFile.exists()) {
         def packageJson = new JsonSlurper().parseText(jsonFile.text)
@@ -12,6 +15,9 @@ def getAppVersionName() {
 }
 
 def getAppVersionCode() {
+    if (project.hasProperty('versionCode')) {
+        return project.property('versionCode').toInteger()
+    }
     try {
         def stdout = new ByteArrayOutputStream()
         exec {
