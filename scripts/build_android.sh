@@ -78,14 +78,14 @@ echo ""
 if [ "${1:-}" = "--apk" ]; then
     echo -e "${YELLOW}Building release APK...${NC}"
     cd "$ANDROID_DIR"
-    ./gradlew assembleRelease
+    ./gradlew assembleRelease -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
     APK_PATH="$ANDROID_DIR/app/build/outputs/apk/release/app-release.apk"
     echo ""
     echo -e "${GREEN}✓ APK built:${NC} $APK_PATH"
 else
     echo -e "${YELLOW}Building release AAB (for Play Store)...${NC}"
     cd "$ANDROID_DIR"
-    ./gradlew bundleRelease
+    ./gradlew bundleRelease -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
     AAB_PATH="$ANDROID_DIR/app/build/outputs/bundle/release/app-release.aab"
     echo ""
     echo -e "${GREEN}✓ AAB built:${NC} $AAB_PATH"
