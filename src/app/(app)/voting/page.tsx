@@ -305,8 +305,8 @@ function VotingContent() {
             const hasVoted = !!p.userVoteOptionId;
 
             // Calculate "support" vs "oppose" for the quick-glance bar
-            const supportOpt = p.options.find(o => o.label.toLowerCase().includes('support') || o.label.toLowerCase().includes('yes') || o.label.toLowerCase().includes('adopt') || o.label.toLowerCase().includes('approve'));
-            const opposeOpt = p.options.find(o => o.label.toLowerCase().includes('oppose') || o.label.toLowerCase().includes('no') || o.label.toLowerCase().includes('reject') || o.label.toLowerCase().includes('ban'));
+            const supportOpt = p.options.find(o => o.label.toLowerCase().includes('support') || o.label.toLowerCase().includes('yes') || o.label.toLowerCase().includes('adopt') || o.label.toLowerCase().includes('approve') || o.label.toLowerCase().includes('allow'));
+            const opposeOpt = p.options.find(o => o.label.toLowerCase().includes('oppose') || o.label.toLowerCase().includes('no') || o.label.toLowerCase().includes('reject') || o.label.toLowerCase().includes('ban') || o.label.toLowerCase().includes('restrict'));
             const reviseOpt = p.options.find(o => o.label.toLowerCase().includes('revise') || o.label.toLowerCase().includes('revision') || o.label.toLowerCase().includes('send back') || o.label.toLowerCase().includes('discussion'));
 
             const hasThreeOptions = p.options.length === 3 && !!supportOpt && !!opposeOpt && !!reviseOpt;
