@@ -163,11 +163,13 @@ function ProposalDetailContent({ proposalId: propProposalId }: { proposalId?: st
   const isTernaryVote = proposal.options.length === 3;
   const supportOpt = proposal.options.find(o =>
     o.label.toLowerCase().includes('support') || o.label.toLowerCase().includes('yes') ||
-    o.label.toLowerCase().includes('adopt') || o.label.toLowerCase().includes('approve')
+    o.label.toLowerCase().includes('adopt') || o.label.toLowerCase().includes('approve') ||
+    o.label.toLowerCase().includes('allow')
   );
   const opposeOpt = proposal.options.find(o =>
     o.label.toLowerCase().includes('oppose') || o.label.toLowerCase().includes('no') ||
-    o.label.toLowerCase().includes('reject') || o.label.toLowerCase().includes('ban')
+    o.label.toLowerCase().includes('reject') || o.label.toLowerCase().includes('ban') ||
+    o.label.toLowerCase().includes('restrict')
   );
   const reviseOpt = proposal.options.find(o =>
     o.label.toLowerCase().includes('revise') || o.label.toLowerCase().includes('revision') ||
