@@ -1,6 +1,7 @@
 # 🌌 Tribes.app — The Privacy-First Social Co-Op
 
-[![Release](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/dustmoo/tribes-app-2026/releases)
+[![Release](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/dustmoo/tribes-app-2026/releases)
+[![CI](https://github.com/dustmoo/tribes-app-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/dustmoo/tribes-app-2026/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Welcome to **Tribes.app**, a modern, beautiful, and open-source social communication platform built with a deep commitment to **End-to-End Encryption (E2EE)** and a state-of-the-art **Concentric Rings UX** design. 
