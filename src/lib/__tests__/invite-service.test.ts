@@ -83,7 +83,8 @@ vi.mock('@/db/schema', () => ({
   inviteRedemptions: { inviteCodeId: 'inviteCodeId', userId: 'userId', _name: 'invite_redemptions' },
   subscriptions: { userId: 'userId', status: 'status', _name: 'subscriptions' },
   plans: { id: 'id', _name: 'plans' },
-  users: { id: 'id', role: 'role', _name: 'users' },
+  users: { id: 'id', role: 'role', name: 'name', _name: 'users' },
+  bonds: { id: 'id', userId: 'userId', targetId: 'targetId', _name: 'bonds' },
 }));
 
 vi.mock('drizzle-orm', () => ({

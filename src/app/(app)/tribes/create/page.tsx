@@ -10,9 +10,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Users, Image as ImageIcon, Globe, Lock, Sparkles, Tag, Link2 } from "lucide-react";
+import { Users, Image as ImageIcon, Globe, Lock, Tag, Link2 } from "lucide-react";
 import Image from "next/image";
-import { generateTribeDescription } from "@/ai/flows/tribe-description-generator";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +51,6 @@ function CreateTribeContent() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isAiGeneratingDesc, setIsAiGeneratingDesc] = React.useState(false);
   const [coverPreview, setCoverPreview] = React.useState<string | null>(null);
   
   const { handleError } = useActionError();
@@ -107,33 +105,7 @@ function CreateTribeContent() {
     }
   }
 
-  async function handleGenerateDescription() {
-    const name = form.getValues("name");
-    const moods = form.getValues("moods");
-    const homepageUrl = form.getValues("homepageUrl");
 
-    let hasError = false;
-    if (!name) {
-      form.setError("name", { type: "manual", message: "Please enter a tribe name first." });
-      hasError = true;
-    }
-    if (!moods || moods.length === 0) {
-      form.setError("moods", { type: "manual", message: "Please select moods to generate a description." });
-      hasError = true;
-    }
-    if (hasError) return;
-
-    setIsAiGeneratingDesc(true);
-    try {
-      const result = await generateTribeDescription({ name, moods: moods.join(', '), homepageUrl });
-      form.setValue("description", result.description);
-      form.clearErrors("description");
-    } catch (error) {
-      console.error("Failed to generate description:", error);
-      form.setError("description", { type: "manual", message: "AI failed to generate description. Please try again." });
-    }
-    setIsAiGeneratingDesc(false);
-  }
   
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -276,9 +248,6 @@ function CreateTribeContent() {
                         {...field}
                       />
                     </FormControl>
-                     {/* <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isLoading || isAiGeneratingDesc} className="mt-2">
-                        <Sparkles className="mr-2 h-4 w-4" /> {isAiGeneratingDesc ? "Generating..." : "Generate with AI"}
-                    </Button> */}
                     <FormDescription>A compelling summary to attract new members.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -343,7 +312,7 @@ function CreateTribeContent() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading || isAiGeneratingDesc} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
+              <Button type="submit" disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
                 {isLoading ? "Creating Tribe..." : "Create Tribe"}
               </Button>
             </CardFooter>

@@ -40,7 +40,6 @@ export interface UserProfile {
   reputationStatus?: 'Onboarding' | 'Newcomer' | 'Active' | 'Trusted' | 'Veteran' | 'Elder';
   emailVerified?: boolean;
   totpEnabled?: boolean;
-  aiDataSharingEnabled?: boolean;
   isVerified?: boolean;
   tosAcceptedVersion?: string | null;
   accountCreatedAt?: Date;

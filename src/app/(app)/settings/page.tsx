@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { UserCircle, Loader2, PlusCircle, AtSign, X, Star, CreditCard, Mail, AlertTriangle, Cpu, CheckCircle2, ScrollText, Check } from "lucide-react";
+import { UserCircle, Loader2, PlusCircle, AtSign, X, Star, CreditCard, Mail, AlertTriangle, CheckCircle2, ScrollText, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from '@/lib/types';
 import { getUserProfile, updateUserProfile } from '@/lib/actions/profile-actions';
@@ -25,9 +25,8 @@ import { ReputationSection } from '@/components/settings/reputation-section';
 import { NotificationsSection, type NotifPrefsState } from '@/components/settings/notifications-section';
 import { SecuritySection } from '@/components/settings/security-section';
 import { SessionsSection } from '@/components/settings/sessions-section';
-import { AppearanceSection, BillingSection, AccountActionsSection } from '@/components/settings/minor-sections';
-import { AiSettingsSection } from '@/components/settings/ai-settings-section';
 import { VaultBackupSection } from '@/components/settings/vault-backup-section';
+import { AppearanceSection, BillingSection, AccountActionsSection } from '@/components/settings/minor-sections';
 import { useScrollToHash } from '@/hooks/use-scroll-to-hash';
 import { AuthGuard } from '@/components/providers/auth-guard';
 
@@ -81,7 +80,6 @@ function SettingsContent() {
   // Passkey management state
   const [passkeys, setPasskeys] = useState<{ id: string; createdAt: Date }[]>([]);
   const [userTotpEnabled, setUserTotpEnabled] = useState(false);
-  const [userAiSharing, setUserAiSharing] = useState(true);
 
   // Load notification preferences
   useEffect(() => {
@@ -172,7 +170,6 @@ function SettingsContent() {
         setAliases(userProfile.aliases || []);
         setReservedAliasInput(userProfile.reservedAlias || "");
         setUserTotpEnabled(userProfile.totpEnabled ?? false);
-        setUserAiSharing(userProfile.aiDataSharingEnabled ?? true);
       }
 
       setIsLoading(false);
@@ -601,7 +598,6 @@ function SettingsContent() {
       <SecuritySection
         passkeys={passkeys}
         totpEnabled={userTotpEnabled}
-        aiDataSharingEnabled={userAiSharing}
         onPasskeysChanged={loadPasskeys}
       />
 
@@ -619,38 +615,6 @@ function SettingsContent() {
 
       <Separator />
       <AppearanceSection />
-
-      {/* ── Admin-Only Section ── */}
-      {profile.role === 'Admin' && (
-        <>
-          <Separator />
-          <div className="space-y-6 p-6 rounded-lg border-2 border-dashed border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/10">
-            <header className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-amber-500/10">
-                <Cpu className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold tracking-normal font-mono text-foreground">
-                  Platform Administration
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Admin-only controls. These settings affect all users on the platform.
-                </p>
-              </div>
-            </header>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-primary" /> AI Inference Engine
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Configure the LLM backend for T-Codex Prime and automated workflows.
-              </p>
-              {/* <AiSettingsSection /> */}
-            </div>
-          </div>
-        </>
-      )}
 
       <Separator />
 

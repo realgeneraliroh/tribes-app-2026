@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Compass, Users, Smile, CalendarDays, Search, Loader2, BookOpen, Bot } from 'lucide-react';
+import { Compass, Users, Smile, CalendarDays, Search, Loader2, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -207,19 +207,6 @@ export default function DiscoverClient() {
                 <div>
                   <p className="font-medium text-sm">Our Story</p>
                   <p className="text-xs text-muted-foreground">The Tribes journey</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/ai-assistant" className="block group">
-            <Card className="hover:shadow-md transition-all duration-200 hover:border-primary/30">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">T-Codex Prime</p>
-                  <p className="text-xs text-muted-foreground">AI assistant</p>
                 </div>
               </CardContent>
             </Card>
