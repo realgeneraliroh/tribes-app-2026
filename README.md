@@ -1,7 +1,7 @@
 # 🌌 Tribes.app — The Privacy-First Social Co-Op
 
-[![Release](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/dustmoo/tribes-app-2026/releases)
-[![CI](https://github.com/dustmoo/tribes-app-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/dustmoo/tribes-app-2026/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/version-1.0.5-blue.svg)](https://github.com/TribesSocialCoOp/tribes-app-2026/releases)
+[![CI](https://github.com/TribesSocialCoOp/tribes-app-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/TribesSocialCoOp/tribes-app-2026/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 Welcome to **Tribes.app**, a modern, beautiful, and open-source social communication platform built with a deep commitment to **End-to-End Encryption (E2EE)** and a state-of-the-art **Concentric Rings UX** design. 
@@ -167,4 +167,4 @@ This is executed automatically upon merging code into `main` via `.github/workfl
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for details.
