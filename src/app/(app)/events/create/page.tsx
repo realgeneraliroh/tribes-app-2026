@@ -19,9 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Image as ImageIcon, Globe, Lock, Sparkles, CalendarPlus, MapPin, Lightbulb, Users, Star } from "lucide-react";
-import { generateEventDescription } from "@/ai/flows/event-description-generator";
-import { generateEventKeywords } from "@/ai/flows/generate-event-keywords"; // New import
+import { CalendarIcon, Image as ImageIcon, Globe, Lock, CalendarPlus, MapPin, Users, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createEvent, getMaxRsvpPoints } from '@/lib/actions/event-actions';
 import { getMyTribes } from '@/lib/actions/tribe-actions';
@@ -61,8 +59,6 @@ function CreateEventContent() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isAiGeneratingDesc, setIsAiGeneratingDesc] = React.useState(false);
-  const [isAiSuggestingKeywords, setIsAiSuggestingKeywords] = React.useState(false);
   const [coverPreview, setCoverPreview] = React.useState<string | null>(null);
 
   const [myTribes, setMyTribes] = useState<Tribe[]>([]);
@@ -138,96 +134,7 @@ function CreateEventContent() {
     }
   }
 
-  async function handleGenerateDescription() {
-    const eventName = form.getValues("name");
-    const keywords = form.getValues("keywords");
-    const locationName = form.getValues("locationName");
-    const locationCityRegion = form.getValues("locationCityRegion");
 
-    let hasError = false;
-    if (!eventName) {
-      form.setError("name", { type: "manual", message: "Please enter an event name first." });
-      hasError = true;
-    }
-    if (!keywords) {
-      form.setError("keywords", { type: "manual", message: "Please enter keywords to help generate a description." });
-      hasError = true;
-    }
-    if (!locationName) {
-      form.setError("locationName", {type: "manual", message: "Please provide a location name for better context."});
-      hasError = true;
-    }
-     if (!locationCityRegion) {
-      form.setError("locationCityRegion", {type: "manual", message: "Please provide a city/region for better context."});
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    setIsAiGeneratingDesc(true);
-    try {
-      const result = await generateEventDescription({
-        name: eventName,
-        keywords,
-        locationName,
-        locationCityRegion
-      });
-      form.setValue("description", result.description);
-      form.clearErrors("description");
-    } catch (error) {
-      console.error("Failed to generate event description:", error);
-      form.setError("description", { type: "manual", message: "AI failed to generate description. Please try again." });
-    }
-    setIsAiGeneratingDesc(false);
-  }
-
-  async function handleSuggestKeywords() {
-    const eventName = form.getValues("name");
-    const eventDescription = form.getValues("description");
-
-    let hasError = false;
-    if (!eventName) {
-      form.setError("name", { type: "manual", message: "Please enter an event name to suggest keywords." });
-      hasError = true;
-    }
-    if (!eventDescription) {
-      form.setError("description", { type: "manual", message: "Please enter an event description to suggest keywords." });
-      hasError = true;
-    }
-    if (hasError) {
-        toast({
-            variant: "destructive",
-            title: "Missing Information",
-            description: "Please provide an event name and description before suggesting keywords.",
-        });
-        return;
-    }
-
-    setIsAiSuggestingKeywords(true);
-    try {
-      const result = await generateEventKeywords({ eventName, eventDescription });
-      const currentKeywords = form.getValues("keywords").split(',').map(k => k.trim()).filter(k => k);
-      const newKeywords = result.suggestedKeywords;
-
-      const combinedKeywords = new Set([...currentKeywords, ...newKeywords]);
-      const uniqueKeywordsString = Array.from(combinedKeywords).join(', ');
-
-      form.setValue("keywords", uniqueKeywordsString);
-      form.clearErrors("keywords");
-      toast({
-        title: "Keywords Suggested",
-        description: "AI has added new keyword suggestions.",
-      });
-    } catch (error) {
-      console.error("Failed to suggest event keywords:", error);
-      toast({
-        variant: "destructive",
-        title: "AI Error",
-        description: "Failed to suggest keywords. Please try again or enter them manually.",
-      });
-    }
-    setIsAiSuggestingKeywords(false);
-  }
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -284,10 +191,7 @@ function CreateEventContent() {
                     <FormControl>
                       <Input placeholder="e.g., Live Music, Networking, Technology, Art Show" {...field} className="text-base" />
                     </FormControl>
-                    {/* <Button type="button" variant="outline" size="sm" onClick={handleSuggestKeywords} disabled={isAiSuggestingKeywords || isLoading || isAiGeneratingDesc} className="mt-2">
-                        <Lightbulb className="mr-2 h-4 w-4" /> {isAiSuggestingKeywords ? "Suggesting..." : "Suggest with AI"}
-                    </Button> */}
-                    <FormDescription>Comma-separated keywords that describe your event. Used for AI description and discovery.</FormDescription>
+                    <FormDescription>Comma-separated keywords that describe your event. Used for discovery.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -338,9 +242,6 @@ function CreateEventContent() {
                         {...field}
                       />
                     </FormControl>
-                     {/* <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isAiGeneratingDesc || isLoading || isAiSuggestingKeywords} className="mt-2">
-                        <Sparkles className="mr-2 h-4 w-4" /> {isAiGeneratingDesc ? "Generating..." : "Generate with AI"}
-                    </Button> */}
                     <FormDescription>A compelling summary to attract attendees.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -549,7 +450,7 @@ function CreateEventContent() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading || isAiGeneratingDesc || isAiSuggestingKeywords} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
+              <Button type="submit" disabled={isLoading} className="w-full md:w-auto bg-primary hover:bg-primary/90 text-lg py-3 px-6">
                 {isLoading ? "Creating Event..." : "Create Event"}
               </Button>
             </CardFooter>

@@ -22,7 +22,6 @@ function rowToProfile(row: typeof users.$inferSelect, aliases: UserProfile['alia
     reputationStatus: (row.reputationStatus ?? 'Onboarding') as UserProfile['reputationStatus'],
     emailVerified: row.emailVerified ?? false,
     totpEnabled: row.totpEnabled ?? false,
-    aiDataSharingEnabled: row.aiDataSharingEnabled ?? true,
     isVerified: row.isVerified ?? false,
     tosAcceptedVersion: row.tosAcceptedVersion ?? null,
     accountCreatedAt: row.createdAt ?? new Date(),

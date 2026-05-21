@@ -29,8 +29,6 @@ interface SecuritySectionProps {
   passkeys: PasskeyInfo[];
   /** Whether TOTP 2FA is currently enabled */
   totpEnabled: boolean;
-  /** Whether AI data sharing is enabled */
-  aiDataSharingEnabled: boolean;
   /** Callback when passkeys list changes */
   onPasskeysChanged?: () => void;
 }
@@ -42,7 +40,6 @@ interface SecuritySectionProps {
 export function SecuritySection({
   passkeys,
   totpEnabled,
-  aiDataSharingEnabled,
   onPasskeysChanged,
 }: SecuritySectionProps) {
   const { toast } = useToast();
@@ -145,26 +142,7 @@ export function SecuritySection({
     }
   }
 
-  // ── AI Data Sharing Toggle ────────────────────────────────
-  const [aiSharing, setAiSharing] = useState(aiDataSharingEnabled);
-  const [isSavingAi, setIsSavingAi] = useState(false);
 
-  async function handleAiSharingToggle(enabled: boolean) {
-    setAiSharing(enabled);
-    setIsSavingAi(true);
-    try {
-      const { updateUserProfile } = await import('@/lib/actions/profile-actions');
-      const { getCurrentUserId } = await import('@/lib/actions/shared');
-      const userId = await getCurrentUserId();
-      if (userId) {
-        await updateUserProfile(userId, { aiDataSharingEnabled: enabled } as any);
-      }
-    } catch {
-      setAiSharing(!enabled); // Revert on failure
-    } finally {
-      setIsSavingAi(false);
-    }
-  }
 
   return (
     <Card className="shadow-lg">
@@ -308,22 +286,7 @@ export function SecuritySection({
           )}
         </div>
 
-        {/* ── AI Data Sharing ────────────────────────────── */}
-        {/* <div className="flex items-center justify-between gap-3 p-3 rounded-md border hover:bg-muted/50 border-t">
-          <div className="min-w-0 flex-1">
-            <Label htmlFor="dataSharing" className="font-medium">Allow AI Assistant Access to My Data</Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              Let the AI assistant use your public tribe information to provide more personalized help. Private data is never used.
-            </p>
-          </div>
-          <Switch
-            id="dataSharing"
-            className="shrink-0"
-            checked={aiSharing}
-            onCheckedChange={handleAiSharingToggle}
-            disabled={isSavingAi}
-          />
-        </div> */}
+
 
       </CardContent>
     </Card>

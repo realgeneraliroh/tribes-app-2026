@@ -19,8 +19,6 @@ Tribes.app is a local-first, privacy-centric social platform built around **Trib
 
 ```
 src/
-├── ai/                         # Genkit AI flows
-│   └── flows/                  # 6 flows: assistant, event/tribe description gen, etc.
 ├── app/                        # Next.js App Router
 │   ├── (app)/                  # Authenticated app routes (26 pages)
 │   ├── (auth)/                 # Login + Signup
@@ -254,20 +252,7 @@ Bonds are **public-key pair relationships** with passkey rotation:
 
 ---
 
-## AI Integration
 
-Built on Firebase Genkit with 6 flows:
-
-| Flow | Purpose |
-|---|---|
-| `assistant-flow.ts` | T-Codex Prime AI assistant |
-| `tribe-description-generator.ts` | Generate tribe descriptions from name + keywords |
-| `event-description-generator.ts` | Generate event descriptions |
-| `generate-event-keywords.ts` | Extract keywords from event text |
-| `mood-based-content-suggestions.ts` | Suggest content for mood streams |
-| `summarize-tribe-activity.ts` | Summarize recent tribe activity |
-
----
 
 ## Testing
 
@@ -325,8 +310,6 @@ S3_SECRET_KEY=        # S3 secret key
 S3_BUCKET=            # S3 bucket name
 S3_PUBLIC_URL=        # Public URL for uploaded media
 
-# AI
-GOOGLE_GENAI_API_KEY= # Google Genkit API key
 
 # OAuth
 GOOGLE_CLIENT_ID=     # Google OAuth client ID
