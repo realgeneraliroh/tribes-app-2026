@@ -35,6 +35,8 @@ async function seed() {
   await db.execute(sql`SET session_replication_role = 'replica'`);
 
   // Clear all tables (reverse dependency order)
+  await db.delete(schema.tribeKeyGrants);
+  await db.delete(schema.tribeKeys);
   await db.delete(schema.messages);
   await db.delete(schema.eventStreamPosts);
   await db.delete(schema.storyComments);

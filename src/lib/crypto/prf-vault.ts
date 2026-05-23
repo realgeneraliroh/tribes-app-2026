@@ -24,13 +24,16 @@ import {
   storeBondKey,
   deleteSharedSecret,
   hashPublicKeyJwk,
+  getAllTribeKeys,
+  storeTribeKey,
+  getTribeKey,
 } from './key-store';
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const VAULT_VERSION = 1;
+const VAULT_VERSION = 2;
 const PRF_SALT = 'tribes.app/prf-vault/v1';
 const HKDF_INFO = 'tribes.app/prf-vault-wrapping-key/v1';
 
@@ -196,7 +199,14 @@ interface VaultPayload {
     privateKeyJwk: JsonWebKey;
     publicKeyJwk: JsonWebKey;
   };
+  tribeKeys?: TribeKeyVaultEntry[];
   exportedAt: number;
+}
+
+interface TribeKeyVaultEntry {
+  tribeId: string;
+  keyJwk: JsonWebKey;
+  version: number;
 }
 
 /**
@@ -252,6 +262,32 @@ export async function encryptVaultWithPrf(
     }
   }
 
+  // Include tribe group keys (AES-256-GCM symmetric keys)
+  try {
+    const tribeKeys = await getAllTribeKeys();
+    if (tribeKeys.length > 0) {
+      const tribeKeyEntries: TribeKeyVaultEntry[] = [];
+      for (const tk of tribeKeys) {
+        try {
+          const keyJwk = await crypto.subtle.exportKey('jwk', tk.key);
+          tribeKeyEntries.push({
+            tribeId: tk.tribeId,
+            keyJwk,
+            version: tk.version,
+          });
+        } catch {
+          console.warn(`[prf-vault] Skipping non-extractable tribe key for ${tk.tribeId}`);
+        }
+      }
+      if (tribeKeyEntries.length > 0) {
+        payload.tribeKeys = tribeKeyEntries;
+        console.log(`[prf-vault] Including ${tribeKeyEntries.length} tribe key(s) in backup`);
+      }
+    }
+  } catch (err) {
+    console.warn('[prf-vault] Failed to export tribe keys:', err);
+  }
+
   const plaintext = new TextEncoder().encode(JSON.stringify(payload));
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
@@ -290,7 +326,7 @@ export async function decryptAndRestoreVault(
   );
 
   const payload: VaultPayload = JSON.parse(new TextDecoder().decode(plaintext));
-  if (payload.version !== VAULT_VERSION) {
+  if (payload.version !== 1 && payload.version !== VAULT_VERSION) {
     throw new Error(`Unsupported vault version: ${payload.version}`);
   }
 
@@ -350,6 +386,34 @@ export async function decryptAndRestoreVault(
       }
     } catch (err) {
       console.warn('[prf-vault] Failed to restore identity key:', err);
+    }
+  }
+
+  // Restore tribe group keys if present (v2+)
+  if (payload.tribeKeys && payload.tribeKeys.length > 0) {
+    let tribeRestored = 0;
+    for (const tkEntry of payload.tribeKeys) {
+      try {
+        const existing = await getTribeKey(tkEntry.tribeId);
+        if (existing && existing.version >= tkEntry.version) {
+          continue;
+        }
+
+        const tribeKey = await crypto.subtle.importKey(
+          'jwk',
+          tkEntry.keyJwk,
+          { name: 'AES-GCM', length: 256 },
+          true,
+          ['encrypt', 'decrypt'],
+        );
+        await storeTribeKey(tkEntry.tribeId, tribeKey, tkEntry.version);
+        tribeRestored++;
+      } catch (err) {
+        console.warn(`[prf-vault] Failed to restore tribe key for ${tkEntry.tribeId}:`, err);
+      }
+    }
+    if (tribeRestored > 0) {
+      console.log(`[prf-vault] Restored ${tribeRestored} tribe key(s) from backup`);
     }
   }
 

@@ -27,6 +27,9 @@ import {
   getBondKey,
   storeBondKey,
   deleteSharedSecret,
+  getAllTribeKeys,
+  storeTribeKey,
+  getTribeKey,
 } from './key-store';
 
 // ============================================================
@@ -56,7 +59,14 @@ interface VaultPayload {
     privateKeyJwk: JsonWebKey;
     publicKeyJwk: JsonWebKey;
   };
+  tribeKeys?: TribeKeyVaultEntry[];
   exportedAt: number;
+}
+
+interface TribeKeyVaultEntry {
+  tribeId: string;
+  keyJwk: JsonWebKey;
+  version: number;
 }
 
 // ============================================================
@@ -167,6 +177,32 @@ export async function createVaultBackup(
     const privateKeyJwk = await exportIdentityPrivateKey(identityKey.privateKey);
     const publicKeyJwk = await exportIdentityPublicKey(identityKey.publicKey);
     payload.identityKey = { privateKeyJwk, publicKeyJwk };
+  }
+
+  // Add tribe group keys (AES-256-GCM symmetric keys)
+  try {
+    const tribeKeys = await getAllTribeKeys();
+    if (tribeKeys.length > 0) {
+      const tribeKeyEntries: TribeKeyVaultEntry[] = [];
+      for (const tk of tribeKeys) {
+        try {
+          const keyJwk = await crypto.subtle.exportKey('jwk', tk.key);
+          tribeKeyEntries.push({
+            tribeId: tk.tribeId,
+            keyJwk,
+            version: tk.version,
+          });
+        } catch {
+          console.warn(`[vault] Skipping non-extractable tribe key for ${tk.tribeId}`);
+        }
+      }
+      if (tribeKeyEntries.length > 0) {
+        payload.tribeKeys = tribeKeyEntries;
+        console.log(`[vault] Including ${tribeKeyEntries.length} tribe key(s) in backup`);
+      }
+    }
+  } catch (err) {
+    console.warn('[vault] Failed to export tribe keys:', err);
   }
 
   // Serialize and encrypt
@@ -394,6 +430,35 @@ export async function restoreVaultBackup(
       }
     } catch (err) {
       console.warn('[vault] Failed to restore identity key:', err);
+    }
+  }
+
+  // Restore tribe group keys if present
+  if (payload.tribeKeys && payload.tribeKeys.length > 0) {
+    let tribeRestored = 0;
+    for (const tkEntry of payload.tribeKeys) {
+      try {
+        const existing = await getTribeKey(tkEntry.tribeId);
+        // Only import if no local key or backup has a newer version
+        if (existing && existing.version >= tkEntry.version) {
+          continue;
+        }
+
+        const tribeKey = await crypto.subtle.importKey(
+          'jwk',
+          tkEntry.keyJwk,
+          { name: 'AES-GCM', length: 256 },
+          true, // extractable — needed for wrapping/re-distribution
+          ['encrypt', 'decrypt'],
+        );
+        await storeTribeKey(tkEntry.tribeId, tribeKey, tkEntry.version);
+        tribeRestored++;
+      } catch (err) {
+        console.warn(`[vault] Failed to restore tribe key for ${tkEntry.tribeId}:`, err);
+      }
+    }
+    if (tribeRestored > 0) {
+      console.log(`[vault] Restored ${tribeRestored} tribe key(s) from backup`);
     }
   }
 
