@@ -20,7 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# ─── Capacitor Core & Plugins Proguard Rules ──────────────────────────────────
 # Preserve Capacitor core classes, fields, and methods from obfuscation and shrinking
 -keep class com.getcapacitor.** { *; }
 -keep interface com.getcapacitor.** { *; }
@@ -38,4 +37,17 @@
     @com.getcapacitor.PluginMethod public void *(...);
     @com.getcapacitor.annotation.PermissionCallback public void *(...);
 }
+
+# ─── Firebase & Google Play Services R8 Keep Rules ───────────────────────────
+# Prevent R8 from stripping out Firebase Cloud Messaging classes used by the Push Notifications plugin
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+
+# Push Notifications Plugin explicitly
+-keep class com.capacitorjs.plugins.pushnotifications.** { *; }
+-dontwarn com.capacitorjs.plugins.pushnotifications.**
+
 

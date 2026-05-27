@@ -58,6 +58,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- NFC feature — not required (graceful fallback if missing) -->
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
